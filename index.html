@@ -425,7 +425,7 @@ var PHRASES=[
  [/^(\d+) of (\d+) company beds filled$/,function(m){return m[1]+" من "+m[2]+" سرير مشغول";}],
  [/^(\d+) working · (\d+) cars · (\d+) bikes assigned$/,function(m){return m[1]+" يعمل · "+m[2]+" سيارة · "+m[3]+" دراجة مُعيّنة";}]
 ];
-Object.assign(I18N,{"Updating existing record":"تحديث سجل قائم","Required":"مطلوب","Ready to log expenses":"جاهز لتسجيل المصاريف","Recent Entries":"أحدث الإدخالات","Categories Used":"الفئات المستخدمة","of available buckets":"من الفئات المتاحة","Housing Occupancy":"إشغال السكن","Fuel Card Balance":"رصيد بطاقة الوقود","Vehicles in Fleet":"مركبات الأسطول","across the crew":"بين الطاقم","Nationalities":"الجنسيات","Fleet Workforce":"القوى العاملة","Add document":"إضافة مستند","Which document is this?":"ما هو هذا المستند؟","Document type":"نوع المستند","Save document":"حفظ المستند","beds":"سرير","company beds filled":"سرير مشغول","expiring ≤30d":"ستنتهي ≤30 يوم","total ≤30 days":"إجمالي ≤30 يوم","showing all":"عرض الكل","this vs last":"هذا مقابل الماضي","Attach photo":"إرفاق صورة","Upload / change":"رفع / تغيير"});
+Object.assign(I18N,{"Updating existing record":"تحديث سجل قائم","Required":"مطلوب","Ready to log expenses":"جاهز لتسجيل المصاريف","Recent Entries":"أحدث الإدخالات","Categories Used":"الفئات المستخدمة","of available buckets":"من الفئات المتاحة","Housing Occupancy":"إشغال السكن","Fuel Card Balance":"رصيد بطاقة الوقود","Vehicles in Fleet":"مركبات الأسطول","across the crew":"بين الطاقم","Nationalities":"الجنسيات","Fleet Workforce":"القوى العاملة","Add document":"إضافة مستند","Which document is this?":"ما هو هذا المستند؟","Document type":"نوع المستند","Save document":"حفظ المستند","beds":"سرير","company beds filled":"سرير مشغول","expiring ≤30d":"ستنتهي ≤30 يوم","total ≤30 days":"إجمالي ≤30 يوم","showing all":"عرض الكل","this vs last":"هذا مقابل الماضي","Attach photo":"إرفاق صورة","Upload / change":"رفع / تغيير","Drivers by Vehicle Type":"السائقون حسب نوع المركبة","drivers":"سائق"});
 PHRASES.push(
  [/^Edit (.+)$/,function(m){return "تعديل "+(I18N[m[1]]||m[1]);}],
  [/^Delete this (.+)\?$/,function(m){return "حذف "+(I18N[m[1]]||m[1])+"؟";}],
@@ -438,7 +438,8 @@ PHRASES.push(
  [/^(\d+) expired$/,function(m){return m[1]+" منتهية";}],
  [/^·\s*(\d+) expiring ≤30d · showing all (\d+)$/,function(m){return "· "+m[1]+" ستنتهي ≤30 يوم · عرض الكل "+m[2];}],
  [/^(\d+)\/(\d+) beds$/,function(m){return m[1]+"/"+m[2]+" سرير";}],
- [/^(Health Card|Civil ID|License|Passport) · (.+)$/,function(m){return (I18N[m[1]]||m[1])+" · "+m[2];}]
+ [/^(Health Card|Civil ID|License|Passport) · (.+)$/,function(m){return (I18N[m[1]]||m[1])+" · "+m[2];}],
+ [/^(\d+) working · (\d+) off-road$/,function(m){return m[1]+" يعمل · "+m[2]+" خارج الخدمة";}]
 );
 function transToken(k){k=k.trim();if(I18N[k]!=null)return I18N[k];for(var i=0;i<PHRASES.length;i++){var mm=k.match(PHRASES[i][0]);if(mm)return PHRASES[i][1](mm);}return k;}
 function transEl(root){
@@ -965,7 +966,7 @@ function pageOverview(pg){
   function stat(o){return '<div class="stat card"><span class="strip" style="background:'+o.c+'"></span><svg class="s-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+o.ic+'</svg><div class="s-lab">'+o.l+'</div><div class="s-val">'+o.v+'</div><div class="s-sub">'+o.s+'</div></div>';}
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+
     stat({l:"Total Workforce",v:d.length,c:"var(--teal)",s:active+" active · "+inproc+" in process",ic:'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/>'})+
-    stat({l:"Vehicles",v:STATE.grd.vehicles.length,c:"var(--indigo)",s:fleetWork+" working · "+((veh.CAR||0))+" cars · "+((veh.BIKE||0))+" bikes",ic:'<path d="M3 13l2-5h14l2 5v5h-3v-2H6v2H3z"/>'})+
+    stat({l:"Vehicles",v:STATE.grd.vehicles.length,c:"var(--indigo)",s:fleetWork+" working · "+(STATE.grd.vehicles.length-fleetWork)+" off-road",ic:'<path d="M3 13l2-5h14l2 5v5h-3v-2H6v2H3z"/>'})+
     stat({l:"Doc Alerts · 30d",v:alerts,c:"var(--crit)",s:expd+" already expired",ic:'<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'})+
     stat({l:"Expenses Logged",v:money(expTotal)+" KD",c:"var(--amber)",s:STATE.finance.expenses.length+" entries · "+money(monthTotal)+" this month",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 4-5"/>'})+
   '</div>';
@@ -977,7 +978,7 @@ function pageOverview(pg){
 
   var charts='<div class="grid g2" style="margin-bottom:16px">'+
     '<div class="card"><div class="card-h"><h3>Workforce by Status</h3><a class="hint" data-route="grd/drivers" style="cursor:pointer;color:var(--teal)">open →</a></div><div class="card-b">'+hbars(stItems)+'</div></div>'+
-    '<div class="card"><div class="card-h"><h3>Vehicle Mix</h3><a class="hint" data-route="grd/vehicles" style="cursor:pointer;color:var(--teal)">open →</a></div><div class="card-b"><div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+donut(vc,(veh.CAR||0)+(veh.BIKE||0)+(veh.REPORTER||0),"assigned")+'<div style="flex:1;min-width:120px">'+vc.map(function(i){return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:'+i.color+'"></span><span style="flex:1;font-size:13px;color:var(--ink-2)">'+i.label+'</span><b class="mono">'+i.value+'</b></div>';}).join("")+'</div></div></div></div>'+
+    '<div class="card"><div class="card-h"><h3>Drivers by Vehicle Type</h3><a class="hint" data-route="grd/drivers" style="cursor:pointer;color:var(--teal)">open →</a></div><div class="card-b"><div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+donut(vc,(veh.CAR||0)+(veh.BIKE||0)+(veh.REPORTER||0),"drivers")+'<div style="flex:1;min-width:120px">'+vc.map(function(i){return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:'+i.color+'"></span><span style="flex:1;font-size:13px;color:var(--ink-2)">'+i.label+'</span><b class="mono">'+i.value+'</b></div>';}).join("")+'</div></div></div></div>'+
   '</div>'+
   '<div class="grid g3" style="margin-bottom:16px">'+
     '<div class="card"><div class="card-h"><h3>Nationality</h3></div><div class="card-b">'+hbars(natItems,{})+'</div></div>'+
