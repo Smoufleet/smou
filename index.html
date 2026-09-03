@@ -446,7 +446,20 @@ PHRASES.push(
  [/^(Health Card|Civil ID|License|Passport) · (.+)$/,function(m){return (I18N[m[1]]||m[1])+" · "+m[2];}],
  [/^(\d+) working · (\d+) off-road$/,function(m){return m[1]+" يعمل · "+m[2]+" خارج الخدمة";}]
 );
-function transToken(k){k=k.trim();if(I18N[k]!=null)return I18N[k];for(var i=0;i<PHRASES.length;i++){var mm=k.match(PHRASES[i][0]);if(mm)return PHRASES[i][1](mm);}return k;}
+// data/enum values shown in tables & dropdowns
+Object.assign(I18N,{
+"Nigeria":"نيجيريا","Sudan":"السودان","India":"الهند","Uganda":"أوغندا","Bangladesh":"بنغلاديش","Nepal":"نيبال","Egypt":"مصر","Syria":"سوريا","Ethiopia":"إثيوبيا","Ethopia":"إثيوبيا","Sri Lanka":"سريلانكا","Srilanka":"سريلانكا","Sierra Leone":"سيراليون","Sierre Leone":"سيراليون","Pakistan":"باكستان","Philippines":"الفلبين","Kenya":"كينيا","Ghana":"غانا","Kuwait":"الكويت",
+"CAR":"سيارة","BIKE":"دراجة","REPORTER":"مبلّغ","Reporter":"مبلّغ",
+"HAWALLI":"حولي","AVENUES":"الأفينيوز","MAHBOULA":"المهبولة","JAHRA":"الجهراء","ARDIYA":"العارضية","SALMIYA":"السالمية","FARWANIYA":"الفروانية","FAHAHEEL":"الفحيحيل","OTHERS":"أخرى","Others":"أخرى",
+"TALABAT":"طلبات","KEETA":"كيتا","Talabat":"طلبات","Keeta":"كيتا",
+"OWN ROOM":"غرفة خاصة"
+});
+var I18N_LC={};for(var _k in I18N){if(I18N.hasOwnProperty(_k))I18N_LC[_k.toLowerCase()]=I18N[_k];}
+function transToken(k){k=k.trim();if(k==="")return k;
+  if(I18N[k]!=null)return I18N[k];
+  var lc=k.toLowerCase();if(I18N_LC[lc]!=null)return I18N_LC[lc];
+  for(var i=0;i<PHRASES.length;i++){var mm=k.match(PHRASES[i][0]);if(mm)return PHRASES[i][1](mm);}
+  return k;}
 function transEl(root){
   if(LANG!=="ar"||!root)return;
   try{
