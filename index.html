@@ -1688,7 +1688,7 @@ function pageUsers(pg){
     var box=document.getElementById("usersBox");if(!box)return;
     if(res.error){box.innerHTML='<div class="autherr">'+esc(res.error.message)+'</div>';return;}
     var rows=res.data||[];
-    var info='<div class="banner info" style="margin-bottom:14px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div>Naya staff add karne ke liye <b>Supabase → Authentication → Add user</b> (Auto Confirm ON). Wo ek baar login kare, phir uska role yaha set kar do.</div></div>';
+    var info='';
     var tbl='<div class="tbl-wrap"><table class="dt"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>'+
       (rows.length?rows.map(function(u){var self=USER&&u.id===USER.id;return '<tr><td><span class="nm">'+esc(u.name||"—")+'</span>'+(self?' <span class="sub">(you)</span>':'')+'</td><td class="mono">'+esc(u.email||"")+'</td><td><select class="urole" data-urole data-uid="'+u.id+'"'+(self?' disabled':'')+'>'+["admin","dataentry","viewer"].map(function(r){return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+roleLabel(r)+'</option>';}).join("")+'</select></td></tr>';}).join(""):'<tr><td colspan="3"><div class="empty" style="padding:22px"><h4>No users yet</h4><p>Create staff accounts in Supabase dashboard.</p></div></td></tr>')+
     '</tbody></table></div>';
