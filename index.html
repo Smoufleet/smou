@@ -326,6 +326,26 @@ label.chk input{width:16px;height:16px;accent-color:var(--teal)}
 .acat-service{background:rgba(245,158,11,.16);color:var(--amber-2)}
 .alertcard{border-color:var(--line-2)}
 @media(max-width:560px){.acat{display:none}}
+/* hiring onboarding-command dashboard */
+.hd-top{display:grid;grid-template-columns:290px 1fr;gap:16px;margin-bottom:16px}
+.hd-ring{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.hd-ring .rsub{font-size:12.5px;color:var(--muted);margin-top:8px}
+.hd-ring .rmini{display:flex;gap:18px;margin-top:14px}
+.hd-ring .rmini div b{display:block;font-size:19px;font-weight:800}
+.hd-ring .rmini div span{font-size:11px;color:var(--muted)}
+.fstep{display:flex;align-items:center;gap:14px;margin:9px 0}
+.fstep .fn{font-size:13px;color:var(--ink-2);width:120px;font-weight:600}
+.fstep .fbar-t{flex:1;background:var(--surface-3);border-radius:9px;overflow:hidden}
+.fstep .fbar{height:34px;border-radius:9px;display:flex;align-items:center;padding:0 12px;color:#fff;font-weight:700;font-size:14px;min-width:34px}
+.hd-bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.crow{display:flex;align-items:center;gap:12px;padding:7px 0;cursor:pointer}
+.crow .cava{width:34px;height:34px;border-radius:50%;background:var(--teal-bg);color:var(--teal-ink);display:grid;place-items:center;font-weight:700;font-size:12.5px;flex:none}
+.crow .cnm{flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .ct{width:90px;height:6px;background:var(--surface-3);border-radius:6px;overflow:hidden;flex:none}
+.crow .cf{height:100%;border-radius:6px}
+.crow .cpc{width:40px;text-align:right;font-size:12px;font-weight:700}
+.crow:hover .cnm{color:var(--teal-ink)}
+@media(max-width:820px){.hd-top,.hd-bottom{grid-template-columns:1fr}}
 /* login gate */
 .authgate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:20px}
 .authcard{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:30px 26px}
@@ -1737,36 +1757,46 @@ function pageHiring(pg){
   if(LANG==="ar")transEl(pg);
 }
 function hstat(l,v,c,s,ic){return '<div class="stat card"><span class="strip" style="background:'+c+'"></span><svg class="s-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+ic+'</svg><div class="s-lab">'+l+'</div><div class="s-val">'+v+'</div><div class="s-sub">'+s+'</div></div>';}
+function hireInitials(n){n=(n||"").trim();if(!n)return "?";var p=n.split(/\s+/);return ((p[0]||"").charAt(0)+(p[1]||"").charAt(0)||p[0].charAt(0)).toUpperCase();}
 function hiringDash(){
   var H=STATE.grd.hiring||[];
   if(!H.length)return '<div class="card"><div class="card-b"><div class="empty" style="padding:32px">'+svg('<circle cx="9" cy="7" r="3.2"/><path d="M3 20v-1.5a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4V20"/>')+'<h4>No candidates yet</h4><p>Import your Excel or add candidates — the dashboard will fill in automatically.</p></div></div></div>';
   var total=H.length;
+  function up(v){return String(v||"").trim().toUpperCase();}
   var arrived=H.filter(function(r){return /ARRIV/i.test(r.status||"")&&!/NOT/i.test(r.status||"");}).length;
-  var notArr=H.filter(function(r){return /NOT ARRIV/i.test(r.status||"")||/^PENDING/i.test(r.status||"");}).length;
-  var cancel=H.filter(function(r){return /CANCEL/i.test(r.status||"");}).length;
   var ready=H.filter(function(r){return hireProgress(r).pct>=100;}).length;
+  var inproc=total-ready;
   var avg=Math.round(H.reduce(function(a,r){return a+hireProgress(r).pct;},0)/total);
-  var kpis='<div class="grid g4" style="margin-bottom:16px">'+
-    hstat("Total Candidates",total,"var(--teal)",arrived+" arrived · "+notArr+" pending",'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/>')+
-    hstat("Fully Ready",ready,"var(--good)",(total-ready)+" still in process",'<path d="M20 6 9 17l-5-5"/>')+
-    hstat("Avg Onboarding",avg+"%","var(--amber)","across all candidates",'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 4-5"/>')+
-    hstat("Cancelled",cancel,"var(--crit)",notArr+" not arrived",'<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>')+
+  function stepDone(k){return H.filter(function(r){var u=up(r[k]);return u==="DONE"||u==="PASS";}).length;}
+  var docsStarted=H.filter(function(r){return HIRE_STEPS.some(function(s){var u=up(r[s[0]]);return u==="DONE"||u==="PASS";});}).length;
+  // RING (avg readiness)
+  var C=377,dash=Math.round(avg/100*C);
+  var ring='<div class="card hd-ring">'+
+    '<svg width="152" height="152" viewBox="0 0 152 152"><circle cx="76" cy="76" r="60" fill="none" stroke="var(--surface-3)" stroke-width="16"/>'+
+    '<circle cx="76" cy="76" r="60" fill="none" stroke="var(--teal)" stroke-width="16" stroke-linecap="round" stroke-dasharray="'+dash+' '+C+'" transform="rotate(-90 76 76)"/>'+
+    '<text x="76" y="73" text-anchor="middle" font-size="34" font-weight="800" fill="var(--ink)">'+avg+'%</text>'+
+    '<text x="76" y="95" text-anchor="middle" font-size="10.5" fill="var(--muted)" style="letter-spacing:.12em">AVG READY</text></svg>'+
+    '<div class="rsub">Overall onboarding completion</div>'+
+    '<div class="rmini"><div><b>'+total+'</b><span>Total</span></div><div><b style="color:var(--good)">'+ready+'</b><span>Ready</span></div><div><b style="color:var(--amber-2)">'+inproc+'</b><span>In process</span></div></div>'+
   '</div>';
-  var nat=countBy(H,function(r){return r.nat;});
-  var natItems=Object.keys(nat).map(function(k){return {label:k,value:nat[k],color:cvar("--teal")};}).sort(function(a,b){return b.value-a.value;});
-  var veh=countBy(H,function(r){return (r.veh||"").toUpperCase();});
-  var vc=[{label:"Car",value:veh.CAR||0,color:cvar("--teal")},{label:"Bike",value:veh.BIKE||0,color:cvar("--amber")},{label:"Reporter",value:veh.REPORTER||0,color:cvar("--indigo")}];
-  var vtot=vc.reduce(function(a,b){return a+b.value;},0);
-  var charts='<div class="grid g2" style="margin-bottom:16px">'+
-    '<div class="card"><div class="card-h"><h3>By Nationality</h3></div><div class="card-b">'+(natItems.length?hbars(natItems,{}):'<div class="sub">No data</div>')+'</div></div>'+
-    '<div class="card"><div class="card-h"><h3>By Vehicle Type</h3></div><div class="card-b"><div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+donut(vc,vtot,"total")+'<div style="flex:1;min-width:120px">'+vc.map(function(i){return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:'+i.color+'"></span><span style="flex:1;font-size:13px;color:var(--ink-2)">'+i.label+'</span><b class="mono">'+i.value+'</b></div>';}).join("")+'</div></div></div></div>'+
-  '</div>';
-  var pend=HIRE_STEPS.map(function(s){var c=H.filter(function(r){return String(r[s[0]]||"").trim().toUpperCase()==="PENDING";}).length;return {label:s[1],value:c,color:cvar("--amber")};}).filter(function(x){return x.value>0;}).sort(function(a,b){return b.value-a.value;});
-  var pendCard='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>⏳ Pending Documents</h3><span class="hint">how many candidates each document is pending for</span></div><div class="card-b">'+(pend.length?hbars(pend,{}):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>All documents cleared</h4><p>No pending documents across candidates.</p></div>')+'</div></div>';
+  // FUNNEL
+  var fun=[["Arrived",arrived,"var(--good)"],["Docs Started",docsStarted,"var(--teal)"],["Medical Done",stepDone("medical"),"var(--amber)"],["License Done",stepDone("license"),"var(--amber-2)"],["Fully Ready",ready,"var(--crit)"]];
+  var fmax=Math.max(total,1);
+  var funnel='<div class="card"><div class="card-h"><h3>Onboarding Funnel</h3></div><div class="card-b">'+
+    fun.map(function(f){var w=Math.max(6,Math.round(f[1]/fmax*100));return '<div class="fstep"><span class="fn">'+f[0]+'</span><span class="fbar-t"><span class="fbar" style="width:'+w+'%;background:'+f[2]+'">'+f[1]+'</span></span></div>';}).join("")+
+  '</div></div>';
+  // PENDING DOCS
+  var pend=HIRE_STEPS.map(function(s){return {label:s[1],value:H.filter(function(r){return up(r[s[0]])==="PENDING";}).length};}).filter(function(x){return x.value>0;}).sort(function(a,b){return b.value-a.value;});
+  var pmax=Math.max.apply(null,pend.map(function(x){return x.value;}).concat([1]));
+  var pendCard='<div class="card"><div class="card-h"><h3>⏳ Pending Documents</h3><span class="hint">per document</span></div><div class="card-b">'+
+    (pend.length?pend.map(function(p){var ratio=p.value/total;var col=ratio>=0.75?"var(--crit)":ratio>=0.4?"var(--amber)":"var(--teal)";var w=Math.max(4,Math.round(p.value/pmax*100));return '<div class="bar"><span class="bl">'+esc(p.label)+'</span><span class="bt"><span class="bf" style="width:'+w+'%;background:'+col+'"></span></span><span class="bv">'+p.value+'</span></div>';}).join(""):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>All documents cleared</h4><p>Nothing pending across candidates.</p></div>')+
+  '</div></div>';
+  // CANDIDATE PROGRESS
   var sorted=H.slice().sort(function(a,b){return hireProgress(b).pct-hireProgress(a).pct;});
-  var readyCard='<div class="card"><div class="card-h"><h3>Onboarding Progress</h3><span class="hint">'+ready+' fully ready</span></div><div class="card-b">'+
-    sorted.slice(0,12).map(function(r){var p=hireProgress(r);var col=p.pct>=100?"var(--good)":p.pct>=50?"var(--amber)":"var(--crit)";return '<div class="barrow" data-route="grd/hiring/'+r.id+'" style="cursor:pointer"><div class="bl" style="max-width:200px">'+esc(r.nameEn||"—")+'</div><div class="bt"><div class="bf" style="width:'+p.pct+'%;background:'+col+'"></div></div><div class="bv">'+p.done+'/'+p.total+'</div></div>';}).join("")+'</div></div>';
-  return kpis+charts+pendCard+readyCard;
+  var progCard='<div class="card"><div class="card-h"><h3>Candidate Progress</h3><span class="hint">'+ready+' fully ready</span></div><div class="card-b">'+
+    sorted.slice(0,14).map(function(r){var p=hireProgress(r);var col=p.pct>=100?"var(--good)":p.pct>=50?"var(--amber)":"var(--crit)";return '<div class="crow" data-route="grd/hiring/'+r.id+'"><span class="cava">'+esc(hireInitials(r.nameEn))+'</span><span class="cnm">'+esc(r.nameEn||"—")+'</span><span class="ct"><span class="cf" style="width:'+p.pct+'%;background:'+col+'"></span></span><span class="cpc">'+p.pct+'%</span></div>';}).join("")+
+  '</div></div>';
+  return '<div class="hd-top">'+ring+funnel+'</div><div class="hd-bottom">'+pendCard+progCard+'</div>';
 }
 function pageOverview(pg){
   var d=STATE.grd.drivers;
