@@ -940,7 +940,8 @@ Object.assign(I18N,{
 "Document":"المستند","Document / Ref No.":"رقم المستند / المرجع","Vehicle / Plate":"المركبة / اللوحة","Current User":"المستخدم الحالي","Current User (Employee)":"المستخدم الحالي (موظف)","Linked Vehicle (optional)":"مركبة مرتبطة (اختياري)","Validity":"الصلاحية","Issue Date":"تاريخ الإصدار","Expiry Date":"تاريخ الانتهاء","Issue":"الإصدار","Expiry":"الانتهاء",
 "Odometer & Service":"العداد والصيانة","Current Odometer (km)":"عداد المسافة الحالي (كم)","Odometer at Last Service (km)":"العداد عند آخر صيانة (كم)","Service Interval (km)":"فترة الصيانة (كم)","Last Service Date":"تاريخ آخر صيانة","Odometer (km)":"العداد (كم)","Since Service":"منذ الصيانة","Next Service":"الصيانة القادمة",
 "Service Status":"حالة الصيانة","Daily KM Log":"سجل الكيلومترات اليومي","Add today’s KM":"أضف كيلومترات اليوم","Mark serviced":"تحديد كمُصان","Add KM":"إضافة كيلومترات","KM driven today":"الكيلومترات المقطوعة اليوم",
-"Alerts & Expiries":"التنبيهات والانتهاءات","Alerts · 30d":"التنبيهات · 30 يوم","Service due":"صيانة مستحقة","Due soon":"قريباً","Expired":"منتهي","Employee":"موظف","Company":"شركة","Service":"صيانة"
+"Alerts & Expiries":"التنبيهات والانتهاءات","Alerts · 30d":"التنبيهات · 30 يوم","Service due":"صيانة مستحقة","Due soon":"قريباً","Expired":"منتهي","Employee":"موظف","Company":"شركة","Service":"صيانة",
+"Hiring / Onboarding":"التوظيف","Candidate":"مرشح","Onboarding Checklist":"قائمة الإجراءات","Onboarding":"الإجراءات","Arrived":"وصل","Not Arrived":"لم يصل","Cancel":"ملغى","Pending":"قيد الانتظار","Done":"تم","Candidate Name (English)":"اسم المرشح (إنجليزي)","Candidate Name (Arabic)":"اسم المرشح (عربي)","Arrived Date":"تاريخ الوصول","Reference":"المرجع"
 });
 var I18N_LC={};for(var _k in I18N){if(I18N.hasOwnProperty(_k))I18N_LC[_k.toLowerCase()]=I18N[_k];}
 function transToken(k){k=k.trim();if(k==="")return k;
@@ -973,7 +974,7 @@ var STATE=null;
 if(window.__STATE__) STATE=clone(window.__STATE__);
 if(!STATE){ try{var ls=localStorage.getItem("smou-erp");if(ls)STATE=JSON.parse(ls);}catch(e){} }
 if(!STATE) STATE=clone(window.__SEEDSTATE__);
-if(STATE&&STATE.grd){if(!STATE.grd.compdocs)STATE.grd.compdocs=[];if(!STATE.grd.service)STATE.grd.service=[];}
+if(STATE&&STATE.grd){if(!STATE.grd.compdocs)STATE.grd.compdocs=[];if(!STATE.grd.service)STATE.grd.service=[];if(!STATE.grd.hiring)STATE.grd.hiring=[];}
 if(STATE&&!STATE.finance)STATE.finance={expenses:[]};
 // sanitize zone lookup junk
 if(STATE.lookups&&STATE.lookups.zones){STATE.lookups.zones=STATE.lookups.zones.filter(function(z){return z&&["CO.","DRIVER","HEADER"].indexOf(z)<0;});
@@ -1002,9 +1003,9 @@ function cap(s){s=(s||"").trim();if(!s)return "—";return s.charAt(0)+s.slice(1
 function uid(p){return p+"-"+Date.now().toString(36)+Math.floor(Math.random()*1000);}
 
 function statusClass(s){s=(s||"").toUpperCase();
-  if(s.indexOf("ACTIVE")>=0||/WORK/.test(s))return "good";
-  if(s.indexOf("PROCESS")>=0||/SERVICE|GARAGE/.test(s))return "warn";
-  if(s.indexOf("TERMIN")>=0||/ACCIDENT|POLIC/.test(s))return "crit";
+  if(s.indexOf("ACTIVE")>=0||/WORK/.test(s)||s.indexOf("ARRIVED")>=0&&s.indexOf("NOT")<0||s==="DONE"||s==="PASS")return "good";
+  if(s.indexOf("PROCESS")>=0||/SERVICE|GARAGE/.test(s)||s.indexOf("PENDING")>=0||s.indexOf("NOT ARRIVED")>=0)return "warn";
+  if(s.indexOf("TERMIN")>=0||/ACCIDENT|POLIC/.test(s)||s.indexOf("CANCEL")>=0||s==="FAIL")return "crit";
   if(s.indexOf("OFFICE")>=0||/VACAT|SHOWROOM|SPARE/.test(s))return "indigo";
   return "neutral";}
 function pill(txt,cls){return '<span class="pill '+cls+'"><span class="pd"></span>'+esc(txt)+'</span>';}
@@ -1067,14 +1068,14 @@ function sbClient(){
   if(window.__SBCLIENT__&&typeof window.__SBCLIENT__.from==="function"){SB=window.__SBCLIENT__;}
   return SB;
 }
-var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["expenses",function(){return STATE.finance.expenses;}]];
-var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],expenses:["finance","expenses"]};
+var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["expenses",function(){return STATE.finance.expenses;}]];
+var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],expenses:["finance","expenses"]};
 var shadow={};
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
-  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],expenses:[]};
+  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
-  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.finance.expenses=buckets.expenses;
+  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.finance.expenses=buckets.expenses;
   snapshotShadow();
 }
 function sbLoad(){
@@ -1183,6 +1184,23 @@ function toast(msg,cls){
 /* ---------- entity configs ---------- */
 function drNameList(){return driverNames();}
 var COMPDOC_TYPES=["Ehtimad Tokiya","Ehtimad Murror","Company License","Baldiya Certificate","Car Insurance","Daftar","Vehicle Food & Nutrition","Tire","Battery","Other"];
+/* hiring / onboarding */
+var HIRE_STEPS=[["medical","Medical"],["finger","Finger"],["licAttest","Lic Attest"],["photo","Photo"],["eyetest","Eye Test"],["istamarah","Istamarah"],["workpermit","Work Permit"],["insurance","Insurance"],["residency","Residency"],["mbId","MB ID"],["civilId","Civil ID"],["tryAppoint","Try Appoint"],["passFail","Pass / Fail"],["license","License"],["healthCard","Health Card"],["criminal","Criminal"],["mobile","Mobile"],["vehicleDoc","Vehicle Doc"],["bankAc","Bank A/C"]];
+var HIRE_FOOD=[["food1","Food 1M"],["food2","Food 2M"],["food3","Food 3M"],["food4","Food 4M"],["food5","Food 5M"],["food6","Food 6M"]];
+function hireOpts(){return ["DONE","PENDING","CANCEL","N/A"];}
+function foodOpts(){return ["DONE","PENDING","N/A"];}
+function hireProgress(r){var d=0;HIRE_STEPS.forEach(function(s){var u=String(r[s[0]]||"").trim().toUpperCase();if(u==="DONE"||u==="PASS")d++;});return {done:d,total:HIRE_STEPS.length,pct:Math.round(d/HIRE_STEPS.length*100)};}
+var hiringFields=[
+  {g:"Candidate"},
+  {k:"nameEn",l:"Candidate Name (English)",t:"text",req:true},{k:"nameAr",l:"Candidate Name (Arabic)",t:"text"},
+  {k:"nat",l:"Nationality",t:"datalist",opts:"nationalities"},{k:"veh",l:"Vehicle Type",t:"select",opts:"vehicleTypes"},{k:"passport",l:"Passport No.",t:"text"},
+  {g:"Arrival"},
+  {k:"arrived",l:"Arrived Date",t:"date"},{k:"status",l:"Status",t:"select",optsFn:function(){return ["ARRIVED","NOT ARRIVED","CANCEL","PENDING"];}},
+  {k:"reference",l:"Reference",t:"text"},{k:"company",l:"Company",t:"text"},
+  {g:"Visa"},
+  {k:"moiRef",l:"MOI Ref",t:"text"},{k:"visaNo",l:"Visa No.",t:"text"},{k:"visaIssue",l:"Visa Issue",t:"date"},{k:"visaExpiry",l:"Visa Expiry",t:"date"},
+  {g:"Onboarding Checklist"}
+].concat(HIRE_STEPS.map(function(s){return {k:s[0],l:s[1],t:"select",optsFn:hireOpts};})).concat([{g:"Food (monthly)"}]).concat(HIRE_FOOD.map(function(s){return {k:s[0],l:s[1],t:"select",optsFn:foodOpts};}));
 var ENT={
   drivers:{title:"Employees",singular:"Employee",path:"grd.drivers",idp:"d",
     searchKeys:["name","no","civilId","mobile","talabat","keeta","nat","accom"],
@@ -1323,6 +1341,18 @@ var ENT={
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
+  hiring:{title:"Hiring / Onboarding",singular:"Candidate",path:"grd.hiring",idp:"hc",
+    searchKeys:["nameEn","nameAr","passport","nat","reference","status","visaNo"],
+    filters:[{k:"status",lab:"All statuses",opts:null},{k:"nat",lab:"All nationalities",opts:"nationalities"},{k:"veh",lab:"All vehicles",opts:"vehicleTypes"}],
+    columns:[
+      {h:"Candidate",v:function(r){return '<div style="min-width:0"><span class="nm">'+esc(r.nameEn||"—")+'</span>'+(r.nameAr?'<div class="sub" dir="rtl">'+esc(r.nameAr)+'</div>':"")+'</div>';},s:function(r){return (r.nameEn||"").toLowerCase();}},
+      {h:"Nationality",v:function(r){return esc(r.nat||"—");},s:function(r){return r.nat;}},
+      {h:"Vehicle",v:function(r){return esc(r.veh||"—");},s:function(r){return r.veh;}},
+      {h:"Status",v:function(r){return r.status?pill(cap(r.status),statusClass(r.status)):"—";},s:function(r){return r.status;}},
+      {h:"Arrived",v:function(r){return '<span class="mono">'+fmtD(r.arrived)+'</span>';},s:function(r){var d=parseD(r.arrived);return d?d.getTime():0;}},
+      {h:"Onboarding",v:function(r){var p=hireProgress(r);var col=p.pct>=100?"var(--good)":p.pct>=50?"var(--amber)":"var(--crit)";return '<div style="display:flex;align-items:center;gap:8px;min-width:120px"><div class="bt" style="width:80px"><div class="bf" style="width:'+p.pct+'%;background:'+col+'"></div></div><span class="mono" style="font-size:11px">'+p.done+'/'+p.total+'</span></div>';},s:function(r){return hireProgress(r).pct;}}
+    ],
+    fields:hiringFields},
   expenses:{title:"Expense Log",singular:"Expense",path:"finance.expenses",idp:"e",
     searchKeys:["category","sub","driver","platform","notes","plate"],
     filters:[{k:"month",lab:"All months",opts:"months"},{k:"category",lab:"All categories",opts:"categories"},{k:"plate",lab:"All vehicles",opts:null},{k:"driver",lab:"All drivers",opts:null},{k:"platform",lab:"All platforms",opts:"platforms"}],
@@ -1360,7 +1390,8 @@ var NAVGROUPS=[
     ]},
     {r:"grd/housing",t:"Housing",ent:"housing",ic:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'},
     {r:"grd/compdocs",t:"Company Documents",ent:"compdocs",ic:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'},
-    {r:"grd/service",t:"Vehicle Service",ent:"service",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'}
+    {r:"grd/service",t:"Vehicle Service",ent:"service",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'},
+    {r:"grd/hiring",t:"Hiring / Onboarding",ent:"hiring",ic:'<circle cx="9" cy="7" r="3.2"/><path d="M3 20v-1.5a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4V20"/><path d="M19 8v6M16 11h6"/>'}
   ]},
   {lab:"Finance",key:"finance",collapsible:true,items:[
     {r:"finance",t:"Dashboard",ic:'<path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/>'},
@@ -1563,7 +1594,7 @@ function closeForm(){var ov=$("#overlay");if(ov)ov.remove();}
 function confirmDelete(ent,id){
   if(!can("delete")){toast("Only an admin can delete records.","err");return;}
   var cfg=ENT[ent];var rec=store(ent).filter(function(r){return r.id===id;})[0];if(!rec)return;
-  var label=rec.name||rec.plate||rec.mobile||rec.room||rec.card||(rec.category+" "+(rec.amount||""))||cfg.singular;
+  var label=rec.name||rec.nameEn||rec.plate||rec.room||rec.card||rec.mobile||(rec.category+" "+(rec.amount||""))||cfg.singular;
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
   ov.innerHTML='<div class="modal" style="max-width:420px"><div class="modal-b" style="text-align:center;padding:28px 24px"><div style="width:48px;height:48px;border-radius:12px;background:var(--crit-bg);color:var(--crit);display:grid;place-items:center;margin:0 auto 14px">'+svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>')+'</div><h3 style="font-size:18px;margin-bottom:6px">Delete this '+esc(cfg.singular.toLowerCase())+'?</h3><p style="color:var(--ink-2);font-size:13.5px;margin:0">“'+esc(label)+'” will be permanently removed for everyone.</p></div><div class="modal-f" style="justify-content:center"><button class="btn ghost" data-act="close">Cancel</button><button class="btn" style="background:var(--crit);border-color:var(--crit);color:#fff" data-act="dodel" data-ent="'+ent+'" data-id="'+id+'">Delete</button></div></div>';
   document.body.appendChild(ov);
@@ -2138,6 +2169,9 @@ function detailSubtitle(ent,r){
   if(ent==="fuel")return [r.vehType,r.company,r.site].filter(Boolean).join(" · ");
   if(ent==="sims")return [r.name,r.company].filter(Boolean).join(" · ");
   if(ent==="housing")return "Capacity "+(r.cap||0)+" · Occupied "+(r.actual||0);
+  if(ent==="hiring")return [r.nat,r.veh,cap(r.status),r.reference].filter(Boolean).join(" · ");
+  if(ent==="compdocs")return [r.doc,r.plate,r.user].filter(Boolean).join(" · ");
+  if(ent==="service")return [r.plate,r.user].filter(Boolean).join(" · ");
   if(ent==="expenses")return [fmtD(r.date),r.platform,r.payment].filter(Boolean).join(" · ");
   return "";
 }
@@ -2145,6 +2179,7 @@ function detailVal(ent,f,rec){
   var v=rec[f.k];
   if(v==null||String(v).trim()==="")return '<span style="color:var(--muted)">—</span>';
   if(f.k==="status")return pill(cap(v),statusClass(v));
+  if(typeof v==="string"&&/^(DONE|PENDING|CANCEL|PASS|FAIL|N\/A)$/i.test(v.trim()))return pill(v.trim().toUpperCase()==="N/A"?"N/A":cap(v),statusClass(v));
   if(/Exp$/.test(f.k)||f.k==="expiry")return expCell(v);
   if(f.t==="date"||f.k==="doi"||f.k==="simIssue")return '<span class="mono">'+esc(fmtD(v))+'</span>';
   if(f.k==="amount")return '<span class="mono" style="color:var(--amber-2);font-weight:600">'+money(num(v))+' KWD</span>';
@@ -2156,7 +2191,7 @@ function pageDetail(pg,ent,id){
   var cfg=ENT[ent];var rec=store(ent).filter(function(r){return r.id===id;})[0];
   if(!rec){go(ent==="expenses"?"finance/log":"grd/"+ent);return;}
   curEnt=ent;
-  var primary=(rec.name||rec.plate||rec.mobile||rec.room||rec.card||((rec.category||"")+(rec.amount?" · "+money(num(rec.amount))+" KWD":""))||cfg.singular);
+  var primary=(rec.name||rec.nameEn||rec.plate||rec.room||rec.card||rec.mobile||((rec.category||"")+(rec.amount?" · "+money(num(rec.amount))+" KWD":""))||cfg.singular);
   setTitle(primary||cfg.singular,crumbFor(ent)+" · Details");
   var groups=[],cur=null;
   cfg.fields.forEach(function(f){if(f.g){cur={g:f.g,items:[]};groups.push(cur);}else{if(!cur){cur={g:"Details",items:[]};groups.push(cur);}cur.items.push(f);}});
@@ -2305,7 +2340,7 @@ function pdfDate(f,v){return (f&&(f.t==="date"||/Exp$|Issue$|Return$|^doi$|^date
 /* ---- per-entry record PDF ---- */
 function entryPDF(ent,id){
   var doc=pdfNew();if(!doc)return;var cfg=ENT[ent];var rec=recById(ent,id);if(!rec)return;
-  var primary=(rec.name||rec.plate||rec.mobile||rec.room||rec.card||((rec.category||"")+(rec.amount?" "+money(num(rec.amount))+" KWD":""))||cfg.singular);
+  var primary=(rec.name||rec.nameEn||rec.plate||rec.room||rec.card||rec.mobile||((rec.category||"")+(rec.amount?" "+money(num(rec.amount))+" KWD":""))||cfg.singular);
   var y=pdfHead(doc,cfg.singular+" Record",primary);
   var groups=[],cur=null;
   cfg.fields.forEach(function(f){if(f.g){cur={g:f.g,items:[]};groups.push(cur);}else{if(!cur){cur={g:"Details",items:[]};groups.push(cur);}cur.items.push(f);}});
