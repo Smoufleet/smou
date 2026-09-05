@@ -243,6 +243,13 @@ table.dt td .sub{font-size:11px;color:var(--muted)}
 .sub-tabs{display:flex;gap:3px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:4px;width:max-content;max-width:100%;overflow:auto;margin-bottom:16px}
 .sub-tab{border:0;background:transparent;color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .sub-tab.active{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
+.pl-filter{display:flex;gap:3px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:4px;width:max-content}
+.pl-chip{border:0;background:transparent;color:var(--ink-2);font-family:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.pl-chip.active{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
+.pl-chip .pd{width:8px;height:8px;border-radius:50%}
+.dd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.dd-mrow td{padding:8px 10px;border-top:1px solid var(--line)}
+@media(max-width:640px){.dd-grid{grid-template-columns:repeat(2,1fr)}}
 
 @media(max-width:860px){
   .app{grid-template-columns:1fr}
@@ -971,7 +978,7 @@ Object.assign(I18N,{
 "Odometer & Service":"العداد والصيانة","Current Odometer (km)":"عداد المسافة الحالي (كم)","Odometer at Last Service (km)":"العداد عند آخر صيانة (كم)","Service Interval (km)":"فترة الصيانة (كم)","Last Service Date":"تاريخ آخر صيانة","Odometer (km)":"العداد (كم)","Since Service":"منذ الصيانة","Next Service":"الصيانة القادمة",
 "Service Status":"حالة الصيانة","Daily KM Log":"سجل الكيلومترات اليومي","Add today’s KM":"أضف كيلومترات اليوم","Mark serviced":"تحديد كمُصان","Add KM":"إضافة كيلومترات","KM driven today":"الكيلومترات المقطوعة اليوم",
 "Alerts & Expiries":"التنبيهات والانتهاءات","Alerts · 30d":"التنبيهات · 30 يوم","Service due":"صيانة مستحقة","Due soon":"قريباً","Expired":"منتهي","Employee":"موظف","Company":"شركة","Service":"صيانة",
-"Hiring / Onboarding":"التوظيف","Candidate":"مرشح","Fleet Ops":"العمليات الميدانية","Traffic Fines":"المخالفات المرورية","Accident / Incident":"الحوادث","Maintenance":"الصيانة","Attendance / Leave":"الحضور / الإجازات","Fine":"مخالفة","Incident":"حادث","Violation":"المخالفة","Severity":"الخطورة","Repair Cost (KWD)":"تكلفة الإصلاح","Leave":"إجازة","Vacation":"عطلة","Absent":"غائب","Present":"حاضر","Sick":"مريض","Payroll":"الرواتب","Payslip":"قسيمة الراتب","Income / Revenue":"الإيرادات","Income":"إيراد","Reports & Export":"التقارير والتصدير","Reports":"التقارير","Profit by Vehicle":"الربح حسب المركبة","Profit by Driver":"الربح حسب السائق","Fuel Efficiency":"كفاءة الوقود","Budget vs Actual":"الميزانية مقابل الفعلي","Net Profit":"صافي الربح","Monthly Budgets":"الميزانيات الشهرية","Basic Salary (KWD)":"الراتب الأساسي","Allowances (KWD)":"البدلات","Net Pay":"صافي الراتب","Deductions":"الاستقطاعات","Earnings":"الأرباح","Onboarding Checklist":"قائمة الإجراءات","Onboarding":"الإجراءات","Arrived":"وصل","Not Arrived":"لم يصل","Cancel":"ملغى","Pending":"قيد الانتظار","Done":"تم","Candidate Name (English)":"اسم المرشح (إنجليزي)","Candidate Name (Arabic)":"اسم المرشح (عربي)","Arrived Date":"تاريخ الوصول","Reference":"المرجع"
+"Hiring / Onboarding":"التوظيف","Candidate":"مرشح","Fleet Ops":"العمليات الميدانية","Traffic Fines":"المخالفات المرورية","Accident / Incident":"الحوادث","Maintenance":"الصيانة","Attendance / Leave":"الحضور / الإجازات","Fine":"مخالفة","Incident":"حادث","Violation":"المخالفة","Severity":"الخطورة","Repair Cost (KWD)":"تكلفة الإصلاح","Leave":"إجازة","Vacation":"عطلة","Absent":"غائب","Present":"حاضر","Sick":"مريض","Payroll":"الرواتب","Payslip":"قسيمة الراتب","Income / Revenue":"الإيرادات","Income":"إيراد","Reports & Export":"التقارير والتصدير","Reports":"التقارير","Order Overview":"نظرة عامة على الطلبات","Performance":"الأداء","By Driver":"حسب السائق","Records":"السجلات","Total Orders":"إجمالي الطلبات","Active Drivers":"السائقون النشطون","Import report":"استيراد التقرير","Profit by Vehicle":"الربح حسب المركبة","Profit by Driver":"الربح حسب السائق","Fuel Efficiency":"كفاءة الوقود","Budget vs Actual":"الميزانية مقابل الفعلي","Net Profit":"صافي الربح","Monthly Budgets":"الميزانيات الشهرية","Basic Salary (KWD)":"الراتب الأساسي","Allowances (KWD)":"البدلات","Net Pay":"صافي الراتب","Deductions":"الاستقطاعات","Earnings":"الأرباح","Onboarding Checklist":"قائمة الإجراءات","Onboarding":"الإجراءات","Arrived":"وصل","Not Arrived":"لم يصل","Cancel":"ملغى","Pending":"قيد الانتظار","Done":"تم","Candidate Name (English)":"اسم المرشح (إنجليزي)","Candidate Name (Arabic)":"اسم المرشح (عربي)","Arrived Date":"تاريخ الوصول","Reference":"المرجع"
 });
 var I18N_LC={};for(var _k in I18N){if(I18N.hasOwnProperty(_k))I18N_LC[_k.toLowerCase()]=I18N[_k];}
 function transToken(k){k=k.trim();if(k==="")return k;
@@ -1004,7 +1011,7 @@ var STATE=null;
 if(window.__STATE__) STATE=clone(window.__STATE__);
 if(!STATE){ try{var ls=localStorage.getItem("smou-erp");if(ls)STATE=JSON.parse(ls);}catch(e){} }
 if(!STATE) STATE=clone(window.__SEEDSTATE__);
-if(STATE&&STATE.grd){["compdocs","service","hiring","fines","incidents","maintenance","attendance"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});}
+if(STATE&&STATE.grd){["compdocs","service","hiring","fines","incidents","maintenance","attendance","perf"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});}
 if(STATE&&!STATE.finance)STATE.finance={expenses:[]};
 if(STATE&&STATE.finance){["payroll","income","budgets"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});}
 // sanitize zone lookup junk
@@ -1099,14 +1106,14 @@ function sbClient(){
   if(window.__SBCLIENT__&&typeof window.__SBCLIENT__.from==="function"){SB=window.__SBCLIENT__;}
   return SB;
 }
-var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["expenses",function(){return STATE.finance.expenses;}]];
-var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],expenses:["finance","expenses"]};
+var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["perf",function(){return STATE.grd.perf;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["expenses",function(){return STATE.finance.expenses;}]];
+var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],expenses:["finance","expenses"]};
 var shadow={};
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
-  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],payroll:[],income:[],budgets:[],expenses:[]};
+  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],payroll:[],income:[],budgets:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
-  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
+  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
   snapshotShadow();
 }
 function sbLoad(){
@@ -1543,6 +1550,7 @@ var NAVGROUPS=[
     {r:"alerts",t:"Alerts & Expiries",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',cnt:function(){return computeAlerts().length;}},
     {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'}
   ]},
+  {lab:"Performance",items:[{r:"orders",t:"Order Overview",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="14" r="1"/><circle cx="17" cy="9" r="1"/>'}]},
   {lab:"GRD Operations",key:"grd",collapsible:true,items:[
     {r:"grd/drivers",t:"Employee",ent:"drivers",ic:'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><path d="M16 4a3.2 3.2 0 0 1 0 6M21 20v-1.5a4 4 0 0 0-3-3.9"/>'},
     {sub:true,key:"assets",lab:"Assets",ic:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',items:[
@@ -1644,6 +1652,7 @@ function renderPage(){
   if(route==="users"){setTitle("Users & Roles","Admin · manage staff access");newBtn.hidden=true;pageUsers(pg);return;}
   if(route==="reports"){newBtn.hidden=true;pageReports(pg);return;}
   if(route==="alerts"){setTitle("Alerts & Expiries","Expired + expiring within 30 days");newBtn.hidden=true;pageAlerts(pg);return;}
+  if(route==="orders"){setTitle("Order Overview","Driver performance · Talabat & Keeta");newBtn.hidden=true;pageOrders(pg);return;}
   if(route==="overview"){setTitle("Overview","Fleet & finance at a glance");newBtn.hidden=true;pageOverview(pg);}
   else if(route==="finance"){setTitle("Finance Dashboard","Cost control · SMOU International");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageFinance(pg);}
   else if(route==="finance/new"){setTitle("New Expense","Finance · daily entry");newBtn.hidden=true;pageNewExpense(pg);}
@@ -1904,6 +1913,7 @@ function pageUsers(pg){
     if(LANG==="ar")transEl(box);
   }).catch(function(e){var box=document.getElementById("usersBox");if(box)box.innerHTML='<div class="autherr">'+esc((e&&e.message)||e)+'</div>';});
 }
+document.addEventListener("change",function(e){var of=e.target.closest("#ordImportFile");if(of&&of.files&&of.files[0]){var fr=new FileReader();fr.onload=function(){parseOrdersWB(fr.result);};fr.readAsArrayBuffer(of.files[0]);of.value="";}});
 document.addEventListener("change",function(e){var s=e.target.closest("[data-urole]");if(!s)return;var uid=s.getAttribute("data-uid"),role=s.value;s.disabled=true;SB.from("profiles").update({role:role}).eq("id",uid).then(function(r){s.disabled=false;if(r&&r.error)toast("Couldn't update role: "+r.error.message,"err");else toast("Role updated to "+roleLabel(role)+".","good");}).catch(function(){s.disabled=false;toast("Update failed.","err");});});
 var hiringView="dash";
 function pageHiring(pg){
@@ -1967,6 +1977,149 @@ document.addEventListener("click",function(e){var pr=e.target.closest("[data-pen
 function pageAlerts(pg){
   pg.innerHTML=renderAlertPanel(computeAlerts());
   if(LANG==="ar")transEl(pg);
+}
+/* ============ ORDER OVERVIEW (Driver Performance / UTR) ============ */
+function perfUTR(r){var d=num(r.days)||0;return d>0?(num(r.orders)||0)/d:0;}
+function fmtN(n){n=num(n);return n==null?"0":Math.round(n).toLocaleString("en-US");}
+function normDriver(s){s=String(s||"").trim();s=s.replace(/\s+\d+\s*[A-Za-z]?\s*[-–]\s*[A-Za-z0-9]+\s*$/,"");return s.replace(/\s+/g," ").trim().toUpperCase();}
+function parseOrdersWB(buf){
+  if(!can("edit")){toast("You don't have permission to import.","err");return;}
+  if(!xlsxReady()){toast("Excel engine still loading — try again in a moment.","err");return;}
+  var wb;try{wb=XLSX.read(new Uint8Array(buf),{type:"array",cellDates:true});}catch(e){toast("Couldn't read that file.","err");return;}
+  var monMap=[["JAN","Jan"],["FEB","Feb"],["MAR","Mar"],["APR","Apr"],["MAY","May"],["JUN","Jun"],["JUL","Jul"],["AUG","Aug"],["SEP","Sep"],["OCT","Oct"],["NOV","Nov"],["DEC","Dec"]];
+  function hIdx(h,fn){for(var i=0;i<h.length;i++){if(fn(String(h[i]==null?"":h[i]).trim().toUpperCase()))return i;}return -1;}
+  var added=[],combos={};
+  wb.SheetNames.forEach(function(sn){
+    var up=sn.toUpperCase();
+    var platform=/TALABAT/.test(up)?"Talabat":/KEETA/.test(up)?"Keeta":"";
+    if(!platform)return;
+    var month="";for(var i=0;i<monMap.length;i++){if(up.indexOf(monMap[i][0])>=0){month=monMap[i][1];break;}}
+    var aoa;try{aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:"",blankrows:false});}catch(e){return;}
+    // header row = first row mentioning any of these header words
+    var hi=-1;for(var r=0;r<Math.min(10,aoa.length);r++){var ru=(aoa[r]||[]).map(function(x){return String(x).toUpperCase();}).join("|");if(/COURIER|RIDER|VDA|TOTAL ORDER|DRIVER|FIRST/.test(ru)){hi=r;break;}}
+    if(hi<0)return;
+    var H=aoa[hi];
+    var year=2026;H.forEach(function(c){if(c instanceof Date)year=c.getFullYear();else{var mm=String(c).match(/20\d\d/);if(mm)year=+mm[0];}});
+    var ordersIdx=hIdx(H,function(s){return s.indexOf("ORDER")>=0;});if(ordersIdx<0)ordersIdx=hIdx(H,function(s){return s==="TOTAL";});
+    if(ordersIdx<0)return;
+    var daysIdx=hIdx(H,function(s){return s.indexOf("VDA")>=0;});
+    var courierIdx=hIdx(H,function(s){return s==="ID"||s.indexOf("COURIER")>=0;});
+    var compIdx=hIdx(H,function(s){return s.indexOf("COMPANY")>=0;});
+    // detect vehicle column from data values (CAR/BIKE/etc) → name is the columns before it
+    var vehIdx=-1;for(var vc=2;vc<H.length;vc++){var hit=0,tt=0;for(var s2=hi+1;s2<Math.min(hi+8,aoa.length);s2++){var val=String(((aoa[s2]||[])[vc])||"").trim().toUpperCase();if(val){tt++;if(/^(CAR|BIKE|REPORTER|MOTOR|CYCLE|SCOOTER|VAN|BICYCLE)$/.test(val))hit++;}}if(tt&&hit>=Math.ceil(tt/2)){vehIdx=vc;break;}}
+    var nameEnd=vehIdx>2?vehIdx:3;
+    for(var d=hi+1;d<aoa.length;d++){var row=aoa[d];if(!row)continue;
+      var name=normDriver(row.slice(2,nameEnd).map(function(x){return String(x==null?"":x).trim();}).filter(Boolean).join(" "));
+      if(!name||/^DRIVER|^TOTAL$|^RIDER|^COURIER|^GRAND|^FIRST|^SR/.test(name))continue;
+      var orders=num(row[ordersIdx]);if(orders==null||orders==="")continue;
+      var days=daysIdx>=0?num(row[daysIdx]):null;
+      if(days==null){days=0;for(var c=ordersIdx+1;c<row.length;c++){var v=num(row[c]);if(v&&v>0)days++;}}
+      added.push({id:uid("po"),courierId:String((courierIdx>=0?row[courierIdx]:"")||"").trim(),driver:name,vehicle:String((vehIdx>=0?row[vehIdx]:"")||"").trim(),company:String((compIdx>=0?row[compIdx]:"")||"").trim(),platform:platform,month:month,year:String(year),days:days||0,orders:orders||0});
+      combos[platform+"|"+month+"|"+year]=1;
+    }
+  });
+  if(!added.length){toast("No performance rows found — check the file (needs Talabat/Keeta monthly sheets).","err");return;}
+  STATE.grd.perf=(STATE.grd.perf||[]).filter(function(r){return !combos[r.platform+"|"+r.month+"|"+r.year];});
+  STATE.grd.perf=added.concat(STATE.grd.perf);
+  persist();ordersView="dash";renderApp();toast("Imported "+added.length+" performance rows across "+Object.keys(combos).length+" month/platform sheets.","good");
+}
+var ordersView="dash";
+var ordersPlat="all";
+function moIdx(m){var i=MONS.indexOf(m);if(i<0)i=MON.indexOf(m);return i;}
+function ordFilter(P){return ordersPlat==="all"?P:P.filter(function(r){return r.platform===ordersPlat;});}
+function pageOrders(pg){
+  curEnt=null;
+  var P=STATE.grd.perf||[];
+  var subtabs='<div class="sub-tabs" style="margin:0">'+[["dash","Dashboard"],["records","Records"],["driver","By Driver"]].map(function(t){return '<button class="sub-tab'+(ordersView===t[0]?" active":"")+'" data-act="ordview" data-v="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
+  var pcol={all:"var(--muted)",Talabat:cvar("--amber"),Keeta:cvar("--teal")};
+  var plfilter='<div class="pl-filter">'+[["all","All"],["Talabat","Talabat"],["Keeta","Keeta"]].map(function(t){return '<button class="pl-chip'+(ordersPlat===t[0]?" active":"")+'" data-act="ordplat" data-v="'+t[0]+'"><span class="pd" style="background:'+pcol[t[0]]+'"></span>'+t[1]+'</button>';}).join("")+'</div>';
+  var head='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+subtabs+plfilter+
+    '<span style="flex:1"></span><button class="btn sm primary" data-act="ordimport">'+svg('<path d="M12 14V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button><input type="file" id="ordImportFile" accept=".xlsx,.xls" hidden></div>';
+  if(!P.length){pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:34px">'+svg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>')+'<h4>No performance data yet</h4><p>Import your Talabat / Keeta monthly report (the multi-sheet Excel) to see driver orders & UTR.</p><button class="btn sm primary" data-act="ordimport" style="margin-top:12px">'+svg('<path d="M12 14V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button></div></div></div>';return;}
+  var FP=ordFilter(P);
+  if(!FP.length){pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:30px">'+svg('<path d="M3 3v18h18"/>')+'<h4>No '+esc(ordersPlat)+' data</h4><p>There are no '+esc(ordersPlat)+' rows in your imported report yet.</p></div></div></div>';return;}
+  if(ordersView==="records")pg.innerHTML=head+ordersRecords(FP);
+  else if(ordersView==="driver")pg.innerHTML=head+ordersByDriver(FP);
+  else pg.innerHTML=head+ordersDash(FP);
+  if(LANG==="ar")transEl(pg);
+}
+function ordersDash(P){
+  var totOrders=P.reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  var totDays=P.reduce(function(a,b){return a+(num(b.days)||0);},0);
+  var drivers={};P.forEach(function(r){drivers[r.driver]=1;});
+  var avgUTR=totDays>0?(totOrders/totDays):0;
+  var tal=P.filter(function(r){return r.platform==="Talabat";}).reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  var kee=P.filter(function(r){return r.platform==="Keeta";}).reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  function stat(o){return '<div class="stat card"><span class="strip" style="background:'+o.c+'"></span><div class="s-lab">'+o.l+'</div><div class="s-val" style="font-size:26px">'+o.v+'</div><div class="s-sub">'+o.s+'</div></div>';}
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+
+    stat({l:"Total Orders",v:fmtN(totOrders),c:"var(--teal)",s:P.length+" records"})+
+    stat({l:"Active Drivers",v:Object.keys(drivers).length,c:"var(--indigo)",s:"across all months"})+
+    stat({l:"Avg UTR",v:avgUTR.toFixed(1),c:"var(--amber)",s:"orders / active day"})+
+    stat({l:"Talabat / Keeta",v:fmtN(tal)+" / "+fmtN(kee),c:"var(--good)",s:"orders by platform"})+
+  '</div>';
+  // monthly trend (sum orders per year-month)
+  var mt={};P.forEach(function(r){var mi=moIdx(r.month);if(mi<0)return;var k=(r.year||"")+"-"+String(mi+1).padStart(2,"0");mt[k]=(mt[k]||0)+(num(r.orders)||0);});
+  var mks=Object.keys(mt).sort();var maxM=Math.max.apply(null,mks.map(function(k){return mt[k];}))||1;
+  var trend='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Monthly Orders Trend</h3><span class="hint">'+mks.length+' months</span></div><div class="card-b">'+
+    (mks.length?'<div style="display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:10px">'+mks.map(function(k){var h=Math.max(3,mt[k]/maxM*140);var p=k.split("-");var lbl=MONS[(+p[1])-1]+" '"+p[0].slice(2);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px" data-tt="'+lbl+': '+fmtN(mt[k])+' orders"><div class="mono" style="font-size:10px;color:var(--ink-2)">'+fmtN(mt[k])+'</div><div style="width:100%;max-width:48px;height:'+h+'px;border-radius:7px 7px 0 0;background:var(--teal)"></div><div style="font-size:10px;color:var(--muted);font-family:\'IBM Plex Mono\'">'+lbl+'</div></div>';}).join("")+'</div>':'<div class="empty">No monthly data.</div>')+
+  '</div></div>';
+  // platform donut
+  var vc=[{label:"Talabat",value:tal,color:cvar("--amber")},{label:"Keeta",value:kee,color:cvar("--teal")}];
+  // top performers by UTR (min 10 days)
+  var top=P.filter(function(r){return (num(r.days)||0)>=10;}).slice().sort(function(a,b){return perfUTR(b)-perfUTR(a);}).slice(0,10);
+  var topCard='<div class="card"><div class="card-h"><h3>Top Performers (UTR)</h3><span class="hint">min 10 active days</span></div><div class="card-b">'+
+    (top.length?top.map(function(r){return '<div class="crow" data-act="orddriver" data-n="'+esc(r.driver)+'"><span class="cava">'+esc(hireInitials(r.driver))+'</span><span class="cnm">'+esc(r.driver)+'<div class="sub" style="font-size:11px;color:var(--muted);font-weight:400">'+esc(r.platform+" · "+r.month+" "+r.year+" · "+fmtN(r.orders)+" orders")+'</div></span><span class="cpc" style="width:auto">'+perfUTR(r).toFixed(1)+'/day</span></div>';}).join(""):'<div class="empty" style="padding:18px">No data.</div>')+
+  '</div></div>';
+  var plat='<div class="card"><div class="card-h"><h3>Orders by Platform</h3></div><div class="card-b"><div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+donut(vc,fmtN(tal+kee),"orders")+'<div style="flex:1;min-width:120px">'+vc.map(function(i){return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:'+i.color+'"></span><span style="flex:1;font-size:13px;color:var(--ink-2)">'+i.label+'</span><b class="mono">'+fmtN(i.value)+'</b></div>';}).join("")+'</div></div></div></div>';
+  return kpis+trend+'<div class="grid g2" style="align-items:start">'+plat+topCard+'</div>';
+}
+function ordersRecords(P){
+  var months=[];var mm={};P.forEach(function(r){var k=r.month+" "+r.year;if(!mm[k]){mm[k]=1;months.push(k);}});
+  months.sort(function(a,b){var pa=a.split(" "),pb=b.split(" ");return (pb[1]-pa[1])||(moIdx(pb[0])-moIdx(pa[0]));});
+  var rows=P.slice().sort(function(a,b){return (b.year-a.year)||(moIdx(b.month)-moIdx(a.month))||((num(b.orders)||0)-(num(a.orders)||0));});
+  var body=rows.map(function(r){return '<tr style="cursor:pointer" data-act="orddriver" data-n="'+esc(r.driver)+'"><td class="nm" style="color:var(--teal-ink)">'+esc(r.driver)+'</td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td></tr>';}).join("");
+  return '<div class="card"><div class="card-h"><h3>Performance Records</h3><span class="hint">'+P.length+' rows · tap a row for driver detail</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Platform</th><th>Month</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+}
+function ordersByDriver(P){
+  var agg={};P.forEach(function(r){var k=r.driver;if(!agg[k])agg[k]={driver:r.driver,orders:0,days:0,months:0,tal:0,kee:0,vehicle:r.vehicle};var a=agg[k];a.orders+=num(r.orders)||0;a.days+=num(r.days)||0;a.months++;if(r.platform==="Talabat")a.tal+=num(r.orders)||0;else if(r.platform==="Keeta")a.kee+=num(r.orders)||0;});
+  var list=Object.keys(agg).map(function(k){return agg[k];}).sort(function(a,b){return b.orders-a.orders;});
+  var body=list.map(function(a,i){var utr=a.days>0?a.orders/a.days:0;return '<tr style="cursor:pointer" data-act="orddriver" data-n="'+esc(a.driver)+'"><td class="mono">'+(i+1)+'</td><td class="nm" style="color:var(--teal-ink)">'+esc(a.driver)+'</td><td class="mono" style="text-align:right">'+fmtN(a.orders)+'</td><td class="mono" style="text-align:right">'+fmtN(a.days)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+utr.toFixed(1)+'</td><td class="mono" style="text-align:right">'+fmtN(a.tal)+'</td><td class="mono" style="text-align:right">'+fmtN(a.kee)+'</td><td class="mono" style="text-align:right">'+a.months+'</td></tr>';}).join("");
+  return '<div class="card"><div class="card-h"><h3>Driver Ranking</h3><span class="hint">'+list.length+' drivers · tap a driver for full detail</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>#</th><th>Driver</th><th style="text-align:right">Orders</th><th style="text-align:right">Days</th><th style="text-align:right">UTR</th><th style="text-align:right">Talabat</th><th style="text-align:right">Keeta</th><th style="text-align:right">Months</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+}
+function openDriverDetail(name){
+  var all=STATE.grd.perf||[];
+  var P=ordFilter(all).filter(function(r){return r.driver===name;});
+  if(!P.length)P=all.filter(function(r){return r.driver===name;});
+  if(!P.length)return;
+  var totO=P.reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  var totD=P.reduce(function(a,b){return a+(num(b.days)||0);},0);
+  var tal=P.filter(function(r){return r.platform==="Talabat";}).reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  var kee=P.filter(function(r){return r.platform==="Keeta";}).reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  var utr=totD>0?totO/totD:0;
+  var veh="";for(var i=0;i<P.length;i++){if(P[i].vehicle){veh=P[i].vehicle;break;}}
+  var plats={};P.forEach(function(r){if(r.platform)plats[r.platform]=1;});
+  // month buckets (sum across platforms in filter)
+  var byM={},mset={};P.forEach(function(r){var mi=moIdx(r.month);if(mi<0)return;var k=r.year+"-"+String(mi+1).padStart(2,"0");mset[k]=1;if(!byM[k])byM[k]={orders:0,days:0};byM[k].orders+=num(r.orders)||0;byM[k].days+=num(r.days)||0;});
+  var mks=Object.keys(byM).sort();
+  var maxM=Math.max.apply(null,mks.map(function(k){return byM[k].orders;}))||1;
+  var trend=mks.length?'<div style="display:flex;align-items:flex-end;gap:9px;height:150px;padding-top:8px">'+mks.map(function(k){var h=Math.max(3,byM[k].orders/maxM*118);var p=k.split("-");var lbl=MONS[(+p[1])-1]+" '"+p[0].slice(2);var u=byM[k].days>0?(byM[k].orders/byM[k].days).toFixed(1):"0";return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div class="mono" style="font-size:10px;color:var(--ink-2)">'+fmtN(byM[k].orders)+'</div><div style="width:100%;max-width:44px;height:'+h+'px;border-radius:6px 6px 0 0;background:var(--teal)" title="UTR '+u+'"></div><div style="font-size:10px;color:var(--muted);font-family:\'IBM Plex Mono\'">'+lbl+'</div></div>';}).join("")+'</div>':'<div class="empty" style="padding:16px">No monthly data.</div>';
+  // per-month per-platform rows
+  var rows=P.slice().sort(function(a,b){return (b.year-a.year)||(moIdx(b.month)-moIdx(a.month))||(a.platform<b.platform?-1:1);});
+  var tbody=rows.map(function(r){return '<tr class="dd-mrow"><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td></tr>';}).join("");
+  function ministat(l,v,s,c){return '<div class="stat card" style="padding:12px 14px"><span class="strip" style="background:'+c+'"></span><div class="s-lab">'+l+'</div><div class="s-val" style="font-size:22px">'+v+'</div><div class="s-sub">'+s+'</div></div>';}
+  var platChips=Object.keys(plats).map(function(p){return '<span class="chip">'+esc(p)+'</span>';}).join(" ");
+  var filtNote=ordersPlat!=="all"?'<span class="chip" style="background:var(--amber-bg,var(--surface-2));color:var(--amber)">Filtered: '+esc(ordersPlat)+'</span>':"";
+  var body='<div class="dd-grid">'+
+    ministat("Total Orders",fmtN(totO),Object.keys(mset).length+" months",cvar("--teal"))+
+    ministat("Active Days",fmtN(totD),"across period",cvar("--indigo"))+
+    ministat("Avg UTR",utr.toFixed(1),"orders / active day",cvar("--amber"))+
+    ministat("Talabat / Keeta",fmtN(tal)+" / "+fmtN(kee),"orders by platform",cvar("--good"))+
+  '</div>'+
+  '<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Month-by-Month Orders</h3><span class="hint">'+mks.length+' months</span></div><div class="card-b">'+trend+'</div></div>'+
+  '<div class="card"><div class="card-h"><h3>Monthly Breakdown</h3></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Month</th><th>Platform</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th></tr></thead><tbody>'+tbody+'</tbody></table></div></div></div>';
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay2";ov.style.zIndex="140";
+  ov.innerHTML='<div class="modal" style="max-width:760px"><div class="modal-h"><div style="display:flex;align-items:center;gap:12px"><span class="cava" style="width:40px;height:40px;border-radius:50%;background:var(--teal-bg);color:var(--teal-ink);display:grid;place-items:center;font-weight:700">'+esc(hireInitials(name))+'</span><div><h3>'+esc(name)+'</h3><div class="sub">'+(veh?esc(veh)+" · ":"")+platChips+" "+filtNote+'</div></div></div><button class="icon-btn" data-act="closeview">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div></div>';
+  document.body.appendChild(ov);
 }
 function pageOverview(pg){
   var d=STATE.grd.drivers;
@@ -2223,6 +2376,10 @@ function showImage(src,title,sub){var ov=document.createElement("div");ov.classN
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
   if(act==="hireview"){hiringView=a.getAttribute("data-v");pageHiring($("#page"));return;}
+  if(act==="ordview"){ordersView=a.getAttribute("data-v");pageOrders($("#page"));return;}
+  if(act==="ordplat"){ordersPlat=a.getAttribute("data-v");pageOrders($("#page"));return;}
+  if(act==="orddriver"){openDriverDetail(a.getAttribute("data-n"));return;}
+  if(act==="ordimport"){var of=document.getElementById("ordImportFile");if(of)of.click();return;}
   if(act==="editbudgets"){openBudgets();return;}
   if(act==="savebudgets"){saveBudgets();return;}
   if(act==="finperiod"){finPeriod=a.getAttribute("data-p");pageFinance($("#page"));}
