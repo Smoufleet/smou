@@ -345,6 +345,14 @@ label.chk input{width:16px;height:16px;accent-color:var(--teal)}
 .crow .cf{height:100%;border-radius:6px}
 .crow .cpc{width:40px;text-align:right;font-size:12px;font-weight:700}
 .crow:hover .cnm{color:var(--teal-ink)}
+.pd-row{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:9px;cursor:pointer;transition:.12s}
+.pd-row:hover{background:var(--surface-2)}
+.pd-name{flex:1;font-size:13px;font-weight:600;color:var(--ink)}
+.pd-bar{width:120px;height:8px;background:var(--surface-3);border-radius:6px;overflow:hidden;flex:none}
+.pd-fill{height:100%;border-radius:6px}
+.pd-count{font-family:"IBM Plex Mono";font-weight:700;font-size:13px;min-width:24px;text-align:right}
+.pd-chev{width:15px;height:15px;color:var(--muted);flex:none}
+@media(max-width:520px){.pd-bar{display:none}}
 @media(max-width:820px){.hd-top,.hd-bottom{grid-template-columns:1fr}}
 /* login gate */
 .authgate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:20px}
@@ -1785,11 +1793,11 @@ function hiringDash(){
   var funnel='<div class="card"><div class="card-h"><h3>Onboarding Funnel</h3></div><div class="card-b">'+
     fun.map(function(f){var w=Math.max(6,Math.round(f[1]/fmax*100));return '<div class="fstep"><span class="fn">'+f[0]+'</span><span class="fbar-t"><span class="fbar" style="width:'+w+'%;background:'+f[2]+'">'+f[1]+'</span></span></div>';}).join("")+
   '</div></div>';
-  // PENDING DOCS
-  var pend=HIRE_STEPS.map(function(s){return {label:s[1],value:H.filter(function(r){return up(r[s[0]])==="PENDING";}).length};}).filter(function(x){return x.value>0;}).sort(function(a,b){return b.value-a.value;});
+  // PENDING DOCS (clickable → shows candidate names)
+  var pend=HIRE_STEPS.map(function(s){return {key:s[0],label:s[1],value:H.filter(function(r){return up(r[s[0]])==="PENDING";}).length};}).filter(function(x){return x.value>0;}).sort(function(a,b){return b.value-a.value;});
   var pmax=Math.max.apply(null,pend.map(function(x){return x.value;}).concat([1]));
-  var pendCard='<div class="card"><div class="card-h"><h3>⏳ Pending Documents</h3><span class="hint">per document</span></div><div class="card-b">'+
-    (pend.length?pend.map(function(p){var ratio=p.value/total;var col=ratio>=0.75?"var(--crit)":ratio>=0.4?"var(--amber)":"var(--teal)";var w=Math.max(4,Math.round(p.value/pmax*100));return '<div class="bar"><span class="bl">'+esc(p.label)+'</span><span class="bt"><span class="bf" style="width:'+w+'%;background:'+col+'"></span></span><span class="bv">'+p.value+'</span></div>';}).join(""):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>All documents cleared</h4><p>Nothing pending across candidates.</p></div>')+
+  var pendCard='<div class="card"><div class="card-h"><h3>⏳ Pending Documents</h3><span class="hint">tap to see who</span></div><div class="card-b">'+
+    (pend.length?pend.map(function(p){var ratio=p.value/total;var col=ratio>=0.75?"var(--crit)":ratio>=0.4?"var(--amber)":"var(--teal)";var w=Math.max(4,Math.round(p.value/pmax*100));return '<div class="pd-row" data-penddoc="'+p.key+'" data-lab="'+esc(p.label)+'"><span class="pd-name">'+esc(p.label)+'</span><span class="pd-bar"><span class="pd-fill" style="width:'+w+'%;background:'+col+'"></span></span><span class="pd-count">'+p.value+'</span><svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>';}).join(""):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>All documents cleared</h4><p>Nothing pending across candidates.</p></div>')+
   '</div></div>';
   // CANDIDATE PROGRESS
   var sorted=H.slice().sort(function(a,b){return hireProgress(b).pct-hireProgress(a).pct;});
@@ -1798,6 +1806,15 @@ function hiringDash(){
   '</div></div>';
   return '<div class="hd-top">'+ring+funnel+'</div><div class="hd-bottom">'+pendCard+progCard+'</div>';
 }
+function openPendDoc(key,label){
+  var H=STATE.grd.hiring||[];
+  var list=H.filter(function(r){return String(r[key]||"").trim().toUpperCase()==="PENDING";});
+  var body=list.length?'<div>'+list.map(function(r){var p=hireProgress(r);return '<div class="crow" data-route="grd/hiring/'+r.id+'" style="border-top:1px solid var(--line)"><span class="cava">'+esc(hireInitials(r.nameEn))+'</span><span class="cnm">'+esc(r.nameEn||"—")+'<div class="sub" style="font-size:11px;color:var(--muted);font-weight:400">'+esc([r.nat,r.veh,r.reference].filter(Boolean).join(" · "))+'</div></span><span class="cpc">'+p.pct+'%</span></div>';}).join("")+'</div>':'<div class="empty" style="padding:24px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>None pending</h4><p>Every candidate has this document done.</p></div>';
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal" style="max-width:480px"><div class="modal-h"><div><h3>'+esc(label)+' — Pending</h3><div class="sub">'+list.length+' candidate'+(list.length===1?"":"s")+' · tap a name to open</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div></div>';
+  document.body.appendChild(ov);
+}
+document.addEventListener("click",function(e){var pr=e.target.closest("[data-penddoc]");if(pr){openPendDoc(pr.getAttribute("data-penddoc"),pr.getAttribute("data-lab"));}});
 function pageOverview(pg){
   var d=STATE.grd.drivers;
   var st=countBy(d,function(x){return x.status;});
@@ -2015,7 +2032,7 @@ function themeIcon(){var b=$("#themeBtn");if(!b)return;b.innerHTML=curTheme()===
 /* ============ GLOBAL EVENTS ============ */
 document.addEventListener("click",function(e){
   var tg=e.target.closest("[data-navtoggle]");if(tg){e.preventDefault();e.stopPropagation();var k=tg.getAttribute("data-navtoggle");NAVOPEN[k]=!NAVOPEN[k];saveNavOpen();renderApp();return;}
-  var rt=e.target.closest("[data-route]");if(rt){e.preventDefault();closeMenu();go(rt.getAttribute("data-route"));return;}
+  var rt=e.target.closest("[data-route]");if(rt){e.preventDefault();closeMenu();var _ov=document.getElementById("overlay");if(_ov)_ov.remove();go(rt.getAttribute("data-route"));return;}
   var a=e.target.closest("[data-act]");if(!a)return;
   var act=a.getAttribute("data-act");
   if(act==="lang"){setLang(LANG==="ar"?"en":"ar");}
