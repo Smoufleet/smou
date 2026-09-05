@@ -319,6 +319,13 @@ label.chk input{width:16px;height:16px;accent-color:var(--teal)}
 .ho-acts{display:flex;gap:5px;justify-content:flex-end;margin-top:5px}
 .ho-acts .btn.sm{padding:0 8px;height:26px}
 [dir="rtl"] .ho-side{text-align:left}
+/* dashboard alert categories */
+.acat{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;letter-spacing:.03em;flex:none;white-space:nowrap}
+.acat-employee{background:var(--teal-bg);color:var(--teal-ink)}
+.acat-company{background:rgba(99,102,241,.14);color:var(--indigo)}
+.acat-service{background:rgba(245,158,11,.16);color:var(--amber-2)}
+.alertcard{border-color:var(--line-2)}
+@media(max-width:560px){.acat{display:none}}
 .rowact button.docbtn{width:auto;padding:0 8px;gap:3px;font-family:"IBM Plex Mono";font-size:11px;font-weight:600}
 .rowact button.docbtn.has{color:var(--teal-ink);background:var(--teal-bg)}
 /* documents */
@@ -910,7 +917,13 @@ Object.assign(I18N,{
 "Download handover voucher PDF after saving":"تحميل سند التسليم PDF بعد الحفظ","Save handover":"حفظ التسليم",
 "PCC No.":"رقم شهادة حسن السيرة","PCC Expiry":"انتهاء شهادة حسن السيرة","PCC":"شهادة حسن السيرة",
 "Date of Return":"تاريخ الإرجاع","Employee (Driver)":"الموظف (السائق)","Holder (Employee)":"الحائز (موظف)","Employee / Rider":"الموظف / السائق",
-"Type name to search…":"اكتب الاسم للبحث…"
+"Type name to search…":"اكتب الاسم للبحث…","Type plate to search…":"اكتب رقم اللوحة للبحث…",
+"Company Documents":"مستندات الشركة","Company Document":"مستند الشركة","Vehicle Service":"صيانة المركبة",
+"Ehtimad Tokiya":"اعتماد توكيا","Ehtimad Murror":"اعتماد مرور","Company License":"رخصة الشركة","Baldiya Certificate":"شهادة البلدية","Car Insurance":"تأمين السيارة","Daftar":"دفتر","Vehicle Food & Nutrition":"غذاء وتغذية المركبة","Tire":"إطار","Battery":"بطارية",
+"Document":"المستند","Document / Ref No.":"رقم المستند / المرجع","Vehicle / Plate":"المركبة / اللوحة","Current User":"المستخدم الحالي","Current User (Employee)":"المستخدم الحالي (موظف)","Linked Vehicle (optional)":"مركبة مرتبطة (اختياري)","Validity":"الصلاحية","Issue Date":"تاريخ الإصدار","Expiry Date":"تاريخ الانتهاء","Issue":"الإصدار","Expiry":"الانتهاء",
+"Odometer & Service":"العداد والصيانة","Current Odometer (km)":"عداد المسافة الحالي (كم)","Odometer at Last Service (km)":"العداد عند آخر صيانة (كم)","Service Interval (km)":"فترة الصيانة (كم)","Last Service Date":"تاريخ آخر صيانة","Odometer (km)":"العداد (كم)","Since Service":"منذ الصيانة","Next Service":"الصيانة القادمة",
+"Service Status":"حالة الصيانة","Daily KM Log":"سجل الكيلومترات اليومي","Add today’s KM":"أضف كيلومترات اليوم","Mark serviced":"تحديد كمُصان","Add KM":"إضافة كيلومترات","KM driven today":"الكيلومترات المقطوعة اليوم",
+"Alerts & Expiries":"التنبيهات والانتهاءات","Alerts · 30d":"التنبيهات · 30 يوم","Service due":"صيانة مستحقة","Due soon":"قريباً","Expired":"منتهي","Employee":"موظف","Company":"شركة","Service":"صيانة"
 });
 var I18N_LC={};for(var _k in I18N){if(I18N.hasOwnProperty(_k))I18N_LC[_k.toLowerCase()]=I18N[_k];}
 function transToken(k){k=k.trim();if(k==="")return k;
@@ -943,6 +956,8 @@ var STATE=null;
 if(window.__STATE__) STATE=clone(window.__STATE__);
 if(!STATE){ try{var ls=localStorage.getItem("smou-erp");if(ls)STATE=JSON.parse(ls);}catch(e){} }
 if(!STATE) STATE=clone(window.__SEEDSTATE__);
+if(STATE&&STATE.grd){if(!STATE.grd.compdocs)STATE.grd.compdocs=[];if(!STATE.grd.service)STATE.grd.service=[];}
+if(STATE&&!STATE.finance)STATE.finance={expenses:[]};
 // sanitize zone lookup junk
 if(STATE.lookups&&STATE.lookups.zones){STATE.lookups.zones=STATE.lookups.zones.filter(function(z){return z&&["CO.","DRIVER","HEADER"].indexOf(z)<0;});
   ["MAHBOULA","JAHRA","ARDIYA","SALMIYA","FARWANIYA","FAHAHEEL","OTHERS"].forEach(function(z){if(STATE.lookups.zones.indexOf(z)<0)STATE.lookups.zones.push(z);});}
@@ -962,6 +977,8 @@ function parseD(s){if(!s)return null;var m=String(s).match(/(\d{4})-(\d{2})-(\d{
 function daysTo(d){return Math.round((d-TODAY)/86400000);}
 function fmtD(s){var d=parseD(s);if(!d)return s?esc(s):"—";return d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2);}
 function L(k){return (STATE.lookups[k]||[]);}
+function fmtKm(n){n=num(n);return n==null?"—":Math.round(n).toLocaleString("en-US");}
+function svcInfo(r){var odo=num(r.odo)||0,last=num(r.lastService)||0,intv=num(r.interval)||5000;var since=Math.max(0,odo-last);return {since:since,next:last+intv,interval:intv,remaining:intv-since,due:since>=intv,soon:since>=intv-500&&since<intv};}
 function driverNames(){return STATE.grd.drivers.map(function(d){return d.name;}).filter(Boolean);}
 function cvar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
 function cap(s){s=(s||"").trim();if(!s)return "—";return s.charAt(0)+s.slice(1).toLowerCase();}
@@ -1027,14 +1044,14 @@ function sbClient(){
   if(window.__SBCLIENT__&&typeof window.__SBCLIENT__.from==="function"){SB=window.__SBCLIENT__;}
   return SB;
 }
-var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["expenses",function(){return STATE.finance.expenses;}]];
-var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],expenses:["finance","expenses"]};
+var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["expenses",function(){return STATE.finance.expenses;}]];
+var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],expenses:["finance","expenses"]};
 var shadow={};
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
-  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],expenses:[]};
+  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
-  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.finance.expenses=buckets.expenses;
+  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.finance.expenses=buckets.expenses;
   snapshotShadow();
 }
 function sbLoad(){
@@ -1094,6 +1111,7 @@ function toast(msg,cls){
 
 /* ---------- entity configs ---------- */
 function drNameList(){return driverNames();}
+var COMPDOC_TYPES=["Ehtimad Tokiya","Ehtimad Murror","Company License","Baldiya Certificate","Car Insurance","Daftar","Vehicle Food & Nutrition","Tire","Battery","Other"];
 var ENT={
   drivers:{title:"Employees",singular:"Employee",path:"grd.drivers",idp:"d",
     searchKeys:["name","no","civilId","mobile","talabat","keeta","nat","accom"],
@@ -1193,6 +1211,47 @@ var ENT={
       {h:"Occupancy",v:function(r){var p=num(r.cap)?Math.round((num(r.actual)||0)/num(r.cap)*100):0;return '<div style="display:flex;align-items:center;gap:8px;min-width:120px"><div class="bt" style="width:80px"><div class="bf" style="width:'+p+'%;background:'+(p>=90?"var(--crit)":p>=70?"var(--amber)":"var(--teal)")+'"></div></div><span class="mono" style="font-size:11px">'+p+'%</span></div>';},s:function(r){return num(r.cap)?(num(r.actual)||0)/num(r.cap):0;}}
     ],
     fields:[{g:"Room"},{k:"room",l:"Room / Flat Name",t:"text",req:true},{k:"cap",l:"Capacity (beds)",t:"number"},{k:"actual",l:"Occupied (beds)",t:"number"}]},
+  compdocs:{title:"Company Documents",singular:"Company Document",path:"grd.compdocs",idp:"cd",
+    searchKeys:["doc","refno","plate","user","notes"],
+    filters:[{k:"doc",lab:"All documents",opts:null},{k:"plate",lab:"All vehicles",opts:null}],
+    columns:[
+      {h:"Document",v:function(r){return '<span class="nm">'+esc(r.doc||"—")+'</span>'+(r.refno?'<div class="sub">'+esc(r.refno)+'</div>':"");},s:function(r){return (r.doc||"").toLowerCase();}},
+      {h:"Vehicle / Plate",v:function(r){return r.plate?'<span class="mono">'+esc(r.plate)+'</span>':"—";},s:function(r){return r.plate||"";}},
+      {h:"Current User",v:function(r){return esc(r.user||"—");},s:function(r){return (r.user||"").toLowerCase();}},
+      {h:"Issue",v:function(r){return '<span class="mono">'+fmtD(r.issue)+'</span>';},s:function(r){var d=parseD(r.issue);return d?d.getTime():0;}},
+      {h:"Expiry",v:function(r){return expCell(r.expiry);},s:function(r){var d=parseD(r.expiry);return d?d.getTime():0;}}
+    ],
+    fields:[
+      {g:"Document"},
+      {k:"doc",l:"Document",t:"datalist",optsFn:function(){return COMPDOC_TYPES;},req:true},
+      {k:"refno",l:"Document / Ref No.",t:"text"},
+      {g:"Linked Vehicle (optional)"},
+      {k:"plate",l:"Vehicle / Plate",t:"plate"},{k:"user",l:"Current User (Employee)",t:"emp"},
+      {g:"Validity"},
+      {k:"issue",l:"Issue Date",t:"date"},{k:"expiry",l:"Expiry Date",t:"date"},
+      {g:"Notes"},
+      {k:"notes",l:"Notes",t:"textarea",wide:true}
+    ]},
+  service:{title:"Vehicle Service",singular:"Vehicle Service",path:"grd.service",idp:"sv",
+    searchKeys:["plate","user","notes"],
+    filters:[{k:"plate",lab:"All vehicles",opts:null}],
+    columns:[
+      {h:"Vehicle / Plate",v:function(r){return '<span class="mono nm">'+esc(r.plate||"—")+'</span>';},s:function(r){return r.plate||"";}},
+      {h:"Current User",v:function(r){return esc(r.user||"—");},s:function(r){return (r.user||"").toLowerCase();}},
+      {h:"Odometer (km)",v:function(r){return '<span class="mono">'+fmtKm(r.odo)+'</span>';},s:function(r){return num(r.odo)||0;}},
+      {h:"Since Service",v:function(r){var s=svcInfo(r);return '<span class="mono" style="color:var(--'+(s.due?"crit":s.soon?"amber":"good")+');font-weight:600">'+fmtKm(s.since)+'</span>';},s:function(r){return svcInfo(r).since;}},
+      {h:"Next Service",v:function(r){return '<span class="mono">'+fmtKm(svcInfo(r).next)+'</span>';},s:function(r){return svcInfo(r).next;}},
+      {h:"Status",v:function(r){var s=svcInfo(r);return s.due?pill("Service due","crit"):s.soon?pill("Due soon","warn"):pill("OK","good");},s:function(r){return svcInfo(r).since;}}
+    ],
+    fields:[
+      {g:"Vehicle"},
+      {k:"plate",l:"Vehicle / Plate",t:"plate",req:true},{k:"user",l:"Current User (Employee)",t:"emp"},
+      {g:"Odometer & Service"},
+      {k:"odo",l:"Current Odometer (km)",t:"number"},{k:"lastService",l:"Odometer at Last Service (km)",t:"number"},
+      {k:"interval",l:"Service Interval (km)",t:"number",hint:"Default 5000"},{k:"lastServiceDate",l:"Last Service Date",t:"date"},
+      {g:"Notes"},
+      {k:"notes",l:"Notes",t:"textarea",wide:true}
+    ]},
   expenses:{title:"Expense Log",singular:"Expense",path:"finance.expenses",idp:"e",
     searchKeys:["category","sub","driver","platform","notes","plate"],
     filters:[{k:"month",lab:"All months",opts:"months"},{k:"category",lab:"All categories",opts:"categories"},{k:"plate",lab:"All vehicles",opts:null},{k:"driver",lab:"All drivers",opts:null},{k:"platform",lab:"All platforms",opts:"platforms"}],
@@ -1228,7 +1287,9 @@ var NAVGROUPS=[
       {r:"grd/sims",t:"SIM / Mobile",ent:"sims",ic:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'},
       {r:"grd/fuel",t:"Fuel Cards",ent:"fuel",ic:'<rect x="3" y="4" width="13" height="16" rx="2"/><path d="M16 8h2.5A1.5 1.5 0 0 1 20 9.5V17a2 2 0 0 0 0 0"/><path d="M7 8h5M7 12h5"/>'}
     ]},
-    {r:"grd/housing",t:"Housing",ent:"housing",ic:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'}
+    {r:"grd/housing",t:"Housing",ent:"housing",ic:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'},
+    {r:"grd/compdocs",t:"Company Documents",ent:"compdocs",ic:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'},
+    {r:"grd/service",t:"Vehicle Service",ent:"service",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'}
   ]},
   {lab:"Finance",key:"finance",collapsible:true,items:[
     {r:"finance",t:"Dashboard",ic:'<path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/>'},
@@ -1386,8 +1447,9 @@ function fieldHTML(f,data){
   }else if(f.t==="datalist"){
     var dlid="dl-"+f.k+"-"+Math.random().toString(36).slice(2,6);
     inner='<input name="'+f.k+'" list="'+dlid+'" value="'+esc(v)+'" autocomplete="off"'+(f.hint?' placeholder="'+esc(f.hint)+'"':"")+'><datalist id="'+dlid+'">'+(opts||[]).map(function(o){return '<option value="'+esc(o)+'">';}).join("")+'</datalist>';
-  }else if(f.t==="emp"){
-    inner='<div class="empc"><input class="empc-inp" name="'+f.k+'" value="'+esc(v)+'" autocomplete="off" placeholder="Type name to search…">'+
+  }else if(f.t==="emp"||f.t==="plate"){
+    var esrc=f.t==="plate"?"plate":"emp";var eph=f.t==="plate"?"Type plate to search…":"Type name to search…";
+    inner='<div class="empc" data-src="'+esrc+'"><input class="empc-inp" name="'+f.k+'" value="'+esc(v)+'" autocomplete="off" placeholder="'+eph+'">'+
       '<svg class="empc-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>'+
       '<div class="empc-pop" hidden><div class="empc-list"></div></div></div>';
   }else if(f.t==="textarea"){
@@ -1518,6 +1580,27 @@ function donut(items,cv,cl){var total=items.reduce(function(a,b){return a+b.valu
   return '<svg width="140" height="140" viewBox="0 0 140 140" style="flex:none">'+seg+'<text x="70" y="66" text-anchor="middle" style="fill:var(--ink);font-weight:800;font-size:28px">'+cv+'</text><text x="70" y="85" text-anchor="middle" style="fill:var(--muted);font-family:IBM Plex Mono;font-size:9px;letter-spacing:.1em;text-transform:uppercase">'+cl+'</text></svg>';}
 function statusColor(s){return cvar("--"+statusClass(s));}
 
+function computeAlerts(){
+  var out=[];
+  STATE.grd.drivers.forEach(function(x){[["Civil ID","cidExp"],["License","licExp"],["Health Card","healthExp"],["Passport","passExp"],["PCC","pccExp"]].forEach(function(dm){var dt=parseD(x[dm[1]]);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({cat:"Employee",title:x.name,sub:dm[0]+(x.nat?" · "+x.nat:""),date:dt,days:dd,kind:"date"});}});});
+  (STATE.grd.compdocs||[]).forEach(function(c){var dt=parseD(c.expiry);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({cat:"Company",title:c.doc||"Document",sub:[c.plate?("Plate "+c.plate):"",c.user||"",c.refno||""].filter(Boolean).join(" · "),date:dt,days:dd,kind:"date"});}});
+  (STATE.grd.service||[]).forEach(function(s){var si=svcInfo(s);if(si.due||si.soon)out.push({cat:"Service",title:"Vehicle "+(s.plate||"?"),sub:(s.user?s.user+" · ":"")+(si.due?(fmtKm(si.since)+" km since last service"):(fmtKm(si.remaining)+" km to service")),kind:"km",overdue:si.due,days:si.due?-1:5});});
+  out.sort(function(a,b){var ax=a.kind==="km"?(a.overdue?-1000:5):a.days;var bx=b.kind==="km"?(b.overdue?-1000:5):b.days;return ax-bx;});
+  return out;
+}
+function renderAlertPanel(list){
+  var expd=list.filter(function(a){return a.kind==="km"?a.overdue:a.days<0;}).length;var soon=list.length-expd;
+  var head='<div class="card alertcard" style="margin-bottom:16px"><div class="card-h"><h3>⚠ Alerts &amp; Expiries</h3><span class="hint">'+(list.length?'<span style="color:var(--crit)">'+expd+' urgent</span> · '+soon+' upcoming · showing all '+list.length:'all clear')+'</span></div><div class="card-b">';
+  if(!list.length)return head+'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>Everything is up to date</h4><p>No documents expired/expiring within 30 days, and no vehicle service due.</p></div></div></div>';
+  var rows=list.map(function(a){
+    var expired=a.kind==="km"?a.overdue:a.days<0;var sv=expired?"crit":"warn";
+    var right=a.kind==="km"?(a.overdue?"DUE NOW":"Soon"):(a.days<0?Math.abs(a.days)+"d ago":a.days+"d left");
+    var datestr=a.kind==="km"?"":(a.date.getDate()+" "+MONS[a.date.getMonth()]+" "+a.date.getFullYear());
+    var badge=expired?'<span class="pill crit" style="margin-left:7px">'+(a.kind==="km"?"Service due":"Expired")+'</span>':'<span class="pill warn" style="margin-left:7px">Due soon</span>';
+    return '<div style="display:grid;grid-template-columns:auto auto 1fr auto;gap:11px;align-items:center;padding:9px 0;border-top:1px solid var(--line)"><span style="width:8px;height:8px;border-radius:50%;background:var(--'+sv+')"></span><span class="acat acat-'+a.cat.toLowerCase()+'">'+a.cat+'</span><div style="min-width:0"><div style="font-size:13px;font-weight:600">'+esc(a.title)+badge+'</div><div class="sub" style="font-size:11px;color:var(--muted)">'+esc(a.sub||"")+'</div></div><div style="text-align:right"><div class="mono" style="font-size:12px;font-weight:600;color:var(--'+sv+')">'+right+'</div>'+(datestr?'<div class="mono" style="font-size:11px;color:var(--muted)">'+datestr+'</div>':'')+'</div></div>';
+  }).join("");
+  return head+rows+'</div></div>';
+}
 function pageOverview(pg){
   var d=STATE.grd.drivers;
   var st=countBy(d,function(x){return x.status;});
@@ -1529,10 +1612,9 @@ function pageOverview(pg){
   var houseCap=STATE.grd.housing.reduce(function(a,b){return a+(num(b.cap)||0);},0);
   var houseAct=STATE.grd.housing.reduce(function(a,b){return a+(num(b.actual)||0);},0);
   var fuelBal=STATE.grd.fuel.reduce(function(a,b){return a+(num(b.bal)||0);},0);
-  // expiries
-  var exps=[];d.forEach(function(x){[["Civil ID","cidExp"],["License","licExp"],["Health Card","healthExp"],["Passport","passExp"],["PCC","pccExp"]].forEach(function(dm){var dt=parseD(x[dm[1]]);if(dt)exps.push({name:x.name,nat:x.nat,doc:dm[0],date:dt,days:daysTo(dt)});});});
-  exps.sort(function(a,b){return a.days-b.days;});
-  var alerts=exps.filter(function(e){return e.days<=30;}).length,expd=exps.filter(function(e){return e.days<0;}).length;
+  // unified alerts (employee docs + company docs + tire/battery + service due)
+  var allAlerts=computeAlerts();
+  var alerts=allAlerts.length,expd=allAlerts.filter(function(a){return a.kind==="km"?a.overdue:a.days<0;}).length;
   var expTotal=STATE.finance.expenses.reduce(function(a,b){return a+(num(b.amount)||0);},0);
   var thisMonth=MON[TODAY.getMonth()];
   var monthTotal=STATE.finance.expenses.filter(function(e){return e.month===thisMonth;}).reduce(function(a,b){return a+(num(b.amount)||0);},0);
@@ -1541,7 +1623,7 @@ function pageOverview(pg){
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+
     stat({l:"Total Workforce",v:d.length,c:"var(--teal)",s:active+" active · "+inproc+" in process",ic:'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/>'})+
     stat({l:"Vehicles",v:STATE.grd.vehicles.length,c:"var(--indigo)",s:fleetWork+" working · "+(STATE.grd.vehicles.length-fleetWork)+" off-road",ic:'<path d="M3 13l2-5h14l2 5v5h-3v-2H6v2H3z"/>'})+
-    stat({l:"Doc Alerts · 30d",v:alerts,c:"var(--crit)",s:expd+" already expired",ic:'<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'})+
+    stat({l:"Alerts · 30d",v:alerts,c:"var(--crit)",s:expd+" urgent / expired",ic:'<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'})+
     stat({l:"Expenses Logged",v:money(expTotal)+" KD",c:"var(--amber)",s:STATE.finance.expenses.length+" entries · "+money(monthTotal)+" this month",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 4-5"/>'})+
   '</div>';
 
@@ -1560,13 +1642,7 @@ function pageOverview(pg){
     '<div class="card"><div class="card-h"><h3>Housing</h3><span class="hint">'+houseAct+"/"+houseCap+' beds</span></div><div class="card-b">'+hbars(STATE.grd.housing.map(function(h){return {label:h.room.replace("SMOU ",""),value:num(h.actual)||0,color:cvar("--teal")};}),{max:Math.max.apply(null,STATE.grd.housing.map(function(h){return num(h.cap)||0;}))})+'</div></div>'+
   '</div>';
 
-  var expList=exps.filter(function(e){return e.days<=30;});
-  var radar='<div class="card"><div class="card-h"><h3>⚠ Document Expiry Radar</h3><span class="hint"><span style="color:var(--crit)">'+expd+" expired</span> · "+(alerts-expd)+" expiring ≤30d · showing all "+expList.length+'</span></div><div class="card-b">'+
-    (expList.length?'<div>'+expList.map(function(e){var sv=expClass(e.days);var dd=e.days<0?Math.abs(e.days)+"d ago":e.days+"d left";var badge=e.days<0?'<span class="pill crit" style="margin-left:7px">Expired</span>':'<span class="pill warn" style="margin-left:7px">Due soon</span>';
-      return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;padding:9px 0;border-top:1px solid var(--line)"><span style="width:8px;height:8px;border-radius:50%;background:var(--'+sv+')"></span><div><div style="font-size:13px;font-weight:600">'+esc(e.name)+badge+'</div><div class="sub" style="font-size:11px;color:var(--muted)">'+esc(e.doc)+' · '+esc(e.nat||"")+'</div></div><div style="text-align:right"><div class="mono" style="font-size:12px;font-weight:600;color:var(--'+sv+')">'+dd+'</div><div class="mono" style="font-size:11px;color:var(--muted)">'+e.date.getDate()+" "+MONS[e.date.getMonth()]+" "+e.date.getFullYear()+'</div></div></div>';}).join("")+'</div>':'<div class="empty" style="padding:26px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>Nothing urgent</h4><p>No documents expired or expiring within 30 days.</p></div>')+
-    '</div></div>';
-
-  pg.innerHTML=kpis+charts+radar;
+  pg.innerHTML=renderAlertPanel(allAlerts)+kpis+charts;
 }
 
 /* ============ FINANCE ANALYTICS ============ */
@@ -1809,13 +1885,15 @@ document.addEventListener("change",function(e){var cb=e.target.closest(".ms-pop 
 document.addEventListener("input",function(e){var si=e.target.closest("[data-mssearch]");if(si){filterMSList(si.closest(".ms-pop"),si.value);}});
 
 /* ============ EMPLOYEE PICKER (smart searchable) ============ */
-function empPickList(){return STATE.grd.drivers.filter(function(d){return d.name;}).map(function(d){return {name:d.name,no:d.no,nat:d.nat,veh:d.veh};});}
+function empPickList(){return STATE.grd.drivers.filter(function(d){return d.name;}).map(function(d){return {v:d.name,a:d.no?("#"+d.no):"",b:d.veh||""};});}
+function platePickList(){return (STATE.grd.vehicles||[]).filter(function(v){return v.plate;}).map(function(v){return {v:v.plate,a:v.brand||"",b:v.driver||""};});}
 function renderEmpOpts(c,q){
+  var src=c.getAttribute("data-src")||"emp";
   var toks=(q||"").toLowerCase().split(/\s+/).filter(Boolean);
-  var list=empPickList();
-  if(toks.length)list=list.filter(function(e){var hay=(e.name+" "+(e.no||"")+" "+(e.nat||"")).toLowerCase();return toks.every(function(t){return hay.indexOf(t)>=0;});});
+  var list=src==="plate"?platePickList():empPickList();
+  if(toks.length)list=list.filter(function(e){var hay=(e.v+" "+e.a+" "+e.b).toLowerCase();return toks.every(function(t){return hay.indexOf(t)>=0;});});
   var lb=c.querySelector(".empc-list");if(!lb)return;
-  lb.innerHTML=list.length?list.slice(0,80).map(function(e){return '<div class="empc-opt" data-empv="'+esc(e.name)+'"><span class="eo-nm">'+esc(e.name)+'</span>'+(e.no?'<span class="eo-no">#'+esc(e.no)+'</span>':'')+(e.veh?'<span class="eo-tag">'+esc(e.veh)+'</span>':'')+'</div>';}).join(""):'<div class="ms-empty">No employee matches — you can still type any name.</div>';
+  lb.innerHTML=list.length?list.slice(0,80).map(function(e){return '<div class="empc-opt" data-empv="'+esc(e.v)+'"><span class="eo-nm">'+esc(e.v)+'</span>'+(e.a?'<span class="eo-no">'+esc(e.a)+'</span>':'')+(e.b?'<span class="eo-tag">'+esc(e.b)+'</span>':'')+'</div>';}).join(""):'<div class="ms-empty">No match — you can still type any value.</div>';
   if(LANG==="ar")transEl(lb);
 }
 function openEmpc(inp){closeAllEmpc();var c=inp.closest(".empc");if(!c)return;renderEmpOpts(c,inp.value);var p=c.querySelector(".empc-pop");if(p)p.hidden=false;c.classList.add("open");}
@@ -1926,6 +2004,7 @@ function openRowMenu(btn,ent,id){
   var items='<div class="menu-item" data-act="viewrec" data-id="'+id+'">'+svg(IC_eye)+'View details</div>';
   if(ent==="drivers")items+='<div class="menu-item" data-act="docs" data-id="'+id+'">'+svg(IC_docs)+'Documents'+((rec&&rec.docs&&rec.docs.length)?' ('+rec.docs.length+')':'')+'</div>';
   if(ASSETENTS[ent])items+='<div class="menu-item" data-act="handover" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_hand)+'Handover / Assign</div>';
+  if(ent==="service"){items+='<div class="menu-item" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</div>';items+='<div class="menu-item" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</div>';}
   items+='<div class="menu-item" data-act="entrypdf" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_pdf)+'Download PDF</div>';
   items+='<div class="menu-item" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</div>';
   items+='<div class="menu-sep"></div><div class="menu-item danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</div>';
@@ -1954,9 +2033,10 @@ function detailVal(ent,f,rec){
   var v=rec[f.k];
   if(v==null||String(v).trim()==="")return '<span style="color:var(--muted)">—</span>';
   if(f.k==="status")return pill(cap(v),statusClass(v));
-  if(/Exp$/.test(f.k))return expCell(v);
+  if(/Exp$/.test(f.k)||f.k==="expiry")return expCell(v);
   if(f.t==="date"||f.k==="doi"||f.k==="simIssue")return '<span class="mono">'+esc(fmtD(v))+'</span>';
   if(f.k==="amount")return '<span class="mono" style="color:var(--amber-2);font-weight:600">'+money(num(v))+' KWD</span>';
+  if(/^odo$|lastService$|^interval$/.test(f.k))return '<span class="mono">'+fmtKm(v)+' km</span>';
   if(/civilId|^civil$|mobile|card|passport|account|chassis|talabat|keeta|simSerial|mbSerial|plate|salary|no|recharge|avail|bal|cap|actual/.test(f.k))return '<span class="mono">'+esc(v)+'</span>';
   return esc(v);
 }
@@ -1997,6 +2077,7 @@ function pageDetail(pg,ent,id){
   });
   html+='</div>';
   if(ASSETENTS[ent])html+=assetHistoryCard(ent,rec,id);
+  if(ent==="service")html+=serviceCard(rec,id);
   if(ent==="housing")html+=houseAssetsCard(rec,id);
   if(ent==="drivers"){
     var docs=rec.docs||[];
@@ -2221,10 +2302,55 @@ function saveHouseAsset(id){
 function haAdj(id,aid,delta){var rec=recById("housing",id);if(!rec)return;var a=(rec.assets||[]).filter(function(x){return x.id===aid;})[0];if(!a)return;a.count=Math.max(0,(num(a.count)||0)+delta);persist();pageDetail($("#page"),"housing",id);}
 function haDel(id,aid){var rec=recById("housing",id);if(!rec)return;rec.assets=(rec.assets||[]).filter(function(x){return x.id!==aid;});persist();pageDetail($("#page"),"housing",id);}
 
+/* ---- vehicle service · daily KM ---- */
+function openKm(id){
+  if(READONLY){toast("You have view-only access.","err");return;}
+  var rec=recById("service",id);if(!rec)return;var s=svcInfo(rec);
+  var body='<div class="banner '+(s.due?"amber":"info")+'" style="margin-bottom:14px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div>Odometer now <b>'+fmtKm(rec.odo)+' km</b>. '+(s.due?'<b style="color:var(--crit)">Service is overdue!</b>':(s.soon?'<b style="color:var(--amber-2)">Service due soon.</b>':(fmtKm(s.remaining)+' km left to next service.')))+'</div></div>'+
+    '<div class="form-grid"><div class="field"><label>KM driven today <span class="req">*</span></label><input type="number" id="kmToday" min="0" step="1" placeholder="e.g. 180"></div>'+
+    '<div class="field"><label>Date</label><input type="date" id="kmDate" value="'+isoToday()+'"></div></div>';
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal" style="max-width:460px"><div class="modal-h"><div><h3>Add today’s KM</h3><div class="sub">'+esc(rec.plate||"Vehicle")+(rec.user?" · "+esc(rec.user):"")+'</div></div><button class="icon-btn" data-act="close">'+svg(IC_x)+'</button></div><div class="modal-b">'+body+'</div><div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn amber" data-act="kmsave" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Add KM</button></div></div>';
+  document.body.appendChild(ov);setTimeout(function(){var i=ov.querySelector("#kmToday");if(i)i.focus();},60);
+}
+function saveKm(id){
+  var ov=$("#overlay");var rec=recById("service",id);if(!rec||!ov)return;
+  var km=num(($("#kmToday",ov)||{}).value);if(km==null||km<0){toast("Enter today’s KM.","err");return;}
+  var date=(($("#kmDate",ov)||{}).value)||isoToday();
+  rec.odo=(num(rec.odo)||0)+km;if(!rec.interval)rec.interval=5000;
+  if(!rec.kmlog)rec.kmlog=[];rec.kmlog.unshift({id:uid("km"),date:date,km:km,odo:rec.odo,at:new Date().toISOString()});
+  closeForm();persist();if(getRoute().indexOf(id)>=0)pageDetail($("#page"),"service",id);else renderApp();
+  var s=svcInfo(rec);toast(km+" km added · odometer "+fmtKm(rec.odo)+" km"+(s.due?" · SERVICE DUE!":""),s.due?"err":"good");
+}
+function markServiced(id){
+  if(READONLY){toast("You have view-only access.","err");return;}
+  var rec=recById("service",id);if(!rec)return;
+  rec.lastService=num(rec.odo)||0;rec.lastServiceDate=isoToday();
+  persist();if(getRoute().indexOf(id)>=0)pageDetail($("#page"),"service",id);else renderApp();
+  toast("Marked serviced at "+fmtKm(rec.lastService)+" km — counter reset.","good");
+}
+function kmDel(id,aid){var rec=recById("service",id);if(!rec||!rec.kmlog)return;var e=rec.kmlog.filter(function(x){return x.id===aid;})[0];if(e){rec.odo=Math.max(0,(num(rec.odo)||0)-(num(e.km)||0));rec.kmlog=rec.kmlog.filter(function(x){return x.id!==aid;});}persist();pageDetail($("#page"),"service",id);toast("KM entry removed.","good");}
+function serviceCard(rec,id){
+  var s=svcInfo(rec);var log=rec.kmlog||[];var bar=Math.min(100,Math.round(s.since/(s.interval||5000)*100));
+  var col=s.due?"var(--crit)":s.soon?"var(--amber)":"var(--teal)";
+  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Service Status</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm amber" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</button><button class="btn sm" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</button></div></div><div class="card-b">'+
+    '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>'+fmtKm(s.since)+' km since last service</span><span class="mono" style="color:'+col+';font-weight:700">'+(s.due?"SERVICE DUE":s.soon?"DUE SOON":fmtKm(s.remaining)+" km left")+'</span></div>'+
+    '<div class="bt" style="height:10px"><div class="bf" style="width:'+bar+'%;background:'+col+'"></div></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap;gap:6px"><span>Last service: '+fmtKm(rec.lastService)+' km'+(rec.lastServiceDate?" · "+esc(fmtD(rec.lastServiceDate)):"")+'</span><span>Next at '+fmtKm(s.next)+' km · every '+fmtKm(s.interval)+' km</span></div>'+
+  '</div></div>'+
+  '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Daily KM Log</h3><span class="hint">'+log.length+' entries</span></div><div class="card-b">'+
+    (log.length?log.slice(0,60).map(function(l){return '<div class="ho-row"><div style="flex:1"><div class="ho-to">'+fmtKm(l.km)+' km driven</div><div class="ho-reason">Odometer reading: '+fmtKm(l.odo)+' km</div></div><div class="ho-side"><div class="mono ho-date">'+esc(fmtD(l.date))+'</div><div class="ho-acts"><button class="btn ghost sm danger" data-act="kmdel" data-id="'+id+'" data-aid="'+l.id+'">'+svg(IC_del)+'</button></div></div></div>';}).join(""):'<div class="empty" style="padding:20px">'+svg('<path d="M3 3v18h18M7 14l3-3 3 2 4-5"/>')+'<h4>No KM entries yet</h4><p>Add daily KM — service is flagged every '+fmtKm(s.interval)+' km.</p></div>')+
+  '</div></div>';
+}
+
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
   var id=a.getAttribute("data-id"),ent=a.getAttribute("data-ent"),aid=a.getAttribute("data-aid");
   if(act==="entrypdf"){entryPDF(ent||curEnt,id);}
+  else if(act==="kmadd"){openKm(id);}
+  else if(act==="kmsave"){saveKm(id);}
+  else if(act==="svcdone"){markServiced(id);}
+  else if(act==="kmdel"){kmDel(id,aid);}
   else if(act==="handover"){openHandover(ent||curEnt,id);}
   else if(act==="hosave"){saveHandover(ent,id);}
   else if(act==="hovpdf"){var h=hovById(ent,id,aid);if(h)handoverPDF(ent,recById(ent,id),h);}
