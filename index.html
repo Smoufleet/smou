@@ -326,6 +326,23 @@ label.chk input{width:16px;height:16px;accent-color:var(--teal)}
 .acat-service{background:rgba(245,158,11,.16);color:var(--amber-2)}
 .alertcard{border-color:var(--line-2)}
 @media(max-width:560px){.acat{display:none}}
+/* login gate */
+.authgate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:20px}
+.authcard{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:30px 26px}
+.authbrand{display:flex;align-items:center;gap:11px;margin-bottom:20px}
+.authbrand .lg{width:38px;height:38px;border-radius:10px;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:18px;flex:none}
+.authbrand .ab-t b{font-size:16px;font-weight:800;display:block;line-height:1.15}
+.authbrand .ab-t small{font-size:11px;color:var(--muted)}
+.authcard h2{font-size:20px;margin:0 0 3px}
+.authsub{font-size:13px;color:var(--muted);margin-bottom:18px}
+.authfield{margin-bottom:13px}
+.authfield label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
+.authfield input{width:100%}
+.authbtn{width:100%;justify-content:center;margin-top:8px;height:42px;font-size:14px}
+.autherr{background:var(--crit-bg);color:var(--crit);border-radius:9px;padding:9px 12px;font-size:12.5px;margin-bottom:14px}
+.authnote{text-align:center;font-size:11.5px;color:var(--muted);margin-top:14px}
+.userbtn .uav{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+select.urole{padding:5px 8px;border-radius:7px}
 .rowact button.docbtn{width:auto;padding:0 8px;gap:3px;font-family:"IBM Plex Mono";font-size:11px;font-weight:600}
 .rowact button.docbtn.has{color:var(--teal-ink);background:var(--teal-bg)}
 /* documents */
@@ -1034,10 +1051,16 @@ function persist(){
   }).catch(function(){persisting=false;setSave("","Saved on this device");});
 }
 var READONLY=false;
+/* ---- roles / auth state ---- */
+var ROLE="viewer";var USER=null;
+function can(a){if(ROLE==="admin")return true;if(ROLE==="dataentry")return a==="edit";return false;}
+function roleLabel(r){return r==="admin"?"Admin":r==="dataentry"?"Data Entry":"View-only";}
+function applyRole(){READONLY=!can("edit");}
 
 /* ============ SUPABASE DATA LAYER ============ */
 var SB=null;
 var SB_ON=!!window.__SB__;
+if(!SB_ON){ROLE="admin";READONLY=false;}
 function sbClient(){
   if(SB)return SB;
   // Use ONLY our own ESM-created client (avoid any window.supabase injected by browser extensions)
@@ -1099,6 +1122,54 @@ function sbSubscribe(){
     if(!document.getElementById("overlay")&&!document.getElementById("rowmenu"))renderApp();
   }).subscribe();}catch(e){}
 }
+
+/* ============ AUTH (Supabase) ============ */
+function ensureProfile(user){
+  return SB.from("profiles").select("id,role,name").eq("id",user.id).then(function(res){
+    if(res.error)throw res.error;
+    if(res.data&&res.data.length)return res.data[0].role||"viewer";
+    return SB.from("profiles").insert({id:user.id,email:user.email,name:(user.email||"").split("@")[0],role:"dataentry"}).then(function(){return "dataentry";}).catch(function(){return "viewer";});
+  });
+}
+function onAuthed(user){
+  USER=user;setSave("saving","Loading…");
+  ensureProfile(user).then(function(role){
+    ROLE=role||"viewer";applyRole();hideLogin();renderApp();
+    var _done=false;var _to=setTimeout(function(){if(!_done){setSave("err","DB timeout — check Console");}},18000);
+    sbLoad().then(function(){_done=true;clearTimeout(_to);renderApp();setSave("","Connected · "+roleLabel(ROLE));sbSubscribe();})
+      .catch(function(err){_done=true;clearTimeout(_to);var msg=(err&&(err.message||err.hint))||JSON.stringify(err);console.error("SMOU DB error:",err);setSave("err","DB error");toast("DB error: "+msg,"err");});
+  }).catch(function(err){showLogin("Couldn't load your profile: "+((err&&err.message)||err));});
+}
+function showLogin(errMsg){
+  setSave("","Sign in required");
+  var ex=document.getElementById("authgate");if(ex)ex.remove();
+  var g=document.createElement("div");g.className="authgate";g.id="authgate";
+  g.innerHTML='<div class="authcard"><div class="authbrand"><span class="lg">◈</span><div class="ab-t"><b>SMOU</b><small>Fleet · Kuwait</small></div></div>'+
+    '<h2>Sign in</h2><div class="authsub">Enter your staff account to continue</div>'+
+    (errMsg?'<div class="autherr">'+esc(errMsg)+'</div>':'')+
+    '<div class="authfield"><label>Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="you@company.com"></div>'+
+    '<div class="authfield"><label>Password</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
+    '<button class="btn primary authbtn" id="authBtn">Sign in</button>'+
+    '<div class="authnote">No account? Ask your admin to create one in Supabase.</div></div>';
+  document.body.appendChild(g);
+  var run=function(){doLogin();};
+  g.querySelector("#authBtn").addEventListener("click",run);
+  g.querySelector("#authPass").addEventListener("keydown",function(e){if(e.key==="Enter")run();});
+  g.querySelector("#authEmail").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();g.querySelector("#authPass").focus();}});
+  setTimeout(function(){var i=g.querySelector("#authEmail");if(i)i.focus();},60);
+}
+function hideLogin(){var el=document.getElementById("authgate");if(el)el.remove();}
+function doLogin(){
+  var em=((document.getElementById("authEmail")||{}).value||"").trim();
+  var pw=(document.getElementById("authPass")||{}).value||"";
+  if(!em||!pw){showLogin("Enter email and password.");return;}
+  var btn=document.getElementById("authBtn");if(btn){btn.disabled=true;btn.textContent="Signing in…";}
+  SB.auth.signInWithPassword({email:em,password:pw}).then(function(res){
+    if(res.error){showLogin(res.error.message||"Wrong email or password.");return;}
+    onAuthed(res.data.user);
+  }).catch(function(e){showLogin("Sign in failed — check your internet.");});
+}
+function doLogout(){if(SB&&SB.auth){SB.auth.signOut().then(function(){location.reload();}).catch(function(){location.reload();});}}
 
 /* ---------- toast ---------- */
 function toast(msg,cls){
@@ -1332,6 +1403,11 @@ function renderApp(){
       sb+='</div>';
     }
   });
+  if(SB_ON&&ROLE==="admin"){
+    sb+='<div class="sb-group"><div class="sb-glab">Admin</div>'+
+      '<a class="sb-link'+(route==="users"?" active":"")+'" data-route="users">'+svg('<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><path d="M16 4a3.2 3.2 0 0 1 0 6M21 20v-1.5a4 4 0 0 0-3-3.9"/>')+'<span>Users &amp; Roles</span></a>'+
+    '</div>';
+  }
   sb+='</nav><div class="sb-foot">v2 · '+(STATE.meta.updatedBy?("last by "+esc(STATE.meta.updatedBy)):"ready")+'</div></aside>';
 
   var main='<div class="main"><div class="topbar">'+
@@ -1342,6 +1418,7 @@ function renderApp(){
       '<button class="btn primary" id="newBtn" data-act="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg><span id="newLbl">New</span></button>'+
       '<button class="icon-btn" data-act="lang" id="langBtn" title="Language / اللغة" style="font-weight:700;font-size:13px">'+(LANG==="ar"?"EN":"ع")+'</button>'+
       '<button class="icon-btn" data-act="theme" id="themeBtn" aria-label="Theme"></button>'+
+      (SB_ON?'<button class="icon-btn userbtn" data-act="usermenu" title="Account"><span class="uav">'+esc((((USER&&USER.email)||"?").charAt(0)||"?").toUpperCase())+'</span></button>':'')+
     '</div></div><div class="page" id="page"></div></div>';
 
   $("#root").innerHTML='<div class="app">'+sb+main+'</div><div class="scrim" id="scrim"></div>';
@@ -1362,6 +1439,7 @@ function renderPage(){
   var titles={overview:["Overview","Fleet & finance at a glance"],finance:["Finance Dashboard","Cost control · SMOU International"],"finance/log":["Expense Log","All logged expenses"],"finance/new":["New Expense","Log a daily cost entry"]};
   var newBtn=$("#newBtn");
   var P=route.split("/");
+  if(route==="users"){setTitle("Users & Roles","Admin · manage staff access");newBtn.hidden=true;pageUsers(pg);return;}
   if(route==="overview"){setTitle("Overview","Fleet & finance at a glance");newBtn.hidden=true;pageOverview(pg);}
   else if(route==="finance"){setTitle("Finance Dashboard","Cost control · SMOU International");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageFinance(pg);}
   else if(route==="finance/new"){setTitle("New Expense","Finance · daily entry");newBtn.hidden=true;pageNewExpense(pg);}
@@ -1371,6 +1449,7 @@ function renderPage(){
     if(P[2]){newBtn.hidden=true;pageDetail(pg,ent,P[2]);}
     else{setTitle(ENT[ent].title,"GRD Operations · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;pageRegister(pg,ent);}}
   else {go("overview");}
+  if(!can("edit")&&newBtn)newBtn.hidden=true;
 }
 function setTitle(t,c){$("#pgTitle").textContent=t;$("#pgCrumb").textContent=c;}
 
@@ -1482,7 +1561,7 @@ function closeForm(){var ov=$("#overlay");if(ov)ov.remove();}
 
 /* ============ DELETE CONFIRM ============ */
 function confirmDelete(ent,id){
-  if(READONLY){toast("You have view-only access.","err");return;}
+  if(!can("delete")){toast("Only an admin can delete records.","err");return;}
   var cfg=ENT[ent];var rec=store(ent).filter(function(r){return r.id===id;})[0];if(!rec)return;
   var label=rec.name||rec.plate||rec.mobile||rec.room||rec.card||(rec.category+" "+(rec.amount||""))||cfg.singular;
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
@@ -1490,6 +1569,7 @@ function confirmDelete(ent,id){
   document.body.appendChild(ov);
 }
 function doDelete(ent,id){
+  if(!can("delete")){toast("Only an admin can delete records.","err");closeForm();return;}
   var cfg=ENT[ent];var arr=store(ent);var i=arr.findIndex(function(r){return r.id===id;});
   if(i>=0)arr.splice(i,1);
   closeForm();renderApp();persist();toast("Deleted.","good");
@@ -1601,6 +1681,22 @@ function renderAlertPanel(list){
   }).join("");
   return head+rows+'</div></div>';
 }
+function pageUsers(pg){
+  if(!SB_ON||ROLE!=="admin"||!SB){go("overview");return;}
+  pg.innerHTML='<div class="card"><div class="card-b" id="usersBox"><div class="empty" style="padding:24px"><h4>Loading users…</h4></div></div></div>';
+  SB.from("profiles").select("id,email,name,role,created_at").order("created_at",{ascending:true}).then(function(res){
+    var box=document.getElementById("usersBox");if(!box)return;
+    if(res.error){box.innerHTML='<div class="autherr">'+esc(res.error.message)+'</div>';return;}
+    var rows=res.data||[];
+    var info='<div class="banner info" style="margin-bottom:14px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div>Naya staff add karne ke liye <b>Supabase → Authentication → Add user</b> (Auto Confirm ON). Wo ek baar login kare, phir uska role yaha set kar do.</div></div>';
+    var tbl='<div class="tbl-wrap"><table class="dt"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>'+
+      (rows.length?rows.map(function(u){var self=USER&&u.id===USER.id;return '<tr><td><span class="nm">'+esc(u.name||"—")+'</span>'+(self?' <span class="sub">(you)</span>':'')+'</td><td class="mono">'+esc(u.email||"")+'</td><td><select class="urole" data-urole data-uid="'+u.id+'"'+(self?' disabled':'')+'>'+["admin","dataentry","viewer"].map(function(r){return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+roleLabel(r)+'</option>';}).join("")+'</select></td></tr>';}).join(""):'<tr><td colspan="3"><div class="empty" style="padding:22px"><h4>No users yet</h4><p>Create staff accounts in Supabase dashboard.</p></div></td></tr>')+
+    '</tbody></table></div>';
+    box.innerHTML=info+tbl+'<div class="sub" style="margin-top:10px;color:var(--muted);font-size:12px"><b>Admin</b> = sab kuch · <b>Data Entry</b> = add/edit (delete nahi) · <b>View-only</b> = sirf dekh sakta</div>';
+    if(LANG==="ar")transEl(box);
+  }).catch(function(e){var box=document.getElementById("usersBox");if(box)box.innerHTML='<div class="autherr">'+esc((e&&e.message)||e)+'</div>';});
+}
+document.addEventListener("change",function(e){var s=e.target.closest("[data-urole]");if(!s)return;var uid=s.getAttribute("data-uid"),role=s.value;s.disabled=true;SB.from("profiles").update({role:role}).eq("id",uid).then(function(r){s.disabled=false;if(r&&r.error)toast("Couldn't update role: "+r.error.message,"err");else toast("Role updated to "+roleLabel(role)+".","good");}).catch(function(){s.disabled=false;toast("Update failed.","err");});});
 function pageOverview(pg){
   var d=STATE.grd.drivers;
   var st=countBy(d,function(x){return x.status;});
@@ -1834,7 +1930,23 @@ document.addEventListener("click",function(e){
   else if(act==="dodel"){doDelete(a.getAttribute("data-ent"),a.getAttribute("data-id"));}
   else if(act==="saveExp"){saveExpensePage($("#page"));}
   else if(act==="clearExp"){pageNewExpense($("#page"));}
+  else if(act==="usermenu"){openUserMenu(a);}
+  else if(act==="logout"){doLogout();}
 });
+function openUserMenu(btn){
+  closeRowMenu();
+  var m=document.createElement("div");m.className="popmenu";m.id="rowmenu";
+  var nm=(USER&&(USER.email||""))||"";
+  m.innerHTML='<div style="padding:10px 12px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px;word-break:break-all">'+esc(nm)+'</div><div class="sub" style="font-size:11.5px;color:var(--muted)">Signed in · '+esc(roleLabel(ROLE))+'</div></div>'+
+    (ROLE==="admin"?'<div class="menu-item" data-route="users">'+svg('<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/>')+'Users &amp; Roles</div>':'')+
+    '<div class="menu-item danger" data-act="logout">'+svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>')+'Log out</div>';
+  document.body.appendChild(m);
+  var r=btn.getBoundingClientRect(),mw=m.offsetWidth||200,mh=m.offsetHeight;
+  var left=Math.min(r.right-mw,innerWidth-mw-8);if(left<8)left=8;
+  var top=r.bottom+6;if(top+mh>innerHeight-8)top=r.top-mh-6;if(top<8)top=8;
+  m.style.left=left+"px";m.style.top=top+"px";
+  setTimeout(function(){document.addEventListener("click",closeRowMenu,{once:true});},0);
+}
 $("#scrim");
 document.addEventListener("click",function(e){if(e.target.id==="scrim")closeMenu();if(e.target.id==="overlay")closeForm();if(e.target.id==="overlay2"){e.target.remove();}});
 function closeMenu(){var s=$("#sidebar");if(s)s.classList.remove("open");var sc=$("#scrim");if(sc)sc.classList.remove("on");}
@@ -2002,12 +2114,12 @@ function openRowMenu(btn,ent,id){
   closeRowMenu();closeAllMS();
   var rec=store(ent).filter(function(r){return r.id===id;})[0];
   var items='<div class="menu-item" data-act="viewrec" data-id="'+id+'">'+svg(IC_eye)+'View details</div>';
-  if(ent==="drivers")items+='<div class="menu-item" data-act="docs" data-id="'+id+'">'+svg(IC_docs)+'Documents'+((rec&&rec.docs&&rec.docs.length)?' ('+rec.docs.length+')':'')+'</div>';
-  if(ASSETENTS[ent])items+='<div class="menu-item" data-act="handover" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_hand)+'Handover / Assign</div>';
-  if(ent==="service"){items+='<div class="menu-item" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</div>';items+='<div class="menu-item" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</div>';}
+  if(ent==="drivers"&&can("edit"))items+='<div class="menu-item" data-act="docs" data-id="'+id+'">'+svg(IC_docs)+'Documents'+((rec&&rec.docs&&rec.docs.length)?' ('+rec.docs.length+')':'')+'</div>';
+  if(ASSETENTS[ent]&&can("edit"))items+='<div class="menu-item" data-act="handover" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_hand)+'Handover / Assign</div>';
+  if(ent==="service"&&can("edit")){items+='<div class="menu-item" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</div>';items+='<div class="menu-item" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</div>';}
   items+='<div class="menu-item" data-act="entrypdf" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_pdf)+'Download PDF</div>';
-  items+='<div class="menu-item" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</div>';
-  items+='<div class="menu-sep"></div><div class="menu-item danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</div>';
+  if(can("edit"))items+='<div class="menu-item" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</div>';
+  if(can("delete"))items+='<div class="menu-sep"></div><div class="menu-item danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</div>';
   var m=document.createElement("div");m.className="popmenu";m.id="rowmenu";m.innerHTML=items;
   document.body.appendChild(m);
   var r=btn.getBoundingClientRect(),mw=m.offsetWidth||186,mh=m.offsetHeight;
@@ -2050,11 +2162,11 @@ function pageDetail(pg,ent,id){
   cfg.fields.forEach(function(f){if(f.g){cur={g:f.g,items:[]};groups.push(cur);}else{if(!cur){cur={g:"Details",items:[]};groups.push(cur);}cur.items.push(f);}});
   var html='<div class="detail-head">'+
     '<button class="btn ghost sm" data-act="back">'+svg(IC_back)+'Back</button><div style="flex:1"></div>'+
-    (ent==="drivers"?'<button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_docs)+'Documents ('+((rec.docs&&rec.docs.length)||0)+')</button>':'')+
-    (ASSETENTS[ent]?'<button class="btn sm" data-act="handover" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_hand)+'Handover</button>':'')+
+    (ent==="drivers"&&can("edit")?'<button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_docs)+'Documents ('+((rec.docs&&rec.docs.length)||0)+')</button>':'')+
+    (ASSETENTS[ent]&&can("edit")?'<button class="btn sm" data-act="handover" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_hand)+'Handover</button>':'')+
     '<button class="btn sm" data-act="entrypdf" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_pdf)+'PDF</button>'+
-    '<button class="btn sm" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</button>'+
-    '<button class="btn sm danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</button></div>';
+    (can("edit")?'<button class="btn sm" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</button>':'')+
+    (can("delete")?'<button class="btn sm danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</button>':'')+'</div>';
   var initial=((primary||"?").trim().charAt(0)||"?").toUpperCase();
   var cam='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5"/></svg>';
   var ava;
@@ -2081,13 +2193,13 @@ function pageDetail(pg,ent,id){
   if(ent==="housing")html+=houseAssetsCard(rec,id);
   if(ent==="drivers"){
     var docs=rec.docs||[];
-    html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Documents</h3><button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_up)+'Upload / manage</button></div><div class="card-b">'+
+    html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Documents</h3>'+(can("edit")?'<button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_up)+'Upload / manage</button>':'')+'</div><div class="card-b">'+
       (docs.length?'<div class="doc-grid">'+docs.map(function(dc){var thumb=/^image\//.test(dc.mime)?'<img src="'+dc.data+'" alt="">':FILEIC;return '<div class="doc-card"><div class="doc-thumb" data-act="docviewd" data-did="'+dc.id+'" data-id="'+id+'">'+thumb+'</div><div class="doc-meta"><div class="doc-type">'+esc(dc.type)+'</div><div class="doc-name">'+esc(dc.name)+'</div></div></div>';}).join("")+'</div>':'<div class="empty" style="padding:22px">'+FILEIC+'<h4>No documents yet</h4><p>Upload Civil ID, passport, license and more.</p></div>')+
     '</div></div>';
   }
   if(ent==="expenses"){
     var rc=rec.receipt;
-    html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Receipt</h3>'+(rc?'<button class="btn sm danger" data-act="rcpdelD" data-id="'+id+'">'+svg(IC_del)+'Remove</button>':'<button class="btn sm" data-act="rcppickD" data-id="'+id+'">'+svg(IC_up)+'Attach receipt</button>')+'</div><div class="card-b" style="text-align:center">'+
+    html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Receipt</h3>'+(can("edit")?(rc?'<button class="btn sm danger" data-act="rcpdelD" data-id="'+id+'">'+svg(IC_del)+'Remove</button>':'<button class="btn sm" data-act="rcppickD" data-id="'+id+'">'+svg(IC_up)+'Attach receipt</button>'):'')+'</div><div class="card-b" style="text-align:center">'+
       (rc?(/^data:image\//.test(rc)?'<img src="'+rc+'" data-act="rcpviewD" data-id="'+id+'" style="max-height:300px;max-width:100%;border-radius:10px;cursor:zoom-in">':'<button class="btn" data-act="rcpviewD" data-id="'+id+'">'+svg(IC_eye)+'Open receipt (PDF)</button>')
        :'<div class="empty" style="padding:22px">'+FILEIC+'<h4>No receipt attached</h4><p>Attach the bill or receipt photo for this expense.</p></div>')+
     '</div></div>';
@@ -2265,19 +2377,21 @@ function handoverPDF(ent,rec,en){
   toast("Handover voucher downloaded.","good");
 }
 function hovById(ent,id,aid){var r=recById(ent,id);if(!r||!r.assign)return null;return r.assign.filter(function(x){return x.id===aid;})[0];}
-function delHandover(ent,id,aid){var r=recById(ent,id);if(!r||!r.assign)return;r.assign=r.assign.filter(function(x){return x.id!==aid;});persist();pageDetail($("#page"),ent,id);toast("Handover entry removed.","good");}
+function delHandover(ent,id,aid){if(READONLY)return;var r=recById(ent,id);if(!r||!r.assign)return;r.assign=r.assign.filter(function(x){return x.id!==aid;});persist();pageDetail($("#page"),ent,id);toast("Handover entry removed.","good");}
 function assetHistoryCard(ent,rec,id){
   var hist=rec.assign||[];
-  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Assignment / Handover History</h3><button class="btn sm" data-act="handover" data-id="'+id+'">'+svg(IC_hand)+'New handover</button></div><div class="card-b">'+
-    (hist.length?hist.map(function(h){return '<div class="ho-row"><div style="flex:1;min-width:0"><div class="ho-to">'+esc(h.to)+(h.from?' <span class="ho-from">← '+esc(h.from)+'</span>':'')+'</div>'+(h.reason?'<div class="ho-reason">'+esc(h.reason)+'</div>':'')+'</div><div class="ho-side"><div class="mono ho-date">'+esc(fmtD(h.date))+(h.ret?' → '+esc(fmtD(h.ret)):'')+'</div><div class="ho-acts"><button class="btn ghost sm" data-act="hovpdf" data-ent="'+ent+'" data-id="'+id+'" data-aid="'+h.id+'">'+svg(IC_pdf)+'PDF</button><button class="btn ghost sm danger" data-act="hovdel" data-ent="'+ent+'" data-id="'+id+'" data-aid="'+h.id+'">'+svg(IC_del)+'</button></div></div></div>';}).join(""):'<div class="empty" style="padding:20px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>')+'<h4>No handovers yet</h4><p>Record when this asset is issued to an employee, with a reason.</p></div>')+
+  var ed=can("edit");
+  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Assignment / Handover History</h3>'+(ed?'<button class="btn sm" data-act="handover" data-id="'+id+'">'+svg(IC_hand)+'New handover</button>':'')+'</div><div class="card-b">'+
+    (hist.length?hist.map(function(h){return '<div class="ho-row"><div style="flex:1;min-width:0"><div class="ho-to">'+esc(h.to)+(h.from?' <span class="ho-from">← '+esc(h.from)+'</span>':'')+'</div>'+(h.reason?'<div class="ho-reason">'+esc(h.reason)+'</div>':'')+'</div><div class="ho-side"><div class="mono ho-date">'+esc(fmtD(h.date))+(h.ret?' → '+esc(fmtD(h.ret)):'')+'</div><div class="ho-acts"><button class="btn ghost sm" data-act="hovpdf" data-ent="'+ent+'" data-id="'+id+'" data-aid="'+h.id+'">'+svg(IC_pdf)+'PDF</button>'+(ed?'<button class="btn ghost sm danger" data-act="hovdel" data-ent="'+ent+'" data-id="'+id+'" data-aid="'+h.id+'">'+svg(IC_del)+'</button>':'')+'</div></div></div>';}).join(""):'<div class="empty" style="padding:20px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>')+'<h4>No handovers yet</h4><p>Record when this asset is issued to an employee, with a reason.</p></div>')+
   '</div></div>';
 }
 
 /* ---- housing room assets ---- */
 function houseAssetsCard(rec,id){
   var as=rec.assets||[];
-  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Room Assets</h3><button class="btn sm" data-act="haadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add asset</button></div><div class="card-b">'+
-    (as.length?'<div class="ha-grid">'+as.map(function(a){return '<div class="ha-item"><div class="ha-nm">'+esc(a.type)+'</div><div class="ha-ct"><button class="ha-btn" data-act="hadec" data-id="'+id+'" data-aid="'+a.id+'">−</button><span class="mono ha-n">'+(num(a.count)||0)+'</span><button class="ha-btn" data-act="hainc" data-id="'+id+'" data-aid="'+a.id+'">+</button><button class="ha-btn del" data-act="hadel" data-id="'+id+'" data-aid="'+a.id+'" title="Remove">'+svg(IC_x)+'</button></div></div>';}).join("")+'</div>':'<div class="empty" style="padding:20px">'+svg('<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>')+'<h4>No assets added</h4><p>Add beds, fridge, washing machine, gas and more — with counts.</p></div>')+
+  var ed=can("edit");
+  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Room Assets</h3>'+(ed?'<button class="btn sm" data-act="haadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add asset</button>':'')+'</div><div class="card-b">'+
+    (as.length?'<div class="ha-grid">'+as.map(function(a){return '<div class="ha-item"><div class="ha-nm">'+esc(a.type)+'</div><div class="ha-ct">'+(ed?'<button class="ha-btn" data-act="hadec" data-id="'+id+'" data-aid="'+a.id+'">−</button>':'')+'<span class="mono ha-n">'+(num(a.count)||0)+'</span>'+(ed?'<button class="ha-btn" data-act="hainc" data-id="'+id+'" data-aid="'+a.id+'">+</button><button class="ha-btn del" data-act="hadel" data-id="'+id+'" data-aid="'+a.id+'" title="Remove">'+svg(IC_x)+'</button>':'')+'</div></div>';}).join("")+'</div>':'<div class="empty" style="padding:20px">'+svg('<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>')+'<h4>No assets added</h4><p>Add beds, fridge, washing machine, gas and more — with counts.</p></div>')+
   '</div></div>';
 }
 function openHouseAsset(id){
@@ -2299,8 +2413,8 @@ function saveHouseAsset(id){
   if(ex)ex.count=(num(ex.count)||0)+count;else rec.assets.unshift({id:uid("ha"),type:type,count:count});
   closeForm();persist();pageDetail($("#page"),"housing",id);toast("Asset added.","good");
 }
-function haAdj(id,aid,delta){var rec=recById("housing",id);if(!rec)return;var a=(rec.assets||[]).filter(function(x){return x.id===aid;})[0];if(!a)return;a.count=Math.max(0,(num(a.count)||0)+delta);persist();pageDetail($("#page"),"housing",id);}
-function haDel(id,aid){var rec=recById("housing",id);if(!rec)return;rec.assets=(rec.assets||[]).filter(function(x){return x.id!==aid;});persist();pageDetail($("#page"),"housing",id);}
+function haAdj(id,aid,delta){if(READONLY)return;var rec=recById("housing",id);if(!rec)return;var a=(rec.assets||[]).filter(function(x){return x.id===aid;})[0];if(!a)return;a.count=Math.max(0,(num(a.count)||0)+delta);persist();pageDetail($("#page"),"housing",id);}
+function haDel(id,aid){if(READONLY)return;var rec=recById("housing",id);if(!rec)return;rec.assets=(rec.assets||[]).filter(function(x){return x.id!==aid;});persist();pageDetail($("#page"),"housing",id);}
 
 /* ---- vehicle service · daily KM ---- */
 function openKm(id){
@@ -2329,17 +2443,17 @@ function markServiced(id){
   persist();if(getRoute().indexOf(id)>=0)pageDetail($("#page"),"service",id);else renderApp();
   toast("Marked serviced at "+fmtKm(rec.lastService)+" km — counter reset.","good");
 }
-function kmDel(id,aid){var rec=recById("service",id);if(!rec||!rec.kmlog)return;var e=rec.kmlog.filter(function(x){return x.id===aid;})[0];if(e){rec.odo=Math.max(0,(num(rec.odo)||0)-(num(e.km)||0));rec.kmlog=rec.kmlog.filter(function(x){return x.id!==aid;});}persist();pageDetail($("#page"),"service",id);toast("KM entry removed.","good");}
+function kmDel(id,aid){if(READONLY)return;var rec=recById("service",id);if(!rec||!rec.kmlog)return;var e=rec.kmlog.filter(function(x){return x.id===aid;})[0];if(e){rec.odo=Math.max(0,(num(rec.odo)||0)-(num(e.km)||0));rec.kmlog=rec.kmlog.filter(function(x){return x.id!==aid;});}persist();pageDetail($("#page"),"service",id);toast("KM entry removed.","good");}
 function serviceCard(rec,id){
   var s=svcInfo(rec);var log=rec.kmlog||[];var bar=Math.min(100,Math.round(s.since/(s.interval||5000)*100));
   var col=s.due?"var(--crit)":s.soon?"var(--amber)":"var(--teal)";
-  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Service Status</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm amber" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</button><button class="btn sm" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</button></div></div><div class="card-b">'+
+  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Service Status</h3>'+(can("edit")?'<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm amber" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</button><button class="btn sm" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</button></div>':'')+'</div><div class="card-b">'+
     '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>'+fmtKm(s.since)+' km since last service</span><span class="mono" style="color:'+col+';font-weight:700">'+(s.due?"SERVICE DUE":s.soon?"DUE SOON":fmtKm(s.remaining)+" km left")+'</span></div>'+
     '<div class="bt" style="height:10px"><div class="bf" style="width:'+bar+'%;background:'+col+'"></div></div>'+
     '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap;gap:6px"><span>Last service: '+fmtKm(rec.lastService)+' km'+(rec.lastServiceDate?" · "+esc(fmtD(rec.lastServiceDate)):"")+'</span><span>Next at '+fmtKm(s.next)+' km · every '+fmtKm(s.interval)+' km</span></div>'+
   '</div></div>'+
   '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Daily KM Log</h3><span class="hint">'+log.length+' entries</span></div><div class="card-b">'+
-    (log.length?log.slice(0,60).map(function(l){return '<div class="ho-row"><div style="flex:1"><div class="ho-to">'+fmtKm(l.km)+' km driven</div><div class="ho-reason">Odometer reading: '+fmtKm(l.odo)+' km</div></div><div class="ho-side"><div class="mono ho-date">'+esc(fmtD(l.date))+'</div><div class="ho-acts"><button class="btn ghost sm danger" data-act="kmdel" data-id="'+id+'" data-aid="'+l.id+'">'+svg(IC_del)+'</button></div></div></div>';}).join(""):'<div class="empty" style="padding:20px">'+svg('<path d="M3 3v18h18M7 14l3-3 3 2 4-5"/>')+'<h4>No KM entries yet</h4><p>Add daily KM — service is flagged every '+fmtKm(s.interval)+' km.</p></div>')+
+    (log.length?log.slice(0,60).map(function(l){return '<div class="ho-row"><div style="flex:1"><div class="ho-to">'+fmtKm(l.km)+' km driven</div><div class="ho-reason">Odometer reading: '+fmtKm(l.odo)+' km</div></div><div class="ho-side"><div class="mono ho-date">'+esc(fmtD(l.date))+'</div>'+(can("edit")?'<div class="ho-acts"><button class="btn ghost sm danger" data-act="kmdel" data-id="'+id+'" data-aid="'+l.id+'">'+svg(IC_del)+'</button></div>':'')+'</div></div>';}).join(""):'<div class="empty" style="padding:20px">'+svg('<path d="M3 3v18h18M7 14l3-3 3 2 4-5"/>')+'<h4>No KM entries yet</h4><p>Add daily KM — service is flagged every '+fmtKm(s.interval)+' km.</p></div>')+
   '</div></div>';
 }
 
@@ -2413,6 +2527,7 @@ function saveSheet(ent,withData){
   } else blobSave();
 }
 function importSheet(ent,arraybuffer){
+  if(!can("edit")){toast("You don't have permission to import.","err");return;}
   if(!xlsxReady()){toast("Excel engine still loading — try again in a moment.","err");return;}
   var aoa;
   try{var wb=XLSX.read(new Uint8Array(arraybuffer),{type:"array"});var ws=wb.Sheets[wb.SheetNames[0]];aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",blankrows:false});}
@@ -2452,10 +2567,13 @@ if(SB_ON){
     else{setSave("err","Library not loaded");toast("Supabase library did not load — check internet/CDN.","err");}
   })();
   function startSB(){
-    var _sbDone=false;
-    var _sbTo=setTimeout(function(){if(!_sbDone){setSave("err","DB timeout — check Console");toast("Database is not responding.","err");}},18000);
-    sbLoad().then(function(){_sbDone=true;clearTimeout(_sbTo);renderApp();setSave("","Connected · synced");sbSubscribe();})
-      .catch(function(err){_sbDone=true;clearTimeout(_sbTo);var msg=(err&&(err.message||err.hint||err.details))||JSON.stringify(err);console.error("SMOU DB error:",err);setSave("err","DB error");toast("DB error: "+msg,"err");});
+    SB=sbClient();
+    setSave("saving","Checking sign-in…");
+    SB.auth.getSession().then(function(res){
+      var sess=res&&res.data&&res.data.session;
+      if(sess&&sess.user){onAuthed(sess.user);}else{showLogin();}
+    }).catch(function(){showLogin();});
+    try{SB.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT")location.reload();});}catch(e){}
   }
 }else{setSave("","Saved");}
 })();
