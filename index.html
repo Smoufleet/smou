@@ -1539,7 +1539,10 @@ function netPay(r){return (num(r.basic)||0)+(num(r.allowance)||0)-dedTotal(r);}
 
 /* ============ RENDER APP SHELL ============ */
 var NAVGROUPS=[
-  {lab:"Overview",items:[{r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'}]},
+  {lab:"Overview",items:[
+    {r:"alerts",t:"Alerts & Expiries",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',cnt:function(){return computeAlerts().length;}},
+    {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'}
+  ]},
   {lab:"GRD Operations",key:"grd",collapsible:true,items:[
     {r:"grd/drivers",t:"Employee",ent:"drivers",ic:'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><path d="M16 4a3.2 3.2 0 0 1 0 6M21 20v-1.5a4 4 0 0 0-3-3.9"/>'},
     {sub:true,key:"assets",lab:"Assets",ic:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',items:[
@@ -1640,6 +1643,7 @@ function renderPage(){
   var P=route.split("/");
   if(route==="users"){setTitle("Users & Roles","Admin · manage staff access");newBtn.hidden=true;pageUsers(pg);return;}
   if(route==="reports"){newBtn.hidden=true;pageReports(pg);return;}
+  if(route==="alerts"){setTitle("Alerts & Expiries","Expired + expiring within 30 days");newBtn.hidden=true;pageAlerts(pg);return;}
   if(route==="overview"){setTitle("Overview","Fleet & finance at a glance");newBtn.hidden=true;pageOverview(pg);}
   else if(route==="finance"){setTitle("Finance Dashboard","Cost control · SMOU International");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageFinance(pg);}
   else if(route==="finance/new"){setTitle("New Expense","Finance · daily entry");newBtn.hidden=true;pageNewExpense(pg);}
@@ -1960,6 +1964,10 @@ function openPendDoc(key,label){
   document.body.appendChild(ov);
 }
 document.addEventListener("click",function(e){var pr=e.target.closest("[data-penddoc]");if(pr){openPendDoc(pr.getAttribute("data-penddoc"),pr.getAttribute("data-lab"));}});
+function pageAlerts(pg){
+  pg.innerHTML=renderAlertPanel(computeAlerts());
+  if(LANG==="ar")transEl(pg);
+}
 function pageOverview(pg){
   var d=STATE.grd.drivers;
   var st=countBy(d,function(x){return x.status;});
@@ -2001,7 +2009,7 @@ function pageOverview(pg){
     '<div class="card"><div class="card-h"><h3>Housing</h3><span class="hint">'+houseAct+"/"+houseCap+' beds</span></div><div class="card-b">'+hbars(STATE.grd.housing.map(function(h){return {label:h.room.replace("SMOU ",""),value:num(h.actual)||0,color:cvar("--teal")};}),{max:Math.max.apply(null,STATE.grd.housing.map(function(h){return num(h.cap)||0;}))})+'</div></div>'+
   '</div>';
 
-  pg.innerHTML=renderAlertPanel(allAlerts)+kpis+charts;
+  pg.innerHTML=kpis+charts;
 }
 
 /* ============ FINANCE ANALYTICS ============ */
