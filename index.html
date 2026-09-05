@@ -247,6 +247,20 @@ table.dt td .sub{font-size:11px;color:var(--muted)}
 .pl-chip{border:0;background:transparent;color:var(--ink-2);font-family:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .pl-chip.active{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
 .pl-chip .pd{width:8px;height:8px;border-radius:50%}
+.ord-msel{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:170px}
+.ord-msel:focus{outline:none;border-color:var(--teal)}
+.btn.xs{padding:4px 9px;font-size:11.5px}
+.dl-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.dl-fld{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px}
+.dl-fld label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.dl-fld input,.dl-fld select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-family:inherit;font-size:13.5px;width:100%}
+.dl-fld input:focus,.dl-fld select:focus{outline:none;border-color:var(--teal)}
+.dl-drv{flex:2;min-width:180px}
+.dl-drv .empc,.dl-drv .empc-inp{width:100%}
+.dl-note{flex:2;min-width:150px}
+.dl-num{flex:0 0 96px;min-width:80px}
+.dl-btn{flex:0 0 auto;min-width:auto}
+.dl-btn .btn{white-space:nowrap}
 .dd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .dd-mrow td{padding:8px 10px;border-top:1px solid var(--line)}
 @media(max-width:640px){.dd-grid{grid-template-columns:repeat(2,1fr)}}
@@ -1011,7 +1025,7 @@ var STATE=null;
 if(window.__STATE__) STATE=clone(window.__STATE__);
 if(!STATE){ try{var ls=localStorage.getItem("smou-erp");if(ls)STATE=JSON.parse(ls);}catch(e){} }
 if(!STATE) STATE=clone(window.__SEEDSTATE__);
-if(STATE&&STATE.grd){["compdocs","service","hiring","fines","incidents","maintenance","attendance","perf"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});}
+if(STATE&&STATE.grd){["compdocs","service","hiring","fines","incidents","maintenance","attendance","perf","orderlog"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});}
 if(STATE&&!STATE.finance)STATE.finance={expenses:[]};
 if(STATE&&STATE.finance){["payroll","income","budgets"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});}
 // sanitize zone lookup junk
@@ -1107,14 +1121,14 @@ function sbClient(){
   if(window.__SBCLIENT__&&typeof window.__SBCLIENT__.from==="function"){SB=window.__SBCLIENT__;}
   return SB;
 }
-var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["perf",function(){return STATE.grd.perf;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["expenses",function(){return STATE.finance.expenses;}]];
-var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],expenses:["finance","expenses"]};
+var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["perf",function(){return STATE.grd.perf;}],["orderlog",function(){return STATE.grd.orderlog;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["expenses",function(){return STATE.finance.expenses;}]];
+var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],orderlog:["grd","orderlog"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],expenses:["finance","expenses"]};
 var shadow={};
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
-  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],payroll:[],income:[],budgets:[],expenses:[]};
+  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
-  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
+  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.grd.orderlog=buckets.orderlog;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
   snapshotShadow();
 }
 function sbLoad(){
@@ -1916,6 +1930,7 @@ function pageUsers(pg){
   }).catch(function(e){var box=document.getElementById("usersBox");if(box)box.innerHTML='<div class="autherr">'+esc((e&&e.message)||e)+'</div>';});
 }
 document.addEventListener("change",function(e){var of=e.target.closest("#ordImportFile");if(of&&of.files&&of.files[0]){var fr=new FileReader();fr.onload=function(){parseOrdersWB(fr.result);};fr.readAsArrayBuffer(of.files[0]);of.value="";}});
+document.addEventListener("change",function(e){var ms=e.target.closest("#ordMonthSel");if(ms){ordersMonth=ms.value;pageOrders($("#page"));}});
 document.addEventListener("change",function(e){var s=e.target.closest("[data-urole]");if(!s)return;var uid=s.getAttribute("data-uid"),role=s.value;s.disabled=true;SB.from("profiles").update({role:role}).eq("id",uid).then(function(r){s.disabled=false;if(r&&r.error)toast("Couldn't update role: "+r.error.message,"err");else toast("Role updated to "+roleLabel(role)+".","good");}).catch(function(){s.disabled=false;toast("Update failed.","err");});});
 var hiringView="dash";
 function pageHiring(pg){
@@ -2044,15 +2059,17 @@ function exportOrdersXLSX(){
   var ws=XLSX.utils.aoa_to_sheet(aoa);ws["!cols"]=ORDHDR.map(function(h){return {wch:Math.max(9,h.length+3)};});
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Performance Data");
   var buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-  var tag=ordersPlat==="all"?"":"-"+ordersPlat;
+  var tag=(ordersPlat==="all"?"":"-"+ordersPlat)+(ordersMonth==="all"?"":"-"+perfMLabel(ordersMonth).replace(/\s+/g,""));
+  var scope=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ");
   dlFile(new Uint8Array(buf),"SMOU-Order-Performance"+tag+"_"+isoToday()+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  toast("Exported "+rows.length+" rows"+(ordersPlat!=="all"?" ("+ordersPlat+")":"")+".","good");
+  toast("Exported "+rows.length+" rows"+(scope?" ("+scope+")":"")+".","good");
 }
 function openOrdMenu(btn){
   closeRowMenu();
   var items='<div class="menu-item" data-act="ordtemplate">'+svg('<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/>')+'Download template</div>';
   if(can("edit"))items+='<div class="menu-item" data-act="ordimport">'+svg('<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</div>';
-  items+='<div class="menu-item" data-act="ordexport">'+svg('<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/>')+'Export data'+(ordersPlat!=="all"?" ("+esc(ordersPlat)+")":"")+'</div>';
+  var _es=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ");
+  items+='<div class="menu-item" data-act="ordexport">'+svg('<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/>')+'Export data'+(_es?" ("+esc(_es)+")":"")+'</div>';
   var m=document.createElement("div");m.className="popmenu";m.id="rowmenu";m.innerHTML=items;document.body.appendChild(m);
   var r=btn.getBoundingClientRect(),mw=m.offsetWidth||200,mh=m.offsetHeight;
   var left=Math.min(r.right-mw,innerWidth-mw-8);if(left<8)left=8;
@@ -2112,23 +2129,91 @@ function parseOrdersWB(buf){
 }
 var ordersView="dash";
 var ordersPlat="all";
+var ordersMonth="all";
 function moIdx(m){var i=MONS.indexOf(m);if(i<0)i=MON.indexOf(m);return i;}
-function ordFilter(P){return ordersPlat==="all"?P:P.filter(function(r){return r.platform===ordersPlat;});}
+function perfMKey(r){var mi=moIdx(r.month);if(mi<0)return "";return (r.year||"")+"-"+String(mi+1).padStart(2,"0");}
+function perfMLabel(k){var p=k.split("-");return MON[(+p[1])-1]+" "+p[0];}
+function ordFilter(P){return P.filter(function(r){if(ordersPlat!=="all"&&r.platform!==ordersPlat)return false;if(ordersMonth!=="all"&&perfMKey(r)!==ordersMonth)return false;return true;});}
+// Combine imported monthly rows with daily-log entries rolled up per driver/platform/month.
+// Daily log takes precedence for a month it covers (avoids double counting).
+function effectivePerf(){
+  var imported=STATE.grd.perf||[],log=STATE.grd.orderlog||[];
+  if(!log.length)return imported;
+  var agg={};
+  log.forEach(function(e){var d=parseD(e.date);if(!d)return;var y=d.getFullYear(),mi=d.getMonth();var ym=y+"-"+String(mi+1).padStart(2,"0");var k=e.driver+"|"+e.platform+"|"+ym;
+    if(!agg[k])agg[k]={id:"log_"+k.replace(/[^A-Za-z0-9]+/g,"_"),driver:e.driver,platform:e.platform,vehicle:e.vehicle||"",company:"",month:MONS[mi],year:String(y),orders:0,days:0,fromLog:true,_d:{}};
+    var a=agg[k];a.orders+=num(e.orders)||0;a._d[e.date]=1;if(e.vehicle)a.vehicle=e.vehicle;});
+  var keys={},out=[];
+  Object.keys(agg).forEach(function(k){var a=agg[k];a.days=Object.keys(a._d).length;delete a._d;keys[k]=1;out.push(a);});
+  imported.forEach(function(r){var mi=moIdx(r.month);var ym=(r.year||"")+"-"+String(mi+1).padStart(2,"0");var k=r.driver+"|"+r.platform+"|"+ym;if(!keys[k])out.push(r);});
+  return out;
+}
+function perfDrvList(){var s={};(STATE.grd.perf||[]).forEach(function(r){if(r.driver)s[r.driver]=1;});(STATE.grd.orderlog||[]).forEach(function(r){if(r.driver)s[r.driver]=1;});(STATE.grd.drivers||[]).forEach(function(d){if(d.name)s[normDriver(d.name)]=1;});return Object.keys(s).sort().map(function(n){return {v:n,a:"",b:""};});}
 function pageOrders(pg){
   curEnt=null;
-  var P=STATE.grd.perf||[];
-  var subtabs='<div class="sub-tabs" style="margin:0">'+[["dash","Dashboard"],["records","Records"],["driver","By Driver"]].map(function(t){return '<button class="sub-tab'+(ordersView===t[0]?" active":"")+'" data-act="ordview" data-v="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
+  var P=effectivePerf();
+  var subtabs='<div class="sub-tabs" style="margin:0">'+[["dash","Dashboard"],["records","Records"],["driver","By Driver"],["daily","Daily Log"]].map(function(t){return '<button class="sub-tab'+(ordersView===t[0]?" active":"")+'" data-act="ordview" data-v="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
   var pcol={all:"var(--muted)",Talabat:cvar("--amber"),Keeta:cvar("--teal")};
   var plfilter='<div class="pl-filter">'+[["all","All"],["Talabat","Talabat"],["Keeta","Keeta"]].map(function(t){return '<button class="pl-chip'+(ordersPlat===t[0]?" active":"")+'" data-act="ordplat" data-v="'+t[0]+'"><span class="pd" style="background:'+pcol[t[0]]+'"></span>'+t[1]+'</button>';}).join("")+'</div>';
-  var head='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+subtabs+plfilter+
+  var mkeys={};P.forEach(function(r){var k=perfMKey(r);if(k)mkeys[k]=1;});(STATE.grd.orderlog||[]).forEach(function(e){var d=parseD(e.date);if(d)mkeys[d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")]=1;});var mopts=Object.keys(mkeys).sort().reverse();
+  if(ordersMonth!=="all"&&!mkeys[ordersMonth])ordersMonth="all";
+  var monsel='<select id="ordMonthSel" class="ord-msel"><option value="all"'+(ordersMonth==="all"?" selected":"")+'>All months</option>'+mopts.map(function(k){return '<option value="'+k+'"'+(ordersMonth===k?" selected":"")+'>'+esc(perfMLabel(k))+'</option>';}).join("")+'</select>';
+  var head='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+subtabs+plfilter+monsel+
     '<span style="flex:1"></span><button class="btn sm primary" data-act="ordmenu">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Import / Export'+svg('<path d="M6 9l6 6 6-6"/>')+'</button><input type="file" id="ordImportFile" accept=".xlsx,.xls" hidden></div>';
-  if(!P.length){pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:34px">'+svg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>')+'<h4>No performance data yet</h4><p>Download the template and fill it in, or import your Talabat / Keeta monthly report — either works.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn sm" data-act="ordtemplate">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Download template</button>'+(can("edit")?'<button class="btn sm primary" data-act="ordimport">'+svg('<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button>':'')+'</div></div></div></div>';return;}
+  // Daily Log tab renders regardless of whether monthly data exists
+  if(ordersView==="daily"){pg.innerHTML=head+ordersDaily();if(LANG==="ar")transEl(pg);return;}
+  if(!P.length){pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:34px">'+svg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>')+'<h4>No performance data yet</h4><p>Add entries in the <b>Daily Log</b>, download the template, or import your Talabat / Keeta monthly report.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn sm" data-act="ordview" data-v="daily">'+svg('<path d="M12 5v14M5 12h14"/>')+'Open Daily Log</button><button class="btn sm" data-act="ordtemplate">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Download template</button>'+(can("edit")?'<button class="btn sm primary" data-act="ordimport">'+svg('<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button>':'')+'</div></div></div></div>';return;}
   var FP=ordFilter(P);
-  if(!FP.length){pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:30px">'+svg('<path d="M3 3v18h18"/>')+'<h4>No '+esc(ordersPlat)+' data</h4><p>There are no '+esc(ordersPlat)+' rows in your imported report yet.</p></div></div></div>';return;}
+  if(!FP.length){var sc=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ")||"matching";pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:30px">'+svg('<path d="M3 3v18h18"/>')+'<h4>No data for '+esc(sc)+'</h4><p>Try a different month or platform.</p></div></div></div>';return;}
   if(ordersView==="records")pg.innerHTML=head+ordersRecords(FP);
   else if(ordersView==="driver")pg.innerHTML=head+ordersByDriver(FP);
   else pg.innerHTML=head+ordersDash(FP);
   if(LANG==="ar")transEl(pg);
+}
+var dailyEdit=null;
+function ordersDaily(){
+  var log=(STATE.grd.orderlog||[]).slice();
+  // apply month + platform filters to the listing
+  var rows=log.filter(function(e){if(ordersPlat!=="all"&&e.platform!==ordersPlat)return false;if(ordersMonth!=="all"){var d=parseD(e.date);var k=d?(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")):"";if(k!==ordersMonth)return false;}return true;});
+  rows.sort(function(a,b){return (a.date<b.date?1:a.date>b.date?-1:0);});
+  var totO=rows.reduce(function(a,b){return a+(num(b.orders)||0);},0);
+  var ed=dailyEdit?(log.filter(function(x){return x.id===dailyEdit;})[0]||null):null;
+  var today=isoToday();
+  var vehOpts=["","CAR","BIKE","REPORTER","SCOOTER","VAN","BICYCLE"];
+  var form=can("edit")?'<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>'+(ed?"Edit entry":"Add daily entry")+'</h3>'+(ed?'<button class="btn xs ghost" data-act="dailycancel">Cancel edit</button>':'<span class="hint">Enter each driver’s orders for a day</span>')+'</div><div class="card-b"><div class="dl-form">'+
+    '<div class="dl-fld"><label>Date</label><input type="date" id="dlDate" value="'+esc(ed?ed.date:today)+'"></div>'+
+    '<div class="dl-fld dl-drv"><label>Driver</label><div class="empc" data-src="perfdrv"><input class="empc-inp" id="dlDriver" autocomplete="off" placeholder="Type to search…" value="'+esc(ed?ed.driver:"")+'"><div class="empc-pop" hidden><div class="empc-list"></div></div></div></div>'+
+    '<div class="dl-fld"><label>Platform</label><select id="dlPlat">'+["Talabat","Keeta"].map(function(p){return '<option'+(ed&&ed.platform===p?" selected":"")+'>'+p+'</option>';}).join("")+'</select></div>'+
+    '<div class="dl-fld"><label>Vehicle</label><select id="dlVeh">'+vehOpts.map(function(v){return '<option value="'+v+'"'+(ed&&(ed.vehicle||"")===v?" selected":"")+'>'+(v||"—")+'</option>';}).join("")+'</select></div>'+
+    '<div class="dl-fld dl-num"><label>Orders</label><input type="number" id="dlOrders" min="0" inputmode="numeric" placeholder="0" value="'+esc(ed?ed.orders:"")+'"></div>'+
+    '<div class="dl-fld dl-note"><label>Note</label><input type="text" id="dlNote" placeholder="optional" value="'+esc(ed?(ed.note||""):"")+'"></div>'+
+    '<div class="dl-fld dl-btn"><label>&nbsp;</label><button class="btn primary" data-act="dailyadd">'+(ed?"Save changes":"Add entry")+'</button></div>'+
+  '</div></div></div>':"";
+  var scope=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ");
+  var body=rows.length?rows.map(function(e){var d=parseD(e.date);var dl=d?(d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)):esc(e.date);return '<tr><td class="mono">'+dl+'</td><td class="nm">'+esc(e.driver)+'</td><td>'+(e.platform?'<span class="chip">'+esc(e.platform)+'</span>':"—")+'</td><td>'+esc(e.vehicle||"—")+'</td><td class="mono nm" style="text-align:right">'+fmtN(e.orders)+'</td><td style="color:var(--muted);font-size:12px">'+esc(e.note||"")+'</td>'+(can("edit")?'<td class="actcol" style="white-space:nowrap"><button class="rowmenu-btn" data-act="dailyedit" data-id="'+e.id+'" title="Edit">'+svg(IC_edit)+'</button>'+(can("delete")?'<button class="rowmenu-btn" data-act="dailydel" data-id="'+e.id+'" title="Delete">'+svg(IC_del)+'</button>':'')+'</td>':'')+'</tr>';}).join(""):'<tr><td colspan="7"><div class="empty" style="padding:22px">'+svg('<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>')+'<h4>No entries'+(scope?" for "+esc(scope):"")+'</h4><p>'+(can("edit")?"Add your first daily entry above.":"No daily entries recorded.")+'</p></div></td></tr>';
+  var table='<div class="card"><div class="card-h"><h3>Daily Entries</h3><span class="hint">'+rows.length+' entr'+(rows.length===1?"y":"ies")+(scope?" · "+esc(scope):"")+' · '+fmtN(totO)+' orders</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Vehicle</th><th style="text-align:right">Orders</th><th>Note</th>'+(can("edit")?'<th></th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+  var note='<div class="hintbar" style="background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;padding:9px 13px;border-radius:10px;margin-bottom:16px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+' Daily entries automatically roll up into the monthly Dashboard, Records &amp; By Driver — orders add up and each day you log counts as one active day.</div>';
+  return note+form+table;
+}
+function saveDailyEntry(){
+  if(!can("edit")){toast("You have view-only access.","err");return;}
+  var g=function(id){return (document.getElementById(id)||{}).value;};
+  var date=(g("dlDate")||"").trim(),driver=normDriver((g("dlDriver")||"").trim()),plat=(g("dlPlat")||"").trim(),veh=(g("dlVeh")||"").trim(),orders=num(g("dlOrders")),note=(g("dlNote")||"").trim();
+  if(!date){toast("Pick a date.","err");return;}
+  if(!driver){toast("Enter a driver name.","err");return;}
+  if(orders==null){toast("Enter the number of orders.","err");return;}
+  if(!STATE.grd.orderlog)STATE.grd.orderlog=[];
+  var wasEdit=!!dailyEdit;
+  if(dailyEdit){var r=STATE.grd.orderlog.filter(function(x){return x.id===dailyEdit;})[0];if(r){r.date=date;r.driver=driver;r.platform=plat;r.vehicle=veh;r.orders=orders;r.note=note;}dailyEdit=null;}
+  else STATE.grd.orderlog.unshift({id:uid("dl"),date:date,driver:driver,platform:plat,vehicle:veh,orders:orders,note:note});
+  persist();pageOrders($("#page"));toast(wasEdit?"Entry updated.":"Entry added.","good");
+  if(!wasEdit){var di=document.getElementById("dlDriver");if(di){di.focus();}}
+}
+function delDailyEntry(id){
+  if(!can("delete")){toast("Only an admin can delete entries.","err");return;}
+  STATE.grd.orderlog=(STATE.grd.orderlog||[]).filter(function(x){return x.id!==id;});
+  if(dailyEdit===id)dailyEdit=null;
+  persist();pageOrders($("#page"));toast("Entry deleted.","good");
 }
 function ordersDash(P){
   var totOrders=P.reduce(function(a,b){return a+(num(b.orders)||0);},0);
@@ -2212,7 +2297,8 @@ function openDriverDetail(name){
   var tbody=rows.map(function(r){return '<tr class="dd-mrow"><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td></tr>';}).join("");
   function ministat(l,v,s,c){return '<div class="stat card" style="padding:12px 14px"><span class="strip" style="background:'+c+'"></span><div class="s-lab">'+l+'</div><div class="s-val" style="font-size:22px">'+v+'</div><div class="s-sub">'+s+'</div></div>';}
   var platChips=Object.keys(plats).map(function(p){return '<span class="chip">'+esc(p)+'</span>';}).join(" ");
-  var filtNote=ordersPlat!=="all"?'<span class="chip" style="background:var(--amber-bg,var(--surface-2));color:var(--amber)">Filtered: '+esc(ordersPlat)+'</span>':"";
+  var fscope=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ");
+  var filtNote=fscope?'<span class="chip" style="background:var(--surface-2);color:var(--amber)">Filtered: '+esc(fscope)+'</span>':"";
   var body='<div class="dd-grid">'+
     ministat("Total Orders",fmtN(totO),Object.keys(mset).length+" months",cvar("--teal"))+
     ministat("Active Days",fmtN(totD),"across period",cvar("--indigo"))+
@@ -2486,6 +2572,10 @@ document.addEventListener("click",function(e){
   if(act==="ordmenu"){openOrdMenu(a);return;}
   if(act==="ordtemplate"){ordTemplateXLSX();return;}
   if(act==="ordexport"){exportOrdersXLSX();return;}
+  if(act==="dailyadd"){saveDailyEntry();return;}
+  if(act==="dailyedit"){dailyEdit=a.getAttribute("data-id");pageOrders($("#page"));try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){}return;}
+  if(act==="dailydel"){delDailyEntry(a.getAttribute("data-id"));return;}
+  if(act==="dailycancel"){dailyEdit=null;pageOrders($("#page"));return;}
   if(act==="ordimport"){var of=document.getElementById("ordImportFile");if(of)of.click();return;}
   if(act==="editbudgets"){openBudgets();return;}
   if(act==="savebudgets"){saveBudgets();return;}
@@ -2591,7 +2681,7 @@ function platePickList(){return (STATE.grd.vehicles||[]).filter(function(v){retu
 function renderEmpOpts(c,q){
   var src=c.getAttribute("data-src")||"emp";
   var toks=(q||"").toLowerCase().split(/\s+/).filter(Boolean);
-  var list=src==="plate"?platePickList():empPickList();
+  var list=src==="plate"?platePickList():(src==="perfdrv"?perfDrvList():empPickList());
   if(toks.length)list=list.filter(function(e){var hay=(e.v+" "+e.a+" "+e.b).toLowerCase();return toks.every(function(t){return hay.indexOf(t)>=0;});});
   var lb=c.querySelector(".empc-list");if(!lb)return;
   lb.innerHTML=list.length?list.slice(0,80).map(function(e){return '<div class="empc-opt" data-empv="'+esc(e.v)+'"><span class="eo-nm">'+esc(e.v)+'</span>'+(e.a?'<span class="eo-no">'+esc(e.a)+'</span>':'')+(e.b?'<span class="eo-tag">'+esc(e.b)+'</span>':'')+'</div>';}).join(""):'<div class="ms-empty">No match — you can still type any value.</div>';
