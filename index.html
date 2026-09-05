@@ -1478,7 +1478,7 @@ function renderPage(){
   else if(route==="finance/log"){setTitle("Expense Log","Finance · all entries");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageRegister(pg,"expenses");}
   else if(route.indexOf("grd/")===0){var ent=P[1];if(!ENT[ent]){go("overview");return;}
     if(P[2]){newBtn.hidden=true;pageDetail(pg,ent,P[2]);}
-    else{setTitle(ENT[ent].title,"GRD Operations · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;pageRegister(pg,ent);}}
+    else{setTitle(ENT[ent].title,"GRD Operations · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;if(ent==="hiring")pageHiring(pg);else pageRegister(pg,ent);}}
   else {go("overview");}
   if(!can("edit")&&newBtn)newBtn.hidden=true;
 }
@@ -1728,6 +1728,46 @@ function pageUsers(pg){
   }).catch(function(e){var box=document.getElementById("usersBox");if(box)box.innerHTML='<div class="autherr">'+esc((e&&e.message)||e)+'</div>';});
 }
 document.addEventListener("change",function(e){var s=e.target.closest("[data-urole]");if(!s)return;var uid=s.getAttribute("data-uid"),role=s.value;s.disabled=true;SB.from("profiles").update({role:role}).eq("id",uid).then(function(r){s.disabled=false;if(r&&r.error)toast("Couldn't update role: "+r.error.message,"err");else toast("Role updated to "+roleLabel(role)+".","good");}).catch(function(){s.disabled=false;toast("Update failed.","err");});});
+var hiringView="dash";
+function pageHiring(pg){
+  curEnt="hiring";
+  var chips='<div class="sub-tabs" style="margin-bottom:16px">'+[["dash","Dashboard"],["list","Candidates"]].map(function(t){return '<button class="sub-tab'+(hiringView===t[0]?" active":"")+'" data-act="hireview" data-v="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
+  if(hiringView==="list"){pg.innerHTML=chips+'<div id="hireReg"></div>';pageRegister(pg.querySelector("#hireReg"),"hiring");if(LANG==="ar")transEl(pg);return;}
+  pg.innerHTML=chips+hiringDash();
+  if(LANG==="ar")transEl(pg);
+}
+function hstat(l,v,c,s,ic){return '<div class="stat card"><span class="strip" style="background:'+c+'"></span><svg class="s-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+ic+'</svg><div class="s-lab">'+l+'</div><div class="s-val">'+v+'</div><div class="s-sub">'+s+'</div></div>';}
+function hiringDash(){
+  var H=STATE.grd.hiring||[];
+  if(!H.length)return '<div class="card"><div class="card-b"><div class="empty" style="padding:32px">'+svg('<circle cx="9" cy="7" r="3.2"/><path d="M3 20v-1.5a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4V20"/>')+'<h4>No candidates yet</h4><p>Import your Excel or add candidates — the dashboard will fill in automatically.</p></div></div></div>';
+  var total=H.length;
+  var arrived=H.filter(function(r){return /ARRIV/i.test(r.status||"")&&!/NOT/i.test(r.status||"");}).length;
+  var notArr=H.filter(function(r){return /NOT ARRIV/i.test(r.status||"")||/^PENDING/i.test(r.status||"");}).length;
+  var cancel=H.filter(function(r){return /CANCEL/i.test(r.status||"");}).length;
+  var ready=H.filter(function(r){return hireProgress(r).pct>=100;}).length;
+  var avg=Math.round(H.reduce(function(a,r){return a+hireProgress(r).pct;},0)/total);
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+
+    hstat("Total Candidates",total,"var(--teal)",arrived+" arrived · "+notArr+" pending",'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/>')+
+    hstat("Fully Ready",ready,"var(--good)",(total-ready)+" still in process",'<path d="M20 6 9 17l-5-5"/>')+
+    hstat("Avg Onboarding",avg+"%","var(--amber)","across all candidates",'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 4-5"/>')+
+    hstat("Cancelled",cancel,"var(--crit)",notArr+" not arrived",'<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>')+
+  '</div>';
+  var nat=countBy(H,function(r){return r.nat;});
+  var natItems=Object.keys(nat).map(function(k){return {label:k,value:nat[k],color:cvar("--teal")};}).sort(function(a,b){return b.value-a.value;});
+  var veh=countBy(H,function(r){return (r.veh||"").toUpperCase();});
+  var vc=[{label:"Car",value:veh.CAR||0,color:cvar("--teal")},{label:"Bike",value:veh.BIKE||0,color:cvar("--amber")},{label:"Reporter",value:veh.REPORTER||0,color:cvar("--indigo")}];
+  var vtot=vc.reduce(function(a,b){return a+b.value;},0);
+  var charts='<div class="grid g2" style="margin-bottom:16px">'+
+    '<div class="card"><div class="card-h"><h3>By Nationality</h3></div><div class="card-b">'+(natItems.length?hbars(natItems,{}):'<div class="sub">No data</div>')+'</div></div>'+
+    '<div class="card"><div class="card-h"><h3>By Vehicle Type</h3></div><div class="card-b"><div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+donut(vc,vtot,"total")+'<div style="flex:1;min-width:120px">'+vc.map(function(i){return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:'+i.color+'"></span><span style="flex:1;font-size:13px;color:var(--ink-2)">'+i.label+'</span><b class="mono">'+i.value+'</b></div>';}).join("")+'</div></div></div></div>'+
+  '</div>';
+  var pend=HIRE_STEPS.map(function(s){var c=H.filter(function(r){return String(r[s[0]]||"").trim().toUpperCase()==="PENDING";}).length;return {label:s[1],value:c,color:cvar("--amber")};}).filter(function(x){return x.value>0;}).sort(function(a,b){return b.value-a.value;});
+  var pendCard='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>⏳ Pending Documents</h3><span class="hint">kitne candidates ka document baaki hai</span></div><div class="card-b">'+(pend.length?hbars(pend,{}):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>All documents cleared</h4><p>No pending documents across candidates.</p></div>')+'</div></div>';
+  var sorted=H.slice().sort(function(a,b){return hireProgress(b).pct-hireProgress(a).pct;});
+  var readyCard='<div class="card"><div class="card-h"><h3>Onboarding Progress</h3><span class="hint">'+ready+' fully ready</span></div><div class="card-b">'+
+    sorted.slice(0,12).map(function(r){var p=hireProgress(r);var col=p.pct>=100?"var(--good)":p.pct>=50?"var(--amber)":"var(--crit)";return '<div class="barrow" data-route="grd/hiring/'+r.id+'" style="cursor:pointer"><div class="bl" style="max-width:200px">'+esc(r.nameEn||"—")+'</div><div class="bt"><div class="bf" style="width:'+p.pct+'%;background:'+col+'"></div></div><div class="bv">'+p.done+'/'+p.total+'</div></div>';}).join("")+'</div></div>';
+  return kpis+charts+pendCard+readyCard;
+}
 function pageOverview(pg){
   var d=STATE.grd.drivers;
   var st=countBy(d,function(x){return x.status;});
@@ -1931,6 +1971,7 @@ function showImage(src,title,sub){var ov=document.createElement("div");ov.classN
   document.body.appendChild(ov);}
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
+  if(act==="hireview"){hiringView=a.getAttribute("data-v");pageHiring($("#page"));return;}
   if(act==="finperiod"){finPeriod=a.getAttribute("data-p");pageFinance($("#page"));}
   else if(act==="loadsample"){loadSampleExpenses();}
   else if(act==="clearsample"){clearSampleExpenses();}
