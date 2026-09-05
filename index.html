@@ -1069,7 +1069,7 @@ function getDocHTML(state){
 }
 var persisting=false;
 function persist(){
-  STATE.meta.updatedAt=new Date().toISOString();STATE.meta.updatedBy=USER||"—";
+  STATE.meta.updatedAt=new Date().toISOString();STATE.meta.updatedBy=(USER&&typeof USER==="object"?(((USER.email||"").split("@")[0])||USER.id||"—"):(USER||"—"));
   saveLocal();
   if(SB_ON){persistSB();return;}
   setSave("saving","Saving…");
@@ -1618,7 +1618,8 @@ function renderApp(){
       '<a class="sb-link'+(route==="users"?" active":"")+'" data-route="users">'+svg('<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><path d="M16 4a3.2 3.2 0 0 1 0 6M21 20v-1.5a4 4 0 0 0-3-3.9"/>')+'<span>Users &amp; Roles</span></a>'+
     '</div>';
   }
-  sb+='</nav><div class="sb-foot">v2 · '+(STATE.meta.updatedBy?("last by "+esc(STATE.meta.updatedBy)):"ready")+'</div></aside>';
+  var _ub=STATE.meta.updatedBy;if(_ub&&typeof _ub==="object")_ub=((_ub.email||"").split("@")[0])||_ub.id||"";
+  sb+='</nav><div class="sb-foot">v2 · '+(_ub?("last by "+esc(_ub)):"ready")+'</div></aside>';
 
   var main='<div class="main"><div class="topbar">'+
     '<button class="icon-btn menu-btn" data-act="menu" aria-label="Menu">'+svg('<path d="M3 6h18M3 12h18M3 18h18"/>')+'</button>'+
@@ -2156,7 +2157,24 @@ function ordersDash(P){
     (top.length?top.map(function(r){return '<div class="crow" data-act="orddriver" data-n="'+esc(r.driver)+'"><span class="cava">'+esc(hireInitials(r.driver))+'</span><span class="cnm">'+esc(r.driver)+'<div class="sub" style="font-size:11px;color:var(--muted);font-weight:400">'+esc(r.platform+" · "+r.month+" "+r.year+" · "+fmtN(r.orders)+" orders")+'</div></span><span class="cpc" style="width:auto">'+perfUTR(r).toFixed(1)+'/day</span></div>';}).join(""):'<div class="empty" style="padding:18px">No data.</div>')+
   '</div></div>';
   var plat='<div class="card"><div class="card-h"><h3>Orders by Platform</h3></div><div class="card-b"><div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+donut(vc,fmtN(tal+kee),"orders")+'<div style="flex:1;min-width:120px">'+vc.map(function(i){return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:'+i.color+'"></span><span style="flex:1;font-size:13px;color:var(--ink-2)">'+i.label+'</span><b class="mono">'+fmtN(i.value)+'</b></div>';}).join("")+'</div></div></div></div>';
-  return kpis+trend+'<div class="grid g2" style="align-items:start">'+plat+topCard+'</div>';
+  // orders by vehicle type (fills the space under the platform donut)
+  var vagg={};P.forEach(function(r){var v=(r.vehicle||"").toUpperCase().trim()||"OTHER";vagg[v]=(vagg[v]||0)+(num(r.orders)||0);});
+  var vcolors=[cvar("--teal"),cvar("--amber"),cvar("--indigo"),cvar("--good"),"#8b5cf6","#ec4899"];
+  var vlist=Object.keys(vagg).sort(function(a,b){return vagg[b]-vagg[a];});var vmax=vlist.length?vagg[vlist[0]]:1;
+  var vehCard=vlist.length?'<div class="card" style="margin-top:16px"><div class="card-h"><h3>Orders by Vehicle</h3><span class="hint">'+vlist.length+' type'+(vlist.length>1?"s":"")+'</span></div><div class="card-b">'+vlist.map(function(k,i){var p=Math.max(3,vagg[k]/vmax*100);return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0"><div style="width:74px;font-size:12.5px;color:var(--ink-2);font-weight:600">'+esc(cap(k))+'</div><div style="flex:1;height:9px;background:var(--surface-3);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+p+'%;border-radius:6px;background:'+vcolors[i%vcolors.length]+'"></div></div><b class="mono" style="width:66px;text-align:right;font-size:12.5px">'+fmtN(vagg[k])+'</b></div>';}).join("")+'</div></div>':'';
+  // at a glance
+  var talDrv={},keeDrv={};P.forEach(function(r){if(r.platform==="Talabat")talDrv[r.driver]=1;else if(r.platform==="Keeta")keeDrv[r.driver]=1;});
+  var ndrv=Object.keys(drivers).length,perDrv=ndrv?Math.round(totOrders/ndrv):0;
+  var bestK=mks.slice().sort(function(a,b){return mt[b]-mt[a];})[0];
+  var bestLbl=bestK?(MONS[(+bestK.split("-")[1])-1]+" '"+bestK.split("-")[0].slice(2)+" · "+fmtN(mt[bestK])):"—";
+  function grow(l,v){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:13px"><span style="color:var(--ink-2)">'+l+'</span><b class="mono">'+v+'</b></div>';}
+  var glance='<div class="card" style="margin-top:16px"><div class="card-h"><h3>At a Glance</h3></div><div class="card-b" style="padding-top:2px">'+
+    grow("Avg orders / driver",fmtN(perDrv))+
+    grow("Busiest month",bestLbl)+
+    grow("Talabat drivers",Object.keys(talDrv).length)+
+    grow("Keeta drivers",Object.keys(keeDrv).length)+
+  '</div></div>';
+  return kpis+trend+'<div class="grid g2" style="align-items:start"><div>'+plat+vehCard+glance+'</div>'+topCard+'</div>';
 }
 function ordersRecords(P){
   var months=[];var mm={};P.forEach(function(r){var k=r.month+" "+r.year;if(!mm[k]){mm[k]=1;months.push(k);}});
