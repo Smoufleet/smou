@@ -1038,7 +1038,8 @@ function svcInfo(r){var odo=num(r.odo)||0,last=num(r.lastService)||0,intv=num(r.
 function driverNames(){return STATE.grd.drivers.map(function(d){return d.name;}).filter(Boolean);}
 function cvar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
 function cap(s){s=(s||"").trim();if(!s)return "—";return s.charAt(0)+s.slice(1).toLowerCase();}
-function uid(p){return p+"-"+Date.now().toString(36)+Math.floor(Math.random()*1000);}
+var _uidSeq=0;
+function uid(p){return p+"-"+Date.now().toString(36)+"-"+(_uidSeq++).toString(36)+"-"+Math.floor(Math.random()*1e9).toString(36);}
 
 function statusClass(s){s=(s||"").toUpperCase();
   if(s.indexOf("ACTIVE")>=0||/WORK/.test(s)||s.indexOf("ARRIVED")>=0&&s.indexOf("NOT")<0||s==="DONE"||s==="PASS"||s==="PAID"||s==="RESOLVED"||s==="CLOSED"||s==="APPROVED"||s==="PRESENT")return "good";
@@ -1140,7 +1141,7 @@ function persistSB(){
     Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0){var id=k.slice(coll.length+1);if(!cur[id]){delOps.push([coll,id]);delete shadow[k];}}});
   });
   var tasks=[];
-  if(ups.length)tasks.push(SB.from("records").upsert(ups,{onConflict:"collection,id"}));
+  if(ups.length){var _seen={},_uniq=[];for(var _i=ups.length-1;_i>=0;_i--){var _k=ups[_i].collection+"/"+ups[_i].id;if(_seen[_k])continue;_seen[_k]=1;_uniq.push(ups[_i]);}ups=_uniq.reverse();tasks.push(SB.from("records").upsert(ups,{onConflict:"collection,id"}));}
   delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
   if(!tasks.length){setSave("","Saved & synced");return;}
   Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];if(err){setSave("err","Sync error");toast("Sync error: "+(err.error.message||"check connection"),"err");}else{setSave("","Saved & synced");}}).catch(function(e){setSave("err","Sync error");});
