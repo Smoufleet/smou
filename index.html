@@ -1304,7 +1304,7 @@ var hiringFields=[
   {g:"Onboarding Checklist"}
 ].concat(HIRE_STEPS.map(function(s){return {k:s[0],l:s[1],t:"select",optsFn:hireOpts};})).concat([{g:"Food (monthly)"}]).concat(HIRE_FOOD.map(function(s){return {k:s[0],l:s[1],t:"select",optsFn:foodOpts};}));
 var ENT={
-  drivers:{title:"Employees",singular:"Employee",path:"grd.drivers",idp:"d",
+  drivers:{title:"Employees",singular:"Employee",path:"grd.drivers",idp:"d",defsort:0,defdir:1,
     searchKeys:["name","no","civilId","mobile","talabat","keeta","nat","accom"],
     filters:[{k:"status",lab:"All statuses",opts:"statuses"},{k:"nat",lab:"All nationalities",opts:"nationalities"},{k:"veh",lab:"All vehicles",opts:"vehicleTypes"}],
     columns:[
@@ -1334,7 +1334,7 @@ var ENT={
       {k:"salary",l:"Salary (KWD)",t:"number"},{k:"account",l:"Bank Account No.",t:"text"},
       {k:"fuelCard",l:"Fuel Card No.",t:"text"},{k:"talabat",l:"Talabat ID",t:"text"},{k:"keeta",l:"Keeta ID",t:"text"}
     ]},
-  vehicles:{title:"Vehicles",singular:"Vehicle",path:"grd.vehicles",idp:"v",
+  vehicles:{title:"Vehicles",singular:"Vehicle",path:"grd.vehicles",idp:"v",defsort:0,defdir:1,
     searchKeys:["plate","brand","model","driver","chassis","company"],
     filters:[{k:"status",lab:"All statuses",opts:"fleetStatuses"},{k:"brand",lab:"All brands",opts:"brands"},{k:"company",lab:"All companies",opts:"companies"}],
     columns:[
@@ -1353,7 +1353,7 @@ var ENT={
       {k:"driver",l:"Employee (Driver)",t:"emp"},{k:"status",l:"Status",t:"datalist",opts:"fleetStatuses"},
       {k:"company",l:"Company / Platform",t:"datalist",opts:"companies"},{k:"issue",l:"Issue Date",t:"text",hint:"Date or note (e.g. OLD)"}
     ]},
-  fuel:{title:"Fuel Cards",singular:"Fuel Card",path:"grd.fuel",idp:"f",
+  fuel:{title:"Fuel Cards",singular:"Fuel Card",path:"grd.fuel",idp:"f",defsort:0,defdir:1,
     searchKeys:["name","card","civil","site","company","plate"],
     filters:[{k:"company",lab:"All companies",opts:null},{k:"site",lab:"All sites",opts:"sites"},{k:"vehType",lab:"All vehicles",opts:"vehicleTypes"}],
     columns:[
@@ -1374,7 +1374,7 @@ var ENT={
       {g:"Assignment"},
       {k:"company",l:"Company",t:"datalist",opts:"companies"},{k:"site",l:"Site",t:"datalist",opts:"sites"},{k:"doi",l:"Date of Issue",t:"date"}
     ]},
-  sims:{title:"SIM / Mobile",singular:"SIM / Device",path:"grd.sims",idp:"s",
+  sims:{title:"SIM / Mobile",singular:"SIM / Device",path:"grd.sims",idp:"s",defsort:1,defdir:1,
     searchKeys:["mobile","name","civil","simSerial","mbSerial","company"],
     filters:[{k:"company",lab:"All companies",opts:null}],
     columns:[
@@ -1392,7 +1392,7 @@ var ENT={
       {k:"simSerial",l:"SIM Serial",t:"text"},{k:"mbSerial",l:"Handset Serial (IMEI)",t:"text"},
       {k:"simIssue",l:"Date of Issue",t:"date"},{k:"simReturn",l:"Date of Return",t:"date"}
     ]},
-  housing:{title:"Housing",singular:"Room / Flat",path:"grd.housing",idp:"h",
+  housing:{title:"Housing",singular:"Room / Flat",path:"grd.housing",idp:"h",defsort:0,defdir:1,
     searchKeys:["room"],filters:[],
     columns:[
       {h:"Room / Flat",v:function(r){return '<span class="nm">'+esc(r.room)+'</span>';},s:function(r){return r.room;}},
@@ -1402,7 +1402,7 @@ var ENT={
       {h:"Occupancy",v:function(r){var p=num(r.cap)?Math.round((num(r.actual)||0)/num(r.cap)*100):0;return '<div style="display:flex;align-items:center;gap:8px;min-width:120px"><div class="bt" style="width:80px"><div class="bf" style="width:'+p+'%;background:'+(p>=90?"var(--crit)":p>=70?"var(--amber)":"var(--teal)")+'"></div></div><span class="mono" style="font-size:11px">'+p+'%</span></div>';},s:function(r){return num(r.cap)?(num(r.actual)||0)/num(r.cap):0;}}
     ],
     fields:[{g:"Room"},{k:"room",l:"Room / Flat Name",t:"text",req:true},{k:"cap",l:"Capacity (beds)",t:"number"},{k:"actual",l:"Occupied (beds)",t:"number"}]},
-  compdocs:{title:"Company Documents",singular:"Company Document",path:"grd.compdocs",idp:"cd",
+  compdocs:{title:"Company Documents",singular:"Company Document",path:"grd.compdocs",idp:"cd",defsort:0,defdir:1,
     searchKeys:["doc","refno","plate","user","notes"],
     filters:[{k:"doc",lab:"All documents",opts:null},{k:"plate",lab:"All vehicles",opts:null}],
     columns:[
@@ -1423,7 +1423,7 @@ var ENT={
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
-  service:{title:"Vehicle Service",singular:"Vehicle Service",path:"grd.service",idp:"sv",
+  service:{title:"Vehicle Service",singular:"Vehicle Service",path:"grd.service",idp:"sv",defsort:0,defdir:1,
     searchKeys:["plate","user","notes"],
     filters:[{k:"plate",lab:"All vehicles",opts:null}],
     columns:[
@@ -1455,7 +1455,7 @@ var ENT={
       {h:"Onboarding",v:function(r){var p=hireProgress(r);var col=p.pct>=100?"var(--good)":p.pct>=50?"var(--amber)":"var(--crit)";return '<div style="display:flex;align-items:center;gap:8px;min-width:120px"><div class="bt" style="width:80px"><div class="bf" style="width:'+p.pct+'%;background:'+col+'"></div></div><span class="mono" style="font-size:11px">'+p.done+'/'+p.total+'</span></div>';},s:function(r){return hireProgress(r).pct;}}
     ],
     fields:hiringFields},
-  fines:{title:"Traffic Fines",singular:"Fine",path:"grd.fines",idp:"fn",
+  fines:{title:"Traffic Fines",singular:"Fine",path:"grd.fines",idp:"fn",defsort:0,defdir:-1,
     searchKeys:["plate","driver","fineNo","reason","location"],
     filters:[{k:"status",lab:"All statuses",opts:null},{k:"plate",lab:"All vehicles",opts:null},{k:"reason",lab:"All violations",opts:null}],
     columns:[
@@ -1477,7 +1477,7 @@ var ENT={
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Unpaid","Paid","Disputed"];}},{k:"payby",l:"Paid By",t:"select",optsFn:function(){return ["Company","Driver"];}},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
-  incidents:{title:"Accident / Incident",singular:"Incident",path:"grd.incidents",idp:"in",
+  incidents:{title:"Accident / Incident",singular:"Incident",path:"grd.incidents",idp:"in",defsort:0,defdir:-1,
     searchKeys:["plate","driver","type","location","description"],
     filters:[{k:"status",lab:"All statuses",opts:null},{k:"type",lab:"All types",opts:null},{k:"severity",lab:"All severity",opts:null}],
     columns:[
@@ -1499,7 +1499,7 @@ var ENT={
       {k:"cost",l:"Repair Cost (KWD)",t:"number"},{k:"status",l:"Status",t:"select",optsFn:function(){return ["Reported","Under Repair","Resolved","Closed"];}},
       {g:"Description"},{k:"description",l:"What happened",t:"textarea",wide:true}
     ]},
-  maintenance:{title:"Maintenance",singular:"Maintenance Record",path:"grd.maintenance",idp:"mt",
+  maintenance:{title:"Maintenance",singular:"Maintenance Record",path:"grd.maintenance",idp:"mt",defsort:0,defdir:-1,
     searchKeys:["plate","type","vendor","notes"],
     filters:[{k:"type",lab:"All types",opts:null},{k:"plate",lab:"All vehicles",opts:null},{k:"status",lab:"All statuses",opts:null}],
     columns:[
@@ -1521,7 +1521,7 @@ var ENT={
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Done","Scheduled","Pending"];}},{k:"nextDue",l:"Next Service Date",t:"date"},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
-  attendance:{title:"Attendance / Leave",singular:"Leave / Attendance",path:"grd.attendance",idp:"at",
+  attendance:{title:"Attendance / Leave",singular:"Leave / Attendance",path:"grd.attendance",idp:"at",defsort:2,defdir:-1,
     searchKeys:["driver","type","reason"],
     filters:[{k:"type",lab:"All types",opts:null},{k:"status",lab:"All statuses",opts:null}],
     columns:[
@@ -1541,7 +1541,7 @@ var ENT={
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Pending","Approved","Rejected"];}},
       {g:"Reason"},{k:"reason",l:"Reason",t:"textarea",wide:true}
     ]},
-  income:{title:"Income / Revenue",singular:"Income",path:"finance.income",idp:"inc",
+  income:{title:"Income / Revenue",singular:"Income",path:"finance.income",idp:"inc",defsort:0,defdir:-1,
     searchKeys:["driver","plate","platform","notes"],
     filters:[{k:"month",lab:"All months",opts:"months"},{k:"platform",lab:"All platforms",opts:null},{k:"driver",lab:"All drivers",opts:null}],
     columns:[
@@ -1559,7 +1559,7 @@ var ENT={
       {k:"driver",l:"Driver (Employee)",t:"emp"},{k:"plate",l:"Vehicle / Plate",t:"plate"},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
-  payroll:{title:"Payroll",singular:"Payslip",path:"finance.payroll",idp:"pay",
+  payroll:{title:"Payroll",singular:"Payslip",path:"finance.payroll",idp:"pay",defsort:1,defdir:-1,
     searchKeys:["employee","month","status","year"],
     filters:[{k:"month",lab:"All months",opts:"months"},{k:"status",lab:"All statuses",opts:null},{k:"year",lab:"All years",opts:null}],
     columns:[
@@ -1581,7 +1581,7 @@ var ENT={
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Unpaid","Paid"];}},{k:"payDate",l:"Payment Date",t:"date"},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
-  expenses:{title:"Expense Log",singular:"Expense",path:"finance.expenses",idp:"e",
+  expenses:{title:"Expense Log",singular:"Expense",path:"finance.expenses",idp:"e",defsort:0,defdir:-1,
     searchKeys:["category","sub","driver","platform","notes","plate"],
     filters:[{k:"month",lab:"All months",opts:"months"},{k:"category",lab:"All categories",opts:"categories"},{k:"plate",lab:"All vehicles",opts:null},{k:"driver",lab:"All drivers",opts:null},{k:"platform",lab:"All platforms",opts:"platforms"}],
     columns:[
@@ -1770,6 +1770,7 @@ function setTitle(t,c){$("#pgTitle").textContent=t;$("#pgCrumb").textContent=c;}
 var curEnt=null;
 function pageRegister(pg,ent){
   curEnt=ent;var cfg=ENT[ent];
+  if(view.sort==null&&cfg.defsort!=null){view.sort=cfg.defsort;view.dir=cfg.defdir||1;}
   var fbar=cfg.filters.map(function(f){return msFilter(ent,f);}).join("");
   pg.innerHTML='<div class="toolbar"><div class="search">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>')+'<input id="q" placeholder="Search '+cfg.title.toLowerCase()+'…" autocomplete="off"></div>'+fbar+
     actionsMenu(ent)+
@@ -1793,7 +1794,7 @@ function fillRows(ent){
   if(view.search&&view.search.trim()){var toks=view.search.toLowerCase().split(/\s+/).filter(Boolean);
     rows=rows.filter(function(r){var hay=Object.keys(r).map(function(k){return (k==="docs"||k==="photo"||k==="receipt")?"":String(r[k]||"");}).join("  ").toLowerCase();return toks.every(function(t){return hay.indexOf(t)>=0;});});}
   Object.keys(view.filters).forEach(function(k){var sel=view.filters[k];if(sel&&sel.length)rows=rows.filter(function(r){return sel.indexOf(String(r[k]||""))>=0;});});
-  if(view.sort!=null){var c=cfg.columns[view.sort];rows.sort(function(a,b){var av=c.s(a),bv=c.s(b);if(typeof av==="number"&&typeof bv==="number")return (av-bv)*view.dir;return String(av).localeCompare(String(bv))*view.dir;});}
+  if(view.sort!=null){var c=cfg.columns[view.sort];rows.sort(function(a,b){var av=c.s(a),bv=c.s(b);if(typeof av==="number"&&typeof bv==="number")return (av-bv)*view.dir;var as=String(av==null?"":av).trim(),bs=String(bv==null?"":bv).trim();if(!as&&bs)return 1;if(as&&!bs)return -1;return as.localeCompare(bs)*view.dir;});}
   var tb=$("#tbody");
   if(!rows.length){tb.innerHTML='<tr><td colspan="'+(cfg.columns.length+1)+'"><div class="empty">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>')+'<h4>No records</h4><p>'+(view.search||Object.values(view.filters).some(Boolean)?"Nothing matches your filters.":"Add your first "+cfg.singular.toLowerCase()+".")+'</p></div></td></tr>';}
   else tb.innerHTML=rows.map(function(r){
