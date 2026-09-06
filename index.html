@@ -473,6 +473,48 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 .detail-ava.photo:hover .cam{opacity:1}
 .detail-ava .ava-del{position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:var(--crit);color:#fff;border:2px solid var(--surface);display:grid;place-items:center;cursor:pointer;padding:0;z-index:2}
 .detail-ava .ava-del svg{width:10px;height:10px}
+/* ===== Full-page live-preview entry form ===== */
+.overlay.formfull{background:var(--bg);backdrop-filter:none;padding:0;display:block;align-items:stretch}
+.ff{min-height:100%}
+.ff-top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.ff-top .in{max-width:1080px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.ff-back{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);display:grid;place-items:center;cursor:pointer;flex:none}
+.ff-back svg{width:18px;height:18px}
+.ff-ttl .crumb{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.ff-ttl h2{font-family:"Fraunces",Georgia,serif;font-size:22px;font-weight:600;line-height:1.1}
+.ff-body{max-width:1080px;margin:0 auto;width:100%;padding:24px 20px 120px}
+.ff-cols{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
+.ff-fields{display:grid;gap:16px}
+.fcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--shadow);padding:20px}
+.fsec{display:flex;align-items:center;gap:11px;margin-bottom:15px}
+.fsec .ic{width:32px;height:32px;border-radius:10px;background:var(--surface-2);color:var(--teal-ink);display:grid;place-items:center;flex:none}
+.fsec .ic svg{width:18px;height:18px}
+.fsec h3{font-size:15px;font-weight:700}
+.ff-actionbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.ff-actionbar .in{max-width:1080px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;gap:12px}
+.ff-actionbar .note{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.ff-actionbar .note .d{width:8px;height:8px;border-radius:50%;background:var(--good);flex:none}
+/* live preview card */
+.pvc{position:sticky;top:92px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:24px 20px;text-align:center}
+.pvc-ava{width:92px;height:92px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--teal) 22%,var(--surface)),var(--surface-2));border:2px solid var(--line);display:grid;place-items:center;font-family:"Fraunces",Georgia,serif;font-size:34px;font-weight:600;color:var(--teal-ink);position:relative;overflow:hidden}
+.pvc-ava svg{width:42px;height:42px;stroke:var(--teal-ink);fill:none}
+.pvc-ava .ava-clip{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+.pvc .detail-ava{width:92px;height:92px;font-size:34px;margin:0 auto 14px}
+.pvc-name{font-family:"Fraunces",Georgia,serif;font-size:19px;font-weight:600;margin-bottom:3px;word-break:break-word}
+.pvc-sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.pvc-chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.pvc-chip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:color-mix(in srgb,var(--teal) 13%,var(--surface));color:var(--teal-ink)}
+.pvc-ring{width:72px;height:72px;margin:0 auto 6px;border-radius:50%;background:conic-gradient(var(--teal) calc(var(--p,0)*1%),var(--surface-3) 0);display:grid;place-items:center}
+.pvc-ring i{width:56px;height:56px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-style:normal;font-weight:700;font-size:15px;color:var(--teal-ink)}
+.pvc-rl{font-size:11px;color:var(--muted)}
+.pvc-meta{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:13px;margin-top:14px;text-align:left;display:grid;gap:8px}
+.pvc-meta>div{display:flex;justify-content:space-between;gap:10px}
+.pvc-meta b{color:var(--ink);font-weight:600;text-align:right}
+/* two-column detail */
+.detail2{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start;margin-bottom:16px}
+.detail2 .groups{display:grid;gap:16px;min-width:0}
+@media(max-width:820px){.ff-cols,.detail2{grid-template-columns:1fr}.pvc{position:static}}
+@media(max-width:600px){.ff-actionbar .note{display:none}.ff-top .in,.ff-body,.ff-actionbar .in{padding-left:16px;padding-right:16px}.ff-ttl h2{font-size:19px}.pvc{padding:20px 16px}}
 .mini-ava{border-radius:50%;object-fit:cover;flex:none;vertical-align:middle;-webkit-clip-path:circle(50%);clip-path:circle(50%)}
 .mini-ava.ini{display:inline-grid;place-items:center;background:var(--teal-bg);color:var(--teal-ink);font-weight:700;font-family:"Plus Jakarta Sans"}
 /* ===== Arabic / RTL ===== */
@@ -1855,24 +1897,104 @@ function fillRows(ent){
 }
 
 /* ============ FORM MODAL ============ */
+/* ===== Live-preview card (shared by full-page form + detail) ===== */
+function secIcon(name){
+  var n=(name||"").toLowerCase();
+  if(/ident|person|driver|basic|profile|candidate|applicant/.test(n))return '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 4-6.5 8-6.5s8 2 8 6.5"/>';
+  if(/contact|phone|bank|address|reach/.test(n))return '<path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 2 6a2 2 0 0 1 2-2z"/>';
+  if(/employ|role|job|work|assign|status|shift/.test(n))return '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
+  if(/doc|expiry|expir|licen|passport|legal|permit/.test(n))return '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4M9 13h6M9 17h6"/>';
+  if(/vehicle|car|bike|plate|fleet|fuel|sim/.test(n))return '<path d="M4 13l1.6-4.5A2.5 2.5 0 0 1 8 7h8a2.5 2.5 0 0 1 2.4 1.5L20 13"/><path d="M3 17h18"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>';
+  if(/pay|salary|amount|cost|finance|money|expense|income|budget/.test(n))return '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.2 9.4h4a1.6 1.6 0 0 1 0 3.2h-2a1.6 1.6 0 0 0 0 3.2h4"/>';
+  if(/hous|room|accommodat|bed/.test(n))return '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>';
+  return '<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>';
+}
+function pvPrimary(ent,rec){return (rec.name||rec.nameEn||rec.plate||rec.room||rec.card||rec.mobile||rec.category||ENT[ent].singular);}
+function pvAva(ent,rec,primary,mode,id){
+  var initial=((primary||"?").trim().charAt(0)||"?").toUpperCase();
+  if(ent==="drivers"||ent==="hiring"){
+    if(mode==="detail"&&ent==="drivers"){
+      var cam='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+      return '<div class="detail-ava photo" data-act="photopick" data-id="'+id+'" title="Upload / change photo">'+
+        (rec.photo?'<span class="ava-clip"><img src="'+rec.photo+'" alt=""></span>':esc(initial))+
+        '<span class="cam">'+cam+'</span>'+
+        (rec.photo?'<button class="ava-del" data-act="photodel" data-id="'+id+'" title="Remove photo">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button>':'')+'</div>';
+    }
+    return '<div class="pvc-ava">'+(rec.photo?'<span class="ava-clip"><img src="'+rec.photo+'" alt=""></span>':esc(initial))+'</div>';
+  }
+  var vt=(rec.veh||rec.vehType||"")+"";
+  if(/bike|motor|scoot/i.test(vt))return '<div class="pvc-ava">'+vIcon("bike")+'</div>';
+  if(/car|sedan|van|vehicle/i.test(vt)||ent==="vehicles"||ent==="fuel")return '<div class="pvc-ava">'+vIcon("car")+'</div>';
+  return '<div class="pvc-ava">'+esc(initial)+'</div>';
+}
+function pvChips(ent,rec){
+  var out=[];
+  if(rec.status)out.push(pill(cap(rec.status),statusClass(rec.status)));
+  ["veh","vehType","platform","company","brand","site","payment"].forEach(function(k){if(rec[k]&&out.length<4)out.push('<span class="pvc-chip">'+esc(rec[k])+'</span>');});
+  return out.join("");
+}
+function pvMeta(ent,cfg,rec,primary){
+  var rows=[],seen=0;
+  cfg.fields.forEach(function(f){
+    if(f.g||seen>=3||f.t==="textarea")return;
+    if(/^(photo|docs|receipt|notes|name|nameEn)$/.test(f.k))return;
+    var v=rec[f.k];if(v==null||String(v).trim()==="")return;
+    if(String(v).trim()===String(primary==null?"":primary).trim())return;
+    rows.push('<div><span>'+esc(f.l)+'</span><b>'+detailVal(ent,f,rec)+'</b></div>');seen++;
+  });
+  return rows.length?'<div class="pvc-meta">'+rows.join("")+'</div>':"";
+}
+function pvComplete(cfg,rec){
+  var tot=0,fill=0;cfg.fields.forEach(function(f){if(f.g)return;tot++;var v=rec[f.k];if(v!=null&&String(v).trim()!=="")fill++;});
+  return tot?Math.round(fill/tot*100):0;
+}
+function previewInner(ent,cfg,rec,mode,id){
+  var primary=pvPrimary(ent,rec);var pct=pvComplete(cfg,rec);var sub=detailSubtitle(ent,rec);
+  return pvAva(ent,rec,primary,mode,id)+
+    '<div class="pvc-name">'+esc(primary||"—")+'</div>'+
+    '<div class="pvc-sub">'+(sub?esc(sub):"&nbsp;")+'</div>'+
+    '<div class="pvc-chips">'+pvChips(ent,rec)+'</div>'+
+    '<div class="pvc-ring" style="--p:'+pct+'"><i>'+pct+'%</i></div>'+
+    '<div class="pvc-rl">'+(mode==="detail"?"Profile filled":"Completeness")+'</div>'+
+    pvMeta(ent,cfg,rec,primary);
+}
 function openForm(ent,id){
   if(READONLY){toast("You have view-only access.","err");return;}
   var cfg=ENT[ent];var rec=id?store(ent).filter(function(r){return r.id===id;})[0]:null;
   var editing=!!rec;var data=rec?clone(rec):{};
   if(ent==="expenses"&&!editing){data.date=isoToday();data.month=MON[TODAY.getMonth()];}
-  var body='<div class="form-grid" id="formGrid">'+cfg.fields.map(function(f){return fieldHTML(f,data);}).join("")+'</div>';
-  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
-  ov.innerHTML='<div class="modal"><div class="modal-h"><div><h3>'+(editing?"Edit ":"Add ")+esc(cfg.singular)+'</h3><div class="sub">'+(editing?"Updating existing record":"New record · "+cfg.title)+'</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
-    '<div class="modal-b">'+body+'</div>'+
-    '<div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="save" data-ent="'+ent+'" data-id="'+(id||"")+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+(editing?"Save changes":"Add "+esc(cfg.singular))+'</button></div></div>';
+  // group fields by the f.g separators, into section cards
+  var groups=[],cur=null;
+  cfg.fields.forEach(function(f){if(f.g){cur={g:f.g,items:[]};groups.push(cur);}else{if(!cur){cur={g:cfg.singular+" details",items:[]};groups.push(cur);}cur.items.push(f);}});
+  var fieldsHTML=groups.map(function(gr){
+    return '<div class="fcard"><div class="fsec"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+secIcon(gr.g)+'</svg></span><h3>'+esc(gr.g)+'</h3></div>'+
+      '<div class="form-grid">'+gr.items.map(function(f){return fieldHTML(f,data);}).join("")+'</div></div>';
+  }).join("");
+  var ov=document.createElement("div");ov.className="overlay formfull";ov.id="overlay";
+  ov.innerHTML='<div class="ff">'+
+    '<div class="ff-top"><div class="in"><button class="ff-back" data-act="close" title="Cancel">'+svg(IC_back)+'</button>'+
+      '<div class="ff-ttl"><div class="crumb">'+esc(cfg.title)+' · '+(editing?"Edit record":"New record")+'</div><h2>'+(editing?"Edit ":"Add ")+esc(cfg.singular)+'</h2></div></div></div>'+
+    '<div class="ff-body"><div class="ff-cols">'+
+      '<div><div class="pvc" id="pvcCard">'+previewInner(ent,cfg,data,"form","")+'</div></div>'+
+      '<div class="ff-fields">'+fieldsHTML+'</div>'+
+    '</div></div>'+
+    '<div class="ff-actionbar"><div class="in"><span class="note"><span class="d"></span>'+(editing?"Editing — changes sync live":"New "+cfg.singular.toLowerCase())+'</span><span style="flex:1"></span>'+
+      '<button class="btn ghost" data-act="close">Cancel</button>'+
+      '<button class="btn primary" data-act="save" data-ent="'+ent+'" data-id="'+(id||"")+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+(editing?"Save changes":"Add "+esc(cfg.singular))+'</button></div></div>'+
+    '</div>';
   document.body.appendChild(ov);
+  // live preview updates as fields change
+  function upd(){var vals={};cfg.fields.forEach(function(f){if(f.g)return;var el=$('[name="'+f.k+'"]',ov);if(el)vals[f.k]=el.value;});
+    if(editing&&rec&&rec.photo)vals.photo=rec.photo;
+    var pc=$("#pvcCard",ov);if(pc)pc.innerHTML=previewInner(ent,cfg,vals,"form","");}
+  ov.addEventListener("input",upd);ov.addEventListener("change",upd);
   // dependent selects (expense subcategory)
   cfg.fields.forEach(function(f){if(f.dep){var sel=$('[name="'+f.k+'"]',ov);if(sel)sel.addEventListener("change",function(){refreshDep(ov,cfg,f.dep,{ } );});}});
   // auto month from date
   if(ent==="expenses"||ent==="income"){var ds=$('[name="date"]',ov);if(ds)ds.addEventListener("change",function(){var d=parseD(this.value);var ms=$('[name="month"]',ov);if(d&&ms)ms.value=MON[d.getMonth()];});}
   // payroll: auto-fill basic salary + year from chosen employee
   if(ent==="payroll"){var ye=$('[name="year"]',ov);if(ye&&!ye.value)ye.value=TODAY.getFullYear();var pe=$('[name="employee"]',ov);if(pe)pe.addEventListener("change",function(){var dr=STATE.grd.drivers.filter(function(x){return x.name===pe.value;})[0];var bs=$('[name="basic"]',ov);if(dr&&bs&&!bs.value)bs.value=dr.salary||"";});}
-  setTimeout(function(){var fi=$('input,select,textarea',ov);if(fi)fi.focus();},50);
+  setTimeout(function(){var fi=$('.ff-fields input,.ff-fields select,.ff-fields textarea',ov);if(fi)fi.focus();},50);
 }
 function refreshDep(ov,cfg,depKey){
   var f=cfg.fields.filter(function(x){return x.k===depKey;})[0];if(!f||!f.optsFn)return;
@@ -2987,27 +3109,12 @@ function pageDetail(pg,ent,id){
     (ent==="payroll"?'<button class="btn sm" data-act="payslip" data-id="'+id+'">'+svg(IC_pdf)+'Payslip PDF</button>':'<button class="btn sm" data-act="entrypdf" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_pdf)+'PDF</button>')+
     (can("edit")?'<button class="btn sm" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</button>':'')+
     (can("delete")?'<button class="btn sm danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</button>':'')+'</div>';
-  var initial=((primary||"?").trim().charAt(0)||"?").toUpperCase();
-  var cam='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5"/></svg>';
-  var ava;
-  if(ent==="drivers"){
-    ava='<div class="detail-ava photo" data-act="photopick" data-id="'+id+'" title="Upload / change photo">'+
-      (rec.photo?'<span class="ava-clip"><img src="'+rec.photo+'" alt=""></span>':esc(initial))+
-      '<span class="cam">'+cam+'</span>'+
-      (rec.photo?'<button class="ava-del" data-act="photodel" data-id="'+id+'" title="Remove photo">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button>':'')+
-    '</div>';
-  } else ava='<div class="detail-ava">'+esc(initial)+'</div>';
-  html+='<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">'+
-    ava+
-    '<div style="min-width:0"><div style="font-weight:800;font-size:20px">'+esc(primary||"—")+'</div>'+
-    '<div style="color:var(--muted);font-size:13px;margin-top:3px">'+esc(detailSubtitle(ent,rec))+'</div></div></div></div>';
-  html+='<div class="grid g2" style="align-items:start">';
-  groups.forEach(function(gr){
-    html+='<div class="card"><div class="card-h"><h3>'+esc(gr.g)+'</h3></div><div class="card-b">'+
+  html+='<div class="detail2">'+
+    '<div><div class="pvc">'+previewInner(ent,cfg,rec,"detail",id)+'</div></div>'+
+    '<div class="groups">'+groups.map(function(gr){return '<div class="card"><div class="card-h"><h3>'+esc(gr.g)+'</h3></div><div class="card-b">'+
       gr.items.map(function(f){return '<div class="kv-row"><div class="kk">'+esc(f.l)+'</div><div class="vv">'+detailVal(ent,f,rec)+'</div></div>';}).join("")+
-      '</div></div>';
-  });
-  html+='</div>';
+      '</div></div>';}).join("")+'</div>'+
+  '</div>';
   if(ASSETENTS[ent])html+=assetHistoryCard(ent,rec,id);
   if(ent==="service")html+=serviceCard(rec,id);
   if(ent==="payroll")html+=payrollCard(rec);
