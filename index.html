@@ -1104,7 +1104,8 @@ function expCell(s){var d=parseD(s);if(!d)return '<span style="color:var(--muted
 
 /* ---------- persistence ---------- */
 function saveLocal(){try{localStorage.setItem("smou-erp",JSON.stringify(STATE));}catch(e){}}
-function setSave(cls,txt){var el=$("#saveInd");if(!el)return;el.className="save-ind "+cls;$(".save-txt",el).textContent=txt;}
+var SAVECLS="",SAVETXT="Saved";
+function setSave(cls,txt){SAVECLS=cls;SAVETXT=txt;var el=$("#saveInd");if(!el)return;el.className="save-ind "+cls;$(".save-txt",el).textContent=txt;}
 function jsonEmbed(o){return JSON.stringify(o).replace(/</g,"\\u003c");}
 function getDocHTML(state){
   var xl=document.getElementById("xlsxlib");
@@ -1217,14 +1218,60 @@ function sbUpload(path,blob,ct){
   });
 }
 function dataURLtoBlob(d){var a=d.split(",");var mime=(a[0].match(/:(.*?);/)||[])[1]||"application/octet-stream";var bin=atob(a[1]);var u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:mime});}
+var _rtChan=null,_rtRetry=0,_rtScheduled=false,_rtLive=false,_rtGotFirst=false,_reconciling=false,_liveWired=false;
+function _rtBusy(){return document.getElementById("overlay")||document.getElementById("rowmenu");}
+function setLive(ok,txt){
+  // reflect realtime connection on the resting indicator, but never stomp an in-progress save
+  var el=document.getElementById("saveInd");
+  if(el&&el.classList.contains("saving"))return;
+  if(ok)setSave("",txt||("Live · "+roleLabel(ROLE)));
+  else setSave("err",txt||"Reconnecting…");
+}
+// pull the full server state and reconcile (catch up on anything missed while disconnected/asleep)
+function sbReconcile(){
+  if(!SB_ON||!SB||!USER||_reconciling)return Promise.resolve();
+  _reconciling=true;
+  return SB.from("records").select("collection,id,data").then(function(res){
+    _reconciling=false;
+    if(res.error||!res.data)return;
+    applyRows(res.data);flushPending();
+    if(!_rtBusy())renderApp();
+  }).catch(function(){_reconciling=false;});
+}
 function sbSubscribe(){
-  try{SB.channel("records-sync").on("postgres_changes",{event:"*",schema:"public",table:"records"},function(p){
-    var row=p.new&&p.new.collection?p.new:p.old;if(!row)return;var coll=row.collection,id=row.id;var dest=COLLSET[coll];if(!dest)return;
-    var arr=STATE[dest[0]][dest[1]];var i=arr.findIndex(function(x){return x.id===id;});
-    if(p.eventType==="DELETE"){if(i>=0)arr.splice(i,1);delete shadow[coll+"/"+id];}
-    else{var d=p.new.data;if(i>=0)arr[i]=d;else arr.push(d);shadow[coll+"/"+id]=JSON.stringify(d);}
-    if(!document.getElementById("overlay")&&!document.getElementById("rowmenu"))renderApp();
-  }).subscribe();}catch(e){}
+  if(!SB_ON||!SB)return;
+  try{if(_rtChan){try{SB.removeChannel(_rtChan);}catch(e){}_rtChan=null;}}catch(e){}
+  try{
+    _rtChan=SB.channel("records-sync").on("postgres_changes",{event:"*",schema:"public",table:"records"},function(p){
+      var row=p.new&&p.new.collection?p.new:p.old;if(!row)return;var coll=row.collection,id=row.id;var dest=COLLSET[coll];if(!dest)return;
+      var arr=STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===id;});
+      if(p.eventType==="DELETE"){if(i>=0)arr.splice(i,1);delete shadow[coll+"/"+id];}
+      else{var d=p.new.data;if(i>=0)arr[i]=d;else arr.push(d);shadow[coll+"/"+id]=JSON.stringify(d);}
+      if(!_rtBusy())renderApp();
+    }).subscribe(function(status){
+      if(status==="SUBSCRIBED"){var wasLive=_rtGotFirst;_rtLive=true;_rtRetry=0;_rtGotFirst=true;setLive(true);if(wasLive)sbReconcile();/* skip reconcile on the very first connect — sbLoad already loaded fresh data, avoids a boot re-render */}
+      else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+        _rtLive=false;setLive(false);
+        if(!_rtScheduled){_rtScheduled=true;var delay=Math.min(30000,1000*Math.pow(2,_rtRetry++));
+          setTimeout(function(){_rtScheduled=false;if(SB_ON&&USER&&!_rtLive)sbSubscribe();},delay);}
+      }
+    });
+  }catch(e){}
+}
+// wire up the always-on safety nets exactly once
+function sbWireLive(){
+  if(_liveWired)return;_liveWired=true;
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="visible"){sbReconcile();if(!_rtLive)sbSubscribe();}
+  });
+  window.addEventListener("online",function(){setLive(false,"Reconnecting…");sbReconcile();sbSubscribe();});
+  window.addEventListener("offline",function(){_rtLive=false;setLive(false,"Offline · saving on device");});
+  // heartbeat: retry any queued writes and revive realtime if it quietly died
+  setInterval(function(){
+    if(!SB_ON||!SB||!USER)return;
+    if(PENDING&&PENDING.length)flushPending();
+    if(document.visibilityState==="visible"&&!_rtLive&&!_rtScheduled)sbSubscribe();
+  },25000);
 }
 
 /* ============ AUTH (Supabase) ============ */
@@ -1240,7 +1287,7 @@ function onAuthed(user){
   ensureProfile(user).then(function(role){
     ROLE=role||"viewer";applyRole();hideLogin();showSplash("Loading your data…");
     var _done=false;var _to=setTimeout(function(){if(!_done){setSave("err","DB timeout — check Console");renderApp();}},18000);
-    sbLoad().then(function(){_done=true;clearTimeout(_to);renderApp();setSave("","Connected · "+roleLabel(ROLE));sbSubscribe();})
+    sbLoad().then(function(){_done=true;clearTimeout(_to);renderApp();setSave("","Connected · "+roleLabel(ROLE));sbSubscribe();sbWireLive();})
       .catch(function(err){_done=true;clearTimeout(_to);var msg=(err&&(err.message||err.hint))||JSON.stringify(err);console.error("SMOU DB error:",err);renderApp();setSave("err","DB error");toast("DB error: "+msg,"err");});
   }).catch(function(err){showLogin("Couldn't load your profile: "+((err&&err.message)||err));});
 }
@@ -1722,7 +1769,7 @@ function renderApp(){
     '<button class="icon-btn menu-btn" data-act="menu" aria-label="Menu">'+svg('<path d="M3 6h18M3 12h18M3 18h18"/>')+'</button>'+
     '<div class="tb-title"><h1 id="pgTitle"></h1><div class="crumb" id="pgCrumb"></div></div>'+
     '<div class="tb-right">'+
-      '<div class="save-ind" id="saveInd"><span class="sd"></span><span class="save-txt">Saved</span></div>'+
+      '<div class="save-ind '+esc(SAVECLS)+'" id="saveInd"><span class="sd"></span><span class="save-txt">'+esc(SAVETXT)+'</span></div>'+
       '<button class="btn primary" id="newBtn" data-act="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg><span id="newLbl">New</span></button>'+
       '<span class="vbadge" id="vbadge" title="Register"></span>'+
       '<button class="icon-btn" data-act="lang" id="langBtn" title="Language / اللغة" style="font-weight:700;font-size:13px">'+(LANG==="ar"?"EN":"ع")+'</button>'+
