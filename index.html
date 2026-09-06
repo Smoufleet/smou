@@ -466,6 +466,7 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 .kv-row .vv{color:var(--ink)}
 @media(max-width:520px){.kv-row{grid-template-columns:1fr;gap:2px}}
 .detail-ava.photo{cursor:pointer;overflow:visible;position:relative}
+.detail-ava .ava-clip{position:absolute;inset:0;border-radius:50%;overflow:hidden;display:block;background:var(--teal-bg)}
 .detail-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;-webkit-clip-path:circle(50%);clip-path:circle(50%);display:block}
 .detail-ava.photo .cam{position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);width:23px;height:23px;border-radius:50%;background:rgba(0,0,0,.6);border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;opacity:0;transition:.15s}
 .detail-ava.photo .cam svg{width:12px;height:12px;color:#fff}
@@ -2944,7 +2945,7 @@ function pageDetail(pg,ent,id){
   var ava;
   if(ent==="drivers"){
     ava='<div class="detail-ava photo" data-act="photopick" data-id="'+id+'" title="Upload / change photo">'+
-      (rec.photo?'<img src="'+rec.photo+'" alt="">':esc(initial))+
+      (rec.photo?'<span class="ava-clip"><img src="'+rec.photo+'" alt=""></span>':esc(initial))+
       '<span class="cam">'+cam+'</span>'+
       (rec.photo?'<button class="ava-del" data-act="photodel" data-id="'+id+'" title="Remove photo">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button>':'')+
     '</div>';
