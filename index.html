@@ -101,7 +101,7 @@ button.sb-glab .chev,.sb-subtoggle .chev{width:14px;height:14px;flex:none;opacit
 button.sb-glab.open .chev,.sb-subtoggle.open .chev{transform:rotate(90deg)}
 button.sb-glab:hover{color:var(--sidebar-ink)}
 .sb-sub{overflow:hidden;max-height:0;transition:max-height .24s ease}
-.sb-sub.open{max-height:520px}
+.sb-sub.open{max-height:1000px}
 .sb-subtoggle{width:100%;text-align:inherit;border:0;background:transparent;font-family:inherit}
 .sb-subtoggle span{flex:1}
 .sb-sub2{overflow:hidden;max-height:0;transition:max-height .22s ease;margin-left:14px;padding-left:8px;border-left:1px solid var(--sidebar-line)}
@@ -2656,7 +2656,7 @@ function themeIcon(){/* theme button is now the palette menu — no icon swap */
 
 /* ============ GLOBAL EVENTS ============ */
 document.addEventListener("click",function(e){
-  var tg=e.target.closest("[data-navtoggle]");if(tg){e.preventDefault();e.stopPropagation();var k=tg.getAttribute("data-navtoggle");NAVOPEN[k]=!NAVOPEN[k];saveNavOpen();renderApp();return;}
+  var tg=e.target.closest("[data-navtoggle]");if(tg){e.preventDefault();e.stopPropagation();var k=tg.getAttribute("data-navtoggle");NAVOPEN[k]=!NAVOPEN[k];saveNavOpen();tg.classList.toggle("open");var sub=tg.nextElementSibling;if(sub&&(sub.classList.contains("sb-sub")||sub.classList.contains("sb-sub2")))sub.classList.toggle("open");return;}
   var rt=e.target.closest("[data-route]");if(rt){e.preventDefault();closeMenu();var _ov=document.getElementById("overlay");if(_ov)_ov.remove();go(rt.getAttribute("data-route"));return;}
   var a=e.target.closest("[data-act]");if(!a)return;
   var act=a.getAttribute("data-act");
