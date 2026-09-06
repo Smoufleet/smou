@@ -1155,6 +1155,19 @@ function sbClient(){
 var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["perf",function(){return STATE.grd.perf;}],["orderlog",function(){return STATE.grd.orderlog;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["expenses",function(){return STATE.finance.expenses;}]];
 var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],orderlog:["grd","orderlog"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],expenses:["finance","expenses"]};
 var shadow={};
+/* ---- offline-safe outbox: rows that failed to sync are remembered across refreshes and auto-retried ---- */
+var PENDING=(function(){try{return JSON.parse(localStorage.getItem("smou-pending")||"[]")||[];}catch(e){return [];}})();
+function savePending(){try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));}catch(e){}}
+function queuePending(rows){rows.forEach(function(u){var k=u.collection+"/"+u.id;PENDING=PENDING.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING.push({collection:u.collection,id:u.id,data:u.data});});savePending();}
+function clearPending(rows){if(!PENDING.length)return;var ok={};rows.forEach(function(u){ok[u.collection+"/"+u.id]=1;});PENDING=PENDING.filter(function(p){return !ok[p.collection+"/"+p.id];});savePending();}
+function flushPending(){
+  if(!PENDING||!PENDING.length)return Promise.resolve();
+  PENDING.forEach(function(p){var dest=COLLSET[p.collection];if(!dest)return;var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===p.id;});if(i>=0)arr[i]=p.data;else arr.push(p.data);});
+  var rows=PENDING.map(function(p){return {collection:p.collection,id:p.id,data:p.data};});
+  return SB.from("records").upsert(rows,{onConflict:"collection,id"}).then(function(res){
+    if(!res.error){rows.forEach(function(r){shadow[r.collection+"/"+r.id]=JSON.stringify(r.data);});PENDING=[];savePending();}
+  }).catch(function(){});
+}
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
   var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],expenses:[]};
@@ -1168,6 +1181,7 @@ function sbLoad(){
     if(res.error)throw res.error;
     if(!res.data||!res.data.length){return sbSeed();}
     applyRows(res.data);
+    return flushPending();
   });
 }
 function sbSeed(){
@@ -1180,16 +1194,20 @@ var sbBusy=false;
 function persistSB(){
   SB=sbClient();if(!SB){setSave("err","Not connected");return;}
   setSave("saving","Saving…");
-  var ups=[],delOps=[];
+  var ups=[],delOps=[],pend=[];
   COLLS.forEach(function(c){var coll=c[0];var cur={};
-    c[1]().forEach(function(r){cur[r.id]=1;var js=JSON.stringify(r);if(shadow[coll+"/"+r.id]!==js){ups.push({collection:coll,id:r.id,data:r});shadow[coll+"/"+r.id]=js;}});
-    Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0){var id=k.slice(coll.length+1);if(!cur[id]){delOps.push([coll,id]);delete shadow[k];}}});
+    c[1]().forEach(function(r){cur[r.id]=1;var js=JSON.stringify(r);if(shadow[coll+"/"+r.id]!==js){ups.push({collection:coll,id:r.id,data:r});pend.push([coll+"/"+r.id,js]);}});
+    Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0){var id=k.slice(coll.length+1);if(!cur[id]){delOps.push([coll,id]);}}});
   });
+  if(ups.length){var _seen={},_uniq=[];for(var _i=ups.length-1;_i>=0;_i--){var _k=ups[_i].collection+"/"+ups[_i].id;if(_seen[_k])continue;_seen[_k]=1;_uniq.push(ups[_i]);}ups=_uniq.reverse();}
   var tasks=[];
-  if(ups.length){var _seen={},_uniq=[];for(var _i=ups.length-1;_i>=0;_i--){var _k=ups[_i].collection+"/"+ups[_i].id;if(_seen[_k])continue;_seen[_k]=1;_uniq.push(ups[_i]);}ups=_uniq.reverse();tasks.push(SB.from("records").upsert(ups,{onConflict:"collection,id"}));}
+  if(ups.length)tasks.push(SB.from("records").upsert(ups,{onConflict:"collection,id"}));
   delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
   if(!tasks.length){setSave("","Saved & synced");return;}
-  Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];if(err){setSave("err","Sync error");toast("Sync error: "+(err.error.message||"check connection"),"err");}else{setSave("","Saved & synced");}}).catch(function(e){setSave("err","Sync error");});
+  Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];
+    if(err){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+(err.error.message||"check connection")+" — entry saved on device, will retry automatically.","err");}
+    else{pend.forEach(function(p){shadow[p[0]]=p[1];});delOps.forEach(function(d){delete shadow[d[0]+"/"+d[1]];});if(ups.length)clearPending(ups);setSave("","Saved & synced");}
+  }).catch(function(e){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((e&&e.message)||"check connection")+" — entry saved on device, will retry automatically.","err");});
 }
 function sbUpload(path,blob,ct){
   return SB.storage.from("files").upload(path,blob,{upsert:true,contentType:ct}).then(function(res){
@@ -1219,10 +1237,10 @@ function ensureProfile(user){
 function onAuthed(user){
   USER=user;setSave("saving","Loading…");
   ensureProfile(user).then(function(role){
-    ROLE=role||"viewer";applyRole();hideLogin();renderApp();
-    var _done=false;var _to=setTimeout(function(){if(!_done){setSave("err","DB timeout — check Console");}},18000);
+    ROLE=role||"viewer";applyRole();hideLogin();showSplash("Loading your data…");
+    var _done=false;var _to=setTimeout(function(){if(!_done){setSave("err","DB timeout — check Console");renderApp();}},18000);
     sbLoad().then(function(){_done=true;clearTimeout(_to);renderApp();setSave("","Connected · "+roleLabel(ROLE));sbSubscribe();})
-      .catch(function(err){_done=true;clearTimeout(_to);var msg=(err&&(err.message||err.hint))||JSON.stringify(err);console.error("SMOU DB error:",err);setSave("err","DB error");toast("DB error: "+msg,"err");});
+      .catch(function(err){_done=true;clearTimeout(_to);var msg=(err&&(err.message||err.hint))||JSON.stringify(err);console.error("SMOU DB error:",err);renderApp();setSave("err","DB error");toast("DB error: "+msg,"err");});
   }).catch(function(err){showLogin("Couldn't load your profile: "+((err&&err.message)||err));});
 }
 function showLogin(errMsg){
@@ -1660,6 +1678,7 @@ function buildThemeMenu(){var pop=$("#themepop");if(!pop)return;var acc=curAccen
   pop.innerHTML='<div class="tp-lab">Accent colour</div><div class="tp-sw">'+ACCENTS.map(function(a){return '<span class="sw'+(a[0].toLowerCase()===acc?" on":"")+'" data-act="setacc" data-h="'+a[0]+'" title="'+a[1]+'" style="background:'+a[0]+'"></span>';}).join("")+'</div><div class="tp-lab">Appearance</div><div class="tp-mode"><button class="'+(!dark?"on":"")+'" data-act="setmode" data-m="light">Light</button><button class="'+(dark?"on":"")+'" data-act="setmode" data-m="dark">Dark</button></div>';}
 function toggleThemeMenu(){var pop=$("#themepop");if(!pop)return;if(pop.hidden){buildThemeMenu();pop.hidden=false;setTimeout(function(){document.addEventListener("click",_closeTM);},0);}else{pop.hidden=true;document.removeEventListener("click",_closeTM);}}
 function _closeTM(e){if(e.target.closest&&e.target.closest(".themewrap"))return;var pop=$("#themepop");if(pop)pop.hidden=true;document.removeEventListener("click",_closeTM);}
+function showSplash(msg){var r=document.getElementById("root");if(!r)return;r.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;background:var(--bg)"><div style="text-align:center"><div style="width:52px;height:52px;border-radius:15px;margin:0 auto 16px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--teal),var(--teal-2));box-shadow:var(--shadow-lg)">'+LOGO_SVG+'</div><div style="font-family:\'Fraunces\',serif;font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-.01em">SMOU</div><div class="splash-dots" style="margin-top:14px;color:var(--muted);font-size:12.5px;font-family:\'IBM Plex Mono\'">'+(msg||"Loading…")+'</div></div></div>';}
 function renderApp(){
   var route=getRoute();
   var sb='<aside class="sidebar" id="sidebar"><div class="sb-brand"><span class="lg">'+LOGO_SVG+'</span><span class="nm">SMOU<small>Fleet · Kuwait</small></span></div><nav class="sb-nav">';
@@ -3401,7 +3420,7 @@ document.addEventListener("click",function(e){
 
 /* ============ INIT ============ */
 if(!location.hash){var r0="overview";try{r0=localStorage.getItem("smou-route")||"overview";}catch(e){}history.replaceState(null,"","#/"+r0);}
-renderApp();
+if(SB_ON){showSplash("Connecting…");}else{renderApp();}
 if(SB_ON){
   setSave("saving","Connecting to database…");
   var _tries=0;
