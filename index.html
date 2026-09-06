@@ -291,6 +291,19 @@ table.dt td .sub{font-size:11px;color:var(--muted)}
   .scrim.on{display:block}
   .menu-btn{display:grid!important}
 }
+@media(max-width:600px){
+  .topbar{gap:7px;padding:10px 11px;min-height:56px}
+  .tb-title{flex:1;min-width:0}
+  .tb-title h1{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-title .crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-right{gap:6px}
+  .save-ind{display:none}
+  #vbadge{display:none}
+  #newBtn #newLbl{display:none}
+  #newBtn{padding:0;width:34px;min-width:34px;height:34px;justify-content:center;gap:0}
+  .icon-btn{width:34px;height:34px}
+  .themepop{right:-2px}
+}
 .menu-btn{display:grid}
 .app{transition:grid-template-columns .28s cubic-bezier(.2,.7,.2,1)}
 .sidebar{transition:transform .28s cubic-bezier(.2,.7,.2,1)}
