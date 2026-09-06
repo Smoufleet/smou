@@ -244,7 +244,7 @@ table.dt td .sub{font-size:11px;color:var(--muted)}
 .barrow{display:flex;align-items:center;gap:11px;margin-bottom:9px}
 .barrow .bl{width:104px;flex:none;font-size:12px;color:var(--ink-2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .barrow .bt{flex:1;height:20px;background:var(--surface-3);border-radius:5px;overflow:hidden}
-.barrow .bf{height:100%;border-radius:5px;transition:width .7s cubic-bezier(.2,.7,.2,1)}
+.barrow .bf{height:100%;border-radius:5px;transition:width .7s cubic-bezier(.2,.7,.2,1);box-shadow:inset 0 7px 6px -6px rgba(255,255,255,.30),inset 0 -9px 9px -6px rgba(0,0,0,.32)}
 .barrow .bv{width:40px;flex:none;font-size:12px;font-weight:600;color:var(--ink)}
 .legend{display:flex;flex-wrap:wrap;gap:7px 15px;padding:0 17px 15px}
 .legend .li{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
@@ -2298,7 +2298,7 @@ function ordersDash(P){
   var mt={};P.forEach(function(r){var mi=moIdx(r.month);if(mi<0)return;var k=(r.year||"")+"-"+String(mi+1).padStart(2,"0");mt[k]=(mt[k]||0)+(num(r.orders)||0);});
   var mks=Object.keys(mt).sort();var maxM=Math.max.apply(null,mks.map(function(k){return mt[k];}))||1;
   var trend='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Monthly Orders Trend</h3><span class="hint">'+mks.length+' months</span></div><div class="card-b">'+
-    (mks.length?'<div style="display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:10px">'+mks.map(function(k){var h=Math.max(3,mt[k]/maxM*140);var p=k.split("-");var lbl=MONS[(+p[1])-1]+" '"+p[0].slice(2);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px" data-tt="'+lbl+': '+fmtN(mt[k])+' orders"><div class="mono" style="font-size:10px;color:var(--ink-2)">'+fmtN(mt[k])+'</div><div style="width:100%;max-width:48px;height:'+h+'px;border-radius:7px 7px 0 0;background:var(--teal)"></div><div style="font-size:10px;color:var(--muted);font-family:\'IBM Plex Mono\'">'+lbl+'</div></div>';}).join("")+'</div>':'<div class="empty">No monthly data.</div>')+
+    (mks.length?'<div style="display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:10px">'+mks.map(function(k){var h=Math.max(3,mt[k]/maxM*140);var p=k.split("-");var lbl=MONS[(+p[1])-1]+" '"+p[0].slice(2);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px" data-tt="'+lbl+': '+fmtN(mt[k])+' orders"><div class="mono" style="font-size:10px;color:var(--ink-2)">'+fmtN(mt[k])+'</div><div style="width:100%;max-width:48px;height:'+h+'px;border-radius:7px 7px 0 0;background:linear-gradient(180deg,var(--teal),var(--teal-2))"></div><div style="font-size:10px;color:var(--muted);font-family:\'IBM Plex Mono\'">'+lbl+'</div></div>';}).join("")+'</div>':'<div class="empty">No monthly data.</div>')+
   '</div></div>';
   // platform donut
   var vc=[{label:"Talabat",value:tal,color:cvar("--amber")},{label:"Keeta",value:kee,color:cvar("--teal")}];
