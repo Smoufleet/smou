@@ -466,13 +466,13 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 .kv-row .vv{color:var(--ink)}
 @media(max-width:520px){.kv-row{grid-template-columns:1fr;gap:2px}}
 .detail-ava.photo{cursor:pointer;overflow:visible;position:relative}
-.detail-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.detail-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%;-webkit-clip-path:circle(50%);clip-path:circle(50%);display:block}
 .detail-ava.photo .cam{position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);width:23px;height:23px;border-radius:50%;background:rgba(0,0,0,.6);border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;opacity:0;transition:.15s}
 .detail-ava.photo .cam svg{width:12px;height:12px;color:#fff}
 .detail-ava.photo:hover .cam{opacity:1}
 .detail-ava .ava-del{position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:var(--crit);color:#fff;border:2px solid var(--surface);display:grid;place-items:center;cursor:pointer;padding:0;z-index:2}
 .detail-ava .ava-del svg{width:10px;height:10px}
-.mini-ava{border-radius:50%;object-fit:cover;flex:none;vertical-align:middle}
+.mini-ava{border-radius:50%;object-fit:cover;flex:none;vertical-align:middle;-webkit-clip-path:circle(50%);clip-path:circle(50%)}
 .mini-ava.ini{display:inline-grid;place-items:center;background:var(--teal-bg);color:var(--teal-ink);font-weight:700;font-family:"Plus Jakarta Sans"}
 /* ===== Arabic / RTL ===== */
 [lang="ar"] body,[lang="ar"] h1,[lang="ar"] h2,[lang="ar"] h3,[lang="ar"] h4,[lang="ar"] .btn,[lang="ar"] .sb-brand .nm,[lang="ar"] input,[lang="ar"] select,[lang="ar"] textarea,[lang="ar"] .pill,[lang="ar"] .chip,[lang="ar"] .menu-item,[lang="ar"] .sub-tab,[lang="ar"] .tab{font-family:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif}
