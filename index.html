@@ -1204,12 +1204,37 @@ var PENDING=(function(){try{return JSON.parse(localStorage.getItem("smou-pending
 function savePending(){try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));}catch(e){}}
 function queuePending(rows){rows.forEach(function(u){var k=u.collection+"/"+u.id;PENDING=PENDING.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING.push({collection:u.collection,id:u.id,data:u.data});});savePending();}
 function clearPending(rows){if(!PENDING.length)return;var ok={};rows.forEach(function(u){ok[u.collection+"/"+u.id]=1;});PENDING=PENDING.filter(function(p){return !ok[p.collection+"/"+p.id];});savePending();}
+/* ---- conflict-safe field-level merge: never overwrite another device's change ---- */
+function fieldDiff(localObj,shadowObj){var d={};shadowObj=shadowObj||{};Object.keys(localObj||{}).forEach(function(k){var lv=localObj[k],sv=shadowObj[k];if(JSON.stringify(lv)===JSON.stringify(sv))return;var lB=(lv===""||lv==null),sB=(sv===""||sv==null);if(lB&&sB)return;/* blank-vs-missing is not a real edit — don't let it wipe another device's value */d[k]=lv;});return d;}
+function mergeUps(ups){
+  if(!ups.length)return Promise.resolve([]);
+  // bulk operations (imports/seed) skip the per-row merge fetch — conflicts there are unlikely
+  if(ups.length>50)return Promise.resolve(ups.map(function(u){return {collection:u.collection,id:u.id,data:u.data,merged:false};}));
+  var ids=ups.map(function(u){return u.id;});
+  return SB.from("records").select("collection,id,data").in("id",ids).then(function(res){
+    var srv={};if(!res.error&&res.data)res.data.forEach(function(r){srv[r.collection+"/"+r.id]=r.data;});
+    return ups.map(function(u){
+      var key=u.collection+"/"+u.id;var srvData=srv[key];var shJSON=shadow[key];
+      // server changed since we last synced AND it's not simply equal to what we're writing → merge my field-changes onto the server copy
+      if(srvData&&shJSON&&JSON.stringify(srvData)!==shJSON&&JSON.stringify(srvData)!==JSON.stringify(u.data)){
+        var shObj;try{shObj=JSON.parse(shJSON);}catch(e){shObj={};}
+        var myDiff=fieldDiff(u.data,shObj);
+        var mm=Object.assign({},srvData,myDiff);mm.id=u.id;
+        var dest=COLLSET[u.collection];if(dest){var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(arr){var i=arr.findIndex(function(x){return x&&x.id===u.id;});if(i>=0)arr[i]=mm;}}
+        return {collection:u.collection,id:u.id,data:mm,merged:true};
+      }
+      return {collection:u.collection,id:u.id,data:u.data,merged:false};
+    });
+  }).catch(function(){return ups.map(function(u){return {collection:u.collection,id:u.id,data:u.data,merged:false};});});
+}
 function flushPending(){
   if(!PENDING||!PENDING.length)return Promise.resolve();
   PENDING.forEach(function(p){var dest=COLLSET[p.collection];if(!dest)return;var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===p.id;});if(i>=0)arr[i]=p.data;else arr.push(p.data);});
-  var rows=PENDING.map(function(p){return {collection:p.collection,id:p.id,data:p.data};});
-  return SB.from("records").upsert(rows,{onConflict:"collection,id"}).then(function(res){
-    if(!res.error){rows.forEach(function(r){shadow[r.collection+"/"+r.id]=JSON.stringify(r.data);});PENDING=[];savePending();}
+  var ups=PENDING.map(function(p){return {collection:p.collection,id:p.id,data:p.data};});
+  return mergeUps(ups).then(function(mups){
+    return SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}).then(function(res){
+      if(!res.error){mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});PENDING=[];savePending();if(mups.some(function(m){return m.merged;})&&!_rtBusy())renderApp();}
+    });
   }).catch(function(){});
 }
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
@@ -1238,20 +1263,26 @@ var sbBusy=false;
 function persistSB(){
   SB=sbClient();if(!SB){setSave("err","Not connected");return;}
   setSave("saving","Saving…");
-  var ups=[],delOps=[],pend=[];
+  var ups=[],delOps=[];
   COLLS.forEach(function(c){var coll=c[0];var cur={};
-    c[1]().forEach(function(r){cur[r.id]=1;var js=JSON.stringify(r);if(shadow[coll+"/"+r.id]!==js){ups.push({collection:coll,id:r.id,data:r});pend.push([coll+"/"+r.id,js]);}});
+    c[1]().forEach(function(r){cur[r.id]=1;var js=JSON.stringify(r);if(shadow[coll+"/"+r.id]!==js){ups.push({collection:coll,id:r.id,data:r});}});
     Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0){var id=k.slice(coll.length+1);if(!cur[id]){delOps.push([coll,id]);}}});
   });
   if(ups.length){var _seen={},_uniq=[];for(var _i=ups.length-1;_i>=0;_i--){var _k=ups[_i].collection+"/"+ups[_i].id;if(_seen[_k])continue;_seen[_k]=1;_uniq.push(ups[_i]);}ups=_uniq.reverse();}
-  var tasks=[];
-  if(ups.length)tasks.push(SB.from("records").upsert(ups,{onConflict:"collection,id"}));
-  delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
-  if(!tasks.length){setSave("","Saved & synced");return;}
-  Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];
-    if(err){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+(err.error.message||"check connection")+" — entry saved on device, will retry automatically.","err");}
-    else{pend.forEach(function(p){shadow[p[0]]=p[1];});delOps.forEach(function(d){delete shadow[d[0]+"/"+d[1]];});if(ups.length)clearPending(ups);setSave("","Saved & synced");}
-  }).catch(function(e){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((e&&e.message)||"check connection")+" — entry saved on device, will retry automatically.","err");});
+  if(!ups.length&&!delOps.length){setSave("","Saved & synced");return;}
+  mergeUps(ups).then(function(mups){
+    var tasks=[];
+    if(mups.length)tasks.push(SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}));
+    delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
+    Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];
+      if(err){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((err.error&&err.error.message)||"check connection")+" — entry saved on device, will retry automatically.","err");return;}
+      mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});
+      delOps.forEach(function(d){delete shadow[d[0]+"/"+d[1]];});
+      if(ups.length)clearPending(ups);
+      if(mups.some(function(m){return m.merged;})){if(!_rtBusy())renderApp();toast("Merged with changes from another device — nothing lost.","good");}
+      setSave("","Saved & synced");
+    }).catch(function(e){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((e&&e.message)||"check connection")+" — entry saved on device, will retry automatically.","err");});
+  });
 }
 function sbUpload(path,blob,ct){
   return SB.storage.from("files").upload(path,blob,{upsert:true,contentType:ct}).then(function(res){
