@@ -1237,6 +1237,25 @@ var PENDING=(function(){try{return JSON.parse(localStorage.getItem("smou-pending
 function savePending(){try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));}catch(e){}}
 function queuePending(rows){rows.forEach(function(u){var k=u.collection+"/"+u.id;PENDING=PENDING.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING.push({collection:u.collection,id:u.id,data:u.data});});savePending();}
 function clearPending(rows){if(!PENDING.length)return;var ok={};rows.forEach(function(u){ok[u.collection+"/"+u.id]=1;});PENDING=PENDING.filter(function(p){return !ok[p.collection+"/"+p.id];});savePending();}
+/* ---- delete outbox: failed deletes are remembered + retried, and never allowed to resurrect ---- */
+var PENDING_DEL=(function(){try{return JSON.parse(localStorage.getItem("smou-pending-del")||"[]")||[];}catch(e){return [];}})();
+function savePendingDel(){try{localStorage.setItem("smou-pending-del",JSON.stringify(PENDING_DEL));}catch(e){}}
+function queuePendingDel(ops){ops.forEach(function(d){var k=d[0]+"/"+d[1];PENDING_DEL=PENDING_DEL.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING_DEL.push({collection:d[0],id:d[1]});});savePendingDel();}
+function clearPendingDel(ops){if(!PENDING_DEL.length)return;var ok={};ops.forEach(function(d){var c=Array.isArray(d)?d[0]:d.collection,i=Array.isArray(d)?d[1]:d.id;ok[c+"/"+i]=1;});PENDING_DEL=PENDING_DEL.filter(function(p){return !ok[p.collection+"/"+p.id];});savePendingDel();}
+// remove any rows that are queued for deletion from local state + shadow, so a reload/reconcile can't bring them back
+function stripPendingDel(){
+  if(!PENDING_DEL||!PENDING_DEL.length)return;
+  PENDING_DEL.forEach(function(p){var dest=COLLSET[p.collection];if(dest){var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(arr){var i=arr.findIndex(function(x){return x&&x.id===p.id;});if(i>=0)arr.splice(i,1);}}delete shadow[p.collection+"/"+p.id];});
+}
+function flushPendingDel(){
+  if(!SB||!PENDING_DEL||!PENDING_DEL.length)return Promise.resolve();
+  var ops=PENDING_DEL.slice();
+  var tasks=ops.map(function(p){return SB.from("records").delete().eq("collection",p.collection).eq("id",p.id);});
+  return Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];
+    if(!err){clearPendingDel(ops);}
+    // if it still errors (e.g. missing DELETE permission), keep them queued and keep them stripped locally
+  }).catch(function(){});
+}
 /* ---- conflict-safe field-level merge: never overwrite another device's change ---- */
 function fieldDiff(localObj,shadowObj){var d={};shadowObj=shadowObj||{};Object.keys(localObj||{}).forEach(function(k){var lv=localObj[k],sv=shadowObj[k];if(JSON.stringify(lv)===JSON.stringify(sv))return;var lB=(lv===""||lv==null),sB=(sv===""||sv==null);if(lB&&sB)return;/* blank-vs-missing is not a real edit — don't let it wipe another device's value */d[k]=lv;});return d;}
 function mergeUps(ups){
@@ -1300,7 +1319,7 @@ function applyRows(rows){
   var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
   STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.grd.orderlog=buckets.orderlog;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
-  snapshotShadow();_lastSig=dataSig(rows);cacheSave();
+  snapshotShadow();stripPendingDel();_lastSig=dataSig(rows);cacheSave();
 }
 var _lastSig="";
 function dataSig(rows){var a=[];for(var i=0;i<rows.length;i++){a.push(rows[i].collection+"/"+rows[i].id+"="+JSON.stringify(rows[i].data));}return a.sort().join("|");}
@@ -1313,7 +1332,7 @@ function bumpLastSync(rows){var mx=lastSync;for(var i=0;i<rows.length;i++){var u
 function applyDelta(rows){
   // MERGE ONLY — add/update rows that changed; never remove or clear anything (data-safety guarantee)
   rows.forEach(function(row){var dest=COLLSET[row.collection];if(!dest)return;var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===row.id;});if(i>=0)arr[i]=row.data;else arr.push(row.data);shadow[row.collection+"/"+row.id]=JSON.stringify(row.data);});
-  cacheSave();
+  stripPendingDel();cacheSave();
 }
 function sbLoad(){
   SB=sbClient();if(!SB)return Promise.reject(new Error("Supabase library not loaded"));
@@ -1326,7 +1345,7 @@ function sbLoad(){
     if(res.error)throw res.error;
     if(!res.data||!res.data.length){return sbSeed();}
     applyRows(res.data);bumpLastSync(res.data);
-    flushAudit();
+    flushAudit();flushPendingDel();
     return flushPending();
   }
 }
@@ -1352,14 +1371,15 @@ function persistSB(){
     if(mups.length)tasks.push(SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}));
     delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
     Promise.all(tasks).then(function(rs){var err=rs.filter(function(r){return r&&r.error;})[0];
-      if(err){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((err.error&&err.error.message)||"check connection")+" — entry saved on device, will retry automatically.","err");return;}
+      if(err){if(ups.length)queuePending(ups);if(delOps.length)queuePendingDel(delOps);setSave("err","Saved on device · will sync");toast("Sync issue: "+((err.error&&err.error.message)||"check connection")+" — saved on device, will retry automatically.","err");return;}
       mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});
       delOps.forEach(function(d){delete shadow[d[0]+"/"+d[1]];});
       if(ups.length)clearPending(ups);
+      if(delOps.length)clearPendingDel(delOps);
       cacheSave();
       if(mups.some(function(m){return m.merged;})){if(!_rtBusy())renderApp();toast("Merged with changes from another device — nothing lost.","good");}
       setSave("","Saved & synced");
-    }).catch(function(e){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((e&&e.message)||"check connection")+" — entry saved on device, will retry automatically.","err");});
+    }).catch(function(e){if(ups.length)queuePending(ups);if(delOps.length)queuePendingDel(delOps);setSave("err","Saved on device · will sync");toast("Sync issue: "+((e&&e.message)||"check connection")+" — saved on device, will retry automatically.","err");});
   });
 }
 function sbUpload(path,blob,ct){
@@ -1386,8 +1406,8 @@ function sbReconcile(){
   return SB.from("records").select(sel).neq("collection","__audit__").then(function(res){
     _reconciling=false;
     if(res.error||!res.data)return;
-    if(dataSig(res.data)===_lastSig){bumpLastSync(res.data);flushPending();return;} // server unchanged → no rebuild, no blink, no scroll reset
-    applyRows(res.data);bumpLastSync(res.data);flushPending();
+    if(dataSig(res.data)===_lastSig){bumpLastSync(res.data);flushPending();flushPendingDel();return;} // server unchanged → no rebuild, no blink, no scroll reset
+    applyRows(res.data);bumpLastSync(res.data);flushPending();flushPendingDel();
     if(!_rtBusy())renderApp();
   }).catch(function(){_reconciling=false;});
 }
@@ -1400,7 +1420,7 @@ function sbDelta(){
     if(res.error){_deltaOK=false;return sbReconcile();} // any issue → safe full reconcile
     var rows=res.data||[];
     if(rows.length){applyDelta(rows);bumpLastSync(rows);if(!_rtBusy())renderApp();}
-    flushPending();
+    flushPending();flushPendingDel();
   }).catch(function(){_reconciling=false;});
 }
 // pick the cheap path when we can, else the full safety-net check
@@ -1432,13 +1452,14 @@ function sbWireLive(){
   document.addEventListener("visibilitychange",function(){
     if(document.visibilityState==="visible"){sbSync();if(!_rtLive)sbSubscribe();}
   });
-  window.addEventListener("online",function(){setLive(false,"Reconnecting…");sbSync();sbSubscribe();});
+  window.addEventListener("online",function(){setLive(false,"Reconnecting…");flushPendingDel();sbSync();sbSubscribe();});
   window.addEventListener("offline",function(){_rtLive=false;setLive(false,"Offline · saving on device");});
   // heartbeat: retry queued writes, revive realtime, and periodically run a FULL safety-net check
   var _hb=0;
   setInterval(function(){
     if(!SB_ON||!SB||!USER)return;
     if(PENDING&&PENDING.length)flushPending();
+    if(PENDING_DEL&&PENDING_DEL.length)flushPendingDel();
     if(AUDITQ&&AUDITQ.length)flushAudit();
     if(document.visibilityState==="visible"&&!_rtLive&&!_rtScheduled)sbSubscribe();
     // every ~5 min: full reconcile — guarantees deletes & any missed change self-heal (nothing ever stays lost/stale)
@@ -1571,7 +1592,8 @@ var ENT={
       {k:"model",l:"Model",t:"text"},{k:"chassis",l:"Chassis No.",t:"text"},
       {g:"Assignment"},
       {k:"driver",l:"Employee (Driver)",t:"emp"},{k:"status",l:"Status",t:"datalist",opts:"fleetStatuses"},
-      {k:"company",l:"Company / Platform",t:"datalist",opts:"companies"},{k:"issue",l:"Issue Date",t:"text",hint:"Date or note (e.g. OLD)"}
+      {k:"company",l:"Company / Platform",t:"datalist",opts:"companies"},{k:"issue",l:"Issue Date",t:"text",hint:"Date or note (e.g. OLD)"},
+      {k:"returned",l:"Return Date",t:"text",hint:"Date, or leave blank if still assigned"}
     ]},
   fuel:{title:"Fuel Cards",singular:"Fuel Card",path:"grd.fuel",idp:"f",defsort:0,defdir:1,
     searchKeys:["name","card","civil","site","company","plate"],
