@@ -1292,15 +1292,30 @@ function applyRows(rows){
 var _lastSig="";
 function dataSig(rows){var a=[];for(var i=0;i<rows.length;i++){a.push(rows[i].collection+"/"+rows[i].id+"="+JSON.stringify(rows[i].data));}return a.sort().join("|");}
 function cacheSave(){try{localStorage.setItem("smou-cache",JSON.stringify({grd:STATE.grd,finance:STATE.finance,t:Date.now()}));}catch(e){}}
+/* ===== Phase 4 (advanced): true delta sync — only fetch what changed. Merges only, never clears. ===== */
+var lastSync=(function(){try{return localStorage.getItem("smou-lastsync")||"";}catch(e){return "";}})();
+function saveLastSync(){try{localStorage.setItem("smou-lastsync",lastSync);}catch(e){}}
+var _deltaOK=true; // becomes false if the updated_at column isn't there yet (app still works, full-sync fallback)
+function bumpLastSync(rows){var mx=lastSync;for(var i=0;i<rows.length;i++){var u=rows[i]&&rows[i].updated_at;if(u&&u>mx)mx=u;}if(mx&&mx!==lastSync){lastSync=mx;saveLastSync();}}
+function applyDelta(rows){
+  // MERGE ONLY — add/update rows that changed; never remove or clear anything (data-safety guarantee)
+  rows.forEach(function(row){var dest=COLLSET[row.collection];if(!dest)return;var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===row.id;});if(i>=0)arr[i]=row.data;else arr.push(row.data);shadow[row.collection+"/"+row.id]=JSON.stringify(row.data);});
+  cacheSave();
+}
 function sbLoad(){
   SB=sbClient();if(!SB)return Promise.reject(new Error("Supabase library not loaded"));
-  return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(function(res){
+  // probe for the updated_at column; if it isn't there, fall back to the classic full select (app keeps working)
+  return SB.from("records").select("collection,id,data,updated_at").neq("collection","__audit__").then(function(res){
+    if(res.error){_deltaOK=false;return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(_applyFull);}
+    _deltaOK=true;return _applyFull(res);
+  });
+  function _applyFull(res){
     if(res.error)throw res.error;
     if(!res.data||!res.data.length){return sbSeed();}
-    applyRows(res.data);
+    applyRows(res.data);bumpLastSync(res.data);
     flushAudit();
     return flushPending();
-  });
+  }
 }
 function sbSeed(){
   // first run: push the embedded seed data into the database
@@ -1354,14 +1369,29 @@ function setLive(ok,txt){
 function sbReconcile(){
   if(!SB_ON||!SB||!USER||_reconciling)return Promise.resolve();
   _reconciling=true;
-  return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(function(res){
+  var sel=_deltaOK?"collection,id,data,updated_at":"collection,id,data";
+  return SB.from("records").select(sel).neq("collection","__audit__").then(function(res){
     _reconciling=false;
     if(res.error||!res.data)return;
-    if(dataSig(res.data)===_lastSig){flushPending();return;} // server unchanged → no rebuild, no blink, no scroll reset
-    applyRows(res.data);flushPending();
+    if(dataSig(res.data)===_lastSig){bumpLastSync(res.data);flushPending();return;} // server unchanged → no rebuild, no blink, no scroll reset
+    applyRows(res.data);bumpLastSync(res.data);flushPending();
     if(!_rtBusy())renderApp();
   }).catch(function(){_reconciling=false;});
 }
+// cheap delta fetch — only rows changed since lastSync; merges them in (used on focus/reconnect when available)
+function sbDelta(){
+  if(!SB_ON||!SB||!USER||_reconciling)return Promise.resolve();
+  _reconciling=true;
+  return SB.from("records").select("collection,id,data,updated_at").neq("collection","__audit__").gt("updated_at",lastSync).then(function(res){
+    _reconciling=false;
+    if(res.error){_deltaOK=false;return sbReconcile();} // any issue → safe full reconcile
+    var rows=res.data||[];
+    if(rows.length){applyDelta(rows);bumpLastSync(rows);if(!_rtBusy())renderApp();}
+    flushPending();
+  }).catch(function(){_reconciling=false;});
+}
+// pick the cheap path when we can, else the full safety-net check
+function sbSync(){ if(_deltaOK&&lastSync)return sbDelta(); return sbReconcile(); }
 function sbSubscribe(){
   if(!SB_ON||!SB)return;
   try{if(_rtChan){try{SB.removeChannel(_rtChan);}catch(e){}_rtChan=null;}}catch(e){}
@@ -1374,7 +1404,7 @@ function sbSubscribe(){
       cacheSave();
       if(!_rtBusy())renderApp();
     }).subscribe(function(status){
-      if(status==="SUBSCRIBED"){var wasLive=_rtGotFirst;_rtLive=true;_rtRetry=0;_rtGotFirst=true;setLive(true);if(wasLive)sbReconcile();/* skip reconcile on the very first connect — sbLoad already loaded fresh data, avoids a boot re-render */}
+      if(status==="SUBSCRIBED"){var wasLive=_rtGotFirst;_rtLive=true;_rtRetry=0;_rtGotFirst=true;setLive(true);if(wasLive)sbSync();/* skip reconcile on the very first connect — sbLoad already loaded fresh data, avoids a boot re-render */}
       else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
         _rtLive=false;setLive(false);
         if(!_rtScheduled){_rtScheduled=true;var delay=Math.min(30000,1000*Math.pow(2,_rtRetry++));
@@ -1387,16 +1417,19 @@ function sbSubscribe(){
 function sbWireLive(){
   if(_liveWired)return;_liveWired=true;
   document.addEventListener("visibilitychange",function(){
-    if(document.visibilityState==="visible"){sbReconcile();if(!_rtLive)sbSubscribe();}
+    if(document.visibilityState==="visible"){sbSync();if(!_rtLive)sbSubscribe();}
   });
-  window.addEventListener("online",function(){setLive(false,"Reconnecting…");sbReconcile();sbSubscribe();});
+  window.addEventListener("online",function(){setLive(false,"Reconnecting…");sbSync();sbSubscribe();});
   window.addEventListener("offline",function(){_rtLive=false;setLive(false,"Offline · saving on device");});
-  // heartbeat: retry any queued writes and revive realtime if it quietly died
+  // heartbeat: retry queued writes, revive realtime, and periodically run a FULL safety-net check
+  var _hb=0;
   setInterval(function(){
     if(!SB_ON||!SB||!USER)return;
     if(PENDING&&PENDING.length)flushPending();
     if(AUDITQ&&AUDITQ.length)flushAudit();
     if(document.visibilityState==="visible"&&!_rtLive&&!_rtScheduled)sbSubscribe();
+    // every ~5 min: full reconcile — guarantees deletes & any missed change self-heal (nothing ever stays lost/stale)
+    if(document.visibilityState==="visible"&&(++_hb%12===0))sbReconcile();
   },25000);
 }
 
