@@ -515,6 +515,26 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 .detail2 .groups{display:grid;gap:16px;min-width:0}
 @media(max-width:820px){.ff-cols,.detail2{grid-template-columns:1fr}.pvc{position:static}}
 @media(max-width:600px){.ff-actionbar .note{display:none}.ff-top .in,.ff-body,.ff-actionbar .in{padding-left:16px;padding-right:16px}.ff-ttl h2{font-size:19px}.pvc{padding:20px 16px}}
+/* ===== audit / activity timeline ===== */
+.aud-list{display:flex;flex-direction:column}
+.aud-item{display:flex;gap:13px;padding:14px 2px;border-top:1px solid var(--line)}
+.aud-item:first-child{border-top:0}
+.aud-ic{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--surface-2);color:var(--ink-2)}
+.aud-ic svg{width:16px;height:16px}
+.aud-ic.good{background:var(--good-bg);color:var(--good)}
+.aud-ic.amber{background:var(--warn-bg);color:var(--amber-2)}
+.aud-ic.crit{background:var(--crit-bg);color:var(--crit)}
+.aud-body{min-width:0;flex:1}
+.aud-txt{font-size:13.5px;color:var(--ink);line-height:1.45}
+.aud-txt b{font-weight:700}
+.aud-meta{font-size:11.5px;color:var(--muted);font-family:"IBM Plex Mono";margin-top:2px}
+.aud-chg{margin-top:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;display:grid;gap:5px}
+.aud-chg>div{font-size:12px;color:var(--ink-2);word-break:break-word}
+.aud-chg span{color:var(--muted)}
+.aud-chg s{color:var(--muted);text-decoration:line-through;opacity:.8}
+.aud-chg em{color:var(--muted);font-style:normal}
+.aud-chg b{color:var(--ink);font-weight:600}
+.aud-more{color:var(--muted);font-size:11px}
 .mini-ava{border-radius:50%;object-fit:cover;flex:none;vertical-align:middle;-webkit-clip-path:circle(50%);clip-path:circle(50%)}
 .mini-ava.ini{display:inline-grid;place-items:center;background:var(--teal-bg);color:var(--teal-ink);font-weight:700;font-family:"Plus Jakarta Sans"}
 /* ===== Arabic / RTL ===== */
@@ -1237,6 +1257,31 @@ function flushPending(){
     });
   }).catch(function(){});
 }
+/* ===== Phase 2: audit trail — stored as __audit__ rows, excluded from the main sync/diff ===== */
+var AUDITQ=(function(){try{return JSON.parse(localStorage.getItem("smou-audit-q")||"[]")||[];}catch(e){return [];}})();
+function saveAuditQ(){try{localStorage.setItem("smou-audit-q",JSON.stringify(AUDITQ));}catch(e){}}
+function auditUser(){var u=USER;if(u&&typeof u==="object")return ((u.email||"").split("@")[0])||u.id||"—";return u||"—";}
+function logAudit(action,coll,recId,label,changes){
+  if(!SB_ON)return;
+  var row={collection:"__audit__",id:uid("aud"),data:{ts:new Date().toISOString(),user:auditUser(),action:action,coll:coll,recId:recId,label:label||"",changes:changes||[]}};
+  if(!SB){AUDITQ.push(row);saveAuditQ();return;}
+  SB.from("records").upsert([row],{onConflict:"collection,id"}).then(function(res){if(res&&res.error){AUDITQ.push(row);saveAuditQ();}}).catch(function(){AUDITQ.push(row);saveAuditQ();});
+}
+function flushAudit(){
+  if(!SB||!AUDITQ.length)return Promise.resolve();
+  var rows=AUDITQ.slice();
+  return SB.from("records").upsert(rows,{onConflict:"collection,id"}).then(function(res){if(!res.error){AUDITQ=[];saveAuditQ();}}).catch(function(){});
+}
+function diffRec(cfg,oldRec,newData){
+  var out=[];
+  cfg.fields.forEach(function(f){if(f.g)return;var ov=oldRec[f.k],nv=newData[f.k];
+    if(JSON.stringify(ov)===JSON.stringify(nv))return;
+    var oB=(ov===""||ov==null),nB=(nv===""||nv==null);if(oB&&nB)return;
+    out.push({f:f.k,l:f.l,from:(ov==null?"":String(ov)),to:(nv==null?"":String(nv))});
+  });
+  return out;
+}
+function recLabel(ent,rec){return pvPrimary(ent,rec);}
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
   var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],expenses:[]};
@@ -1246,10 +1291,11 @@ function applyRows(rows){
 }
 function sbLoad(){
   SB=sbClient();if(!SB)return Promise.reject(new Error("Supabase library not loaded"));
-  return SB.from("records").select("collection,id,data").then(function(res){
+  return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(function(res){
     if(res.error)throw res.error;
     if(!res.data||!res.data.length){return sbSeed();}
     applyRows(res.data);
+    flushAudit();
     return flushPending();
   });
 }
@@ -1304,7 +1350,7 @@ function setLive(ok,txt){
 function sbReconcile(){
   if(!SB_ON||!SB||!USER||_reconciling)return Promise.resolve();
   _reconciling=true;
-  return SB.from("records").select("collection,id,data").then(function(res){
+  return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(function(res){
     _reconciling=false;
     if(res.error||!res.data)return;
     applyRows(res.data);flushPending();
@@ -1343,6 +1389,7 @@ function sbWireLive(){
   setInterval(function(){
     if(!SB_ON||!SB||!USER)return;
     if(PENDING&&PENDING.length)flushPending();
+    if(AUDITQ&&AUDITQ.length)flushAudit();
     if(document.visibilityState==="visible"&&!_rtLive&&!_rtScheduled)sbSubscribe();
   },25000);
 }
@@ -1733,7 +1780,8 @@ function netPay(r){return (num(r.basic)||0)+(num(r.allowance)||0)-dedTotal(r);}
 var NAVGROUPS=[
   {lab:"Overview",items:[
     {r:"alerts",t:"Alerts & Expiries",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',cnt:function(){return computeAlerts().length;}},
-    {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'}
+    {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'},
+    {r:"activity",t:"Activity Log",ic:'<path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/>'}
   ]},
   {lab:"Performance",items:[{r:"orders",t:"Order Overview",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="14" r="1"/><circle cx="17" cy="9" r="1"/>'}]},
   {lab:"GRD Operations",key:"grd",collapsible:true,items:[
@@ -1873,6 +1921,7 @@ function renderPage(){
   if(route==="users"){setTitle("Users & Roles","Admin · manage staff access");newBtn.hidden=true;pageUsers(pg);return;}
   if(route==="reports"){newBtn.hidden=true;pageReports(pg);return;}
   if(route==="alerts"){setTitle("Alerts & Expiries","Expired + expiring within 30 days");newBtn.hidden=true;pageAlerts(pg);return;}
+  if(route==="activity"){setTitle("Activity Log","Every change · who & when");newBtn.hidden=true;pageActivity(pg);return;}
   if(route==="orders"){setTitle("Order Overview","Driver performance · Talabat & Keeta");newBtn.hidden=true;pageOrders(pg);return;}
   if(route==="overview"){setTitle("Overview","Fleet & finance at a glance");newBtn.hidden=true;pageOverview(pg);}
   else if(route==="finance"){setTitle("Finance Dashboard","Cost control · SMOU International");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageFinance(pg);}
@@ -2069,8 +2118,8 @@ function saveForm(ent,id){
   var data=collectForm(ov,cfg);
   if(!data){toast("Please fill the required fields.","err");return;}
   var arr=store(ent);
-  if(id){var rec=arr.filter(function(r){return r.id===id;})[0];if(rec)Object.assign(rec,data);}
-  else{data.id=uid(cfg.idp);arr.unshift(data);}
+  if(id){var rec=arr.filter(function(r){return r.id===id;})[0];if(rec){var chg=diffRec(cfg,rec,data);Object.assign(rec,data);logAudit("edit",ent,id,recLabel(ent,rec),chg);}}
+  else{data.id=uid(cfg.idp);arr.unshift(data);logAudit("add",ent,data.id,recLabel(ent,data),[]);}
   closeForm();renderApp();persist();
   toast((id?"Updated":"Added")+" "+cfg.singular.toLowerCase()+".","good");
 }
@@ -2088,8 +2137,40 @@ function confirmDelete(ent,id){
 function doDelete(ent,id){
   if(!can("delete")){toast("Only an admin can delete records.","err");closeForm();return;}
   var cfg=ENT[ent];var arr=store(ent);var i=arr.findIndex(function(r){return r.id===id;});
-  if(i>=0)arr.splice(i,1);
+  if(i>=0){logAudit("delete",ent,id,recLabel(ent,arr[i]),[]);arr.splice(i,1);}
   closeForm();renderApp();persist();toast("Deleted.","good");
+}
+
+/* ===== Phase 2: activity / audit views ===== */
+function fmtTS(iso){var d=new Date(iso);if(isNaN(d))return esc(iso||"");var h=d.getHours(),m=d.getMinutes(),ap=h>=12?"PM":"AM";h=h%12;if(h===0)h=12;return d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)+" · "+h+":"+String(m).padStart(2,"0")+" "+ap;}
+function auditMeta(a){a=(a||"").toLowerCase();
+  if(a==="add")return {cls:"good",v:"added",ic:'<path d="M12 5v14M5 12h14"/>'};
+  if(a==="delete")return {cls:"crit",v:"deleted",ic:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'};
+  return {cls:"amber",v:"edited",ic:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'};}
+function auditRowHTML(d){
+  var m=auditMeta(d.action);var sing=ENT[d.coll]?ENT[d.coll].singular:(d.coll||"record");
+  var chg=(d.changes&&d.changes.length)?'<div class="aud-chg">'+d.changes.slice(0,8).map(function(c){return '<div><span>'+esc(c.l||c.f)+':</span> <s>'+esc(c.from||"—")+'</s> <em>→</em> <b>'+esc(c.to||"—")+'</b></div>';}).join("")+(d.changes.length>8?'<div class="aud-more">+'+(d.changes.length-8)+' more field(s)</div>':"")+'</div>':"";
+  return '<div class="aud-item"><span class="aud-ic '+m.cls+'">'+svg(m.ic)+'</span><div class="aud-body"><div class="aud-txt"><b>'+esc(d.user||"—")+'</b> '+m.v+' '+esc((sing||"record").toLowerCase())+' <b>“'+esc(d.label||"—")+'”</b></div><div class="aud-meta">'+esc(fmtTS(d.ts))+'</div>'+chg+'</div></div>';}
+function sortByTs(rows){return rows.sort(function(a,b){return (b.ts||"").localeCompare(a.ts||"");});}
+function pageActivity(pg){
+  pg.innerHTML='<div class="card"><div class="card-h"><h3>Recent Activity</h3><span class="hint">who changed what · when</span></div><div class="card-b" id="actwrap"><div class="empty" style="padding:26px">Loading activity…</div></div></div>';
+  if(!SB){var w0=$("#actwrap");if(w0)w0.innerHTML='<div class="empty" style="padding:26px">Activity log is available in cloud (synced) mode.</div>';return;}
+  SB.from("records").select("data").eq("collection","__audit__").order("id",{ascending:false}).limit(300).then(function(res){
+    var w=$("#actwrap");if(!w)return;if(res.error){w.innerHTML='<div class="empty" style="padding:26px">Could not load activity.</div>';return;}
+    var rows=sortByTs(((res.data)||[]).map(function(r){return r.data;}).filter(Boolean));
+    if(!rows.length){w.innerHTML='<div class="empty" style="padding:30px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>')+'<h4>No activity yet</h4><p>Every add, edit and delete will show up here — with who and when.</p></div>';return;}
+    w.innerHTML='<div class="aud-list">'+rows.map(auditRowHTML).join("")+'</div>';
+  }).catch(function(){var w=$("#actwrap");if(w)w.innerHTML='<div class="empty" style="padding:26px">Could not load activity.</div>';});
+}
+function loadRecHistory(recId){
+  if(!SB)return;var b=document.getElementById("histbody");if(!b)return;
+  SB.from("records").select("data").eq("collection","__audit__").eq("data->>recId",recId).order("id",{ascending:false}).then(function(res){
+    var bb=document.getElementById("histbody");if(!bb)return;
+    if(res.error){bb.innerHTML='<div class="empty" style="padding:18px">Could not load history.</div>';return;}
+    var rows=sortByTs(((res.data)||[]).map(function(r){return r.data;}).filter(Boolean));
+    if(!rows.length){bb.innerHTML='<div class="empty" style="padding:18px">No changes recorded yet.</div>';return;}
+    bb.innerHTML='<div class="aud-list">'+rows.map(auditRowHTML).join("")+'</div>';
+  }).catch(function(){var bb=document.getElementById("histbody");if(bb)bb.innerHTML='<div class="empty" style="padding:18px">Could not load history.</div>';});
 }
 
 /* ============ NEW EXPENSE (quick page) ============ */
@@ -3163,7 +3244,9 @@ function pageDetail(pg,ent,id){
        :'<div class="empty" style="padding:22px">'+FILEIC+'<h4>No receipt attached</h4><p>Attach the bill or receipt photo for this expense.</p></div>')+
     '</div></div>';
   }
+  if(SB_ON){html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Change History</h3><span class="hint">who edited this record</span></div><div class="card-b" id="histbody"><div class="empty" style="padding:18px">Loading…</div></div></div>';}
   pg.innerHTML=html;
+  if(SB_ON)loadRecHistory(id);
 }
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
