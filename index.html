@@ -141,7 +141,7 @@ button.sb-glab:hover{color:var(--sidebar-ink)}
 .btn svg{width:16px;height:16px}
 .btn.sm{padding:6px 11px;font-size:12.5px}
 
-.page{padding:clamp(18px,3vw,30px);flex:1;animation:fade .3s ease}
+.page{padding:clamp(18px,3vw,30px);flex:1}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .page-intro{color:var(--ink-2);font-size:14px;margin:-4px 0 18px;max-width:70ch}
 
@@ -1287,8 +1287,11 @@ function applyRows(rows){
   var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
   STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.grd.orderlog=buckets.orderlog;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
-  snapshotShadow();
+  snapshotShadow();_lastSig=dataSig(rows);cacheSave();
 }
+var _lastSig="";
+function dataSig(rows){var a=[];for(var i=0;i<rows.length;i++){a.push(rows[i].collection+"/"+rows[i].id+"="+JSON.stringify(rows[i].data));}return a.sort().join("|");}
+function cacheSave(){try{localStorage.setItem("smou-cache",JSON.stringify({grd:STATE.grd,finance:STATE.finance,t:Date.now()}));}catch(e){}}
 function sbLoad(){
   SB=sbClient();if(!SB)return Promise.reject(new Error("Supabase library not loaded"));
   return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(function(res){
@@ -1325,6 +1328,7 @@ function persistSB(){
       mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});
       delOps.forEach(function(d){delete shadow[d[0]+"/"+d[1]];});
       if(ups.length)clearPending(ups);
+      cacheSave();
       if(mups.some(function(m){return m.merged;})){if(!_rtBusy())renderApp();toast("Merged with changes from another device — nothing lost.","good");}
       setSave("","Saved & synced");
     }).catch(function(e){if(ups.length)queuePending(ups);setSave("err","Saved on device · will sync");toast("Sync issue: "+((e&&e.message)||"check connection")+" — entry saved on device, will retry automatically.","err");});
@@ -1353,6 +1357,7 @@ function sbReconcile(){
   return SB.from("records").select("collection,id,data").neq("collection","__audit__").then(function(res){
     _reconciling=false;
     if(res.error||!res.data)return;
+    if(dataSig(res.data)===_lastSig){flushPending();return;} // server unchanged → no rebuild, no blink, no scroll reset
     applyRows(res.data);flushPending();
     if(!_rtBusy())renderApp();
   }).catch(function(){_reconciling=false;});
@@ -1366,6 +1371,7 @@ function sbSubscribe(){
       var arr=STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===id;});
       if(p.eventType==="DELETE"){if(i>=0)arr.splice(i,1);delete shadow[coll+"/"+id];}
       else{var d=p.new.data;if(i>=0)arr[i]=d;else arr.push(d);shadow[coll+"/"+id]=JSON.stringify(d);}
+      cacheSave();
       if(!_rtBusy())renderApp();
     }).subscribe(function(status){
       if(status==="SUBSCRIBED"){var wasLive=_rtGotFirst;_rtLive=true;_rtRetry=0;_rtGotFirst=true;setLive(true);if(wasLive)sbReconcile();/* skip reconcile on the very first connect — sbLoad already loaded fresh data, avoids a boot re-render */}
@@ -1405,7 +1411,7 @@ function ensureProfile(user){
 function onAuthed(user){
   USER=user;setSave("saving","Loading…");
   ensureProfile(user).then(function(role){
-    ROLE=role||"viewer";applyRole();hideLogin();showSplash("Loading your data…");
+    ROLE=role||"viewer";applyRole();hideLogin();if(!_hadCache)showSplash("Loading your data…");
     var _done=false;var _to=setTimeout(function(){if(!_done){setSave("err","DB timeout — check Console");renderApp();}},18000);
     sbLoad().then(function(){_done=true;clearTimeout(_to);renderApp();setSave("","Connected · "+roleLabel(ROLE));sbSubscribe();sbWireLive();})
       .catch(function(err){_done=true;clearTimeout(_to);var msg=(err&&(err.message||err.hint))||JSON.stringify(err);console.error("SMOU DB error:",err);renderApp();setSave("err","DB error");toast("DB error: "+msg,"err");});
@@ -3690,7 +3696,16 @@ document.addEventListener("click",function(e){
 
 /* ============ INIT ============ */
 if(!location.hash){var r0="overview";try{r0=localStorage.getItem("smou-route")||"overview";}catch(e){}history.replaceState(null,"","#/"+r0);}
-if(SB_ON){showSplash("Connecting…");}else{renderApp();}
+var _hadCache=false;
+if(SB_ON){
+  try{var _cc=JSON.parse(localStorage.getItem("smou-cache")||"null");
+    if(_cc&&_cc.grd){STATE.grd=Object.assign(STATE.grd||{},_cc.grd);if(_cc.finance)STATE.finance=Object.assign(STATE.finance||{},_cc.finance);
+      ["drivers","vehicles","fuel","sims","housing","compdocs","service","hiring","fines","incidents","maintenance","attendance","perf","orderlog"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});
+      ["payroll","income","budgets","expenses"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});
+      snapshotShadow();_hadCache=true;}
+  }catch(e){}
+  if(_hadCache)renderApp();else showSplash("Connecting…");
+}else{renderApp();}
 if(SB_ON){
   setSave("saving","Connecting to database…");
   var _tries=0;
