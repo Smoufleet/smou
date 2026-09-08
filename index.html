@@ -508,6 +508,14 @@ select.urole{padding:5px 8px;border-radius:7px}
 .kr-row:hover{background:var(--surface-2)}
 .kr-row input{width:17px;height:17px;accent-color:var(--teal);cursor:pointer}
 .kr-all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px;color:var(--ink-2)}
+/* compact documents (left column) */
+.doc-mini{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.dm-tile{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface-2);cursor:pointer;transition:.13s}
+.dm-tile:hover{border-color:var(--teal);transform:translateY(-1px);box-shadow:var(--shadow)}
+.dm-th{height:60px;background:var(--surface-3);display:grid;place-items:center;overflow:hidden}
+.dm-th img{width:100%;height:100%;object-fit:cover;display:block}
+.dm-th .dm-ic svg{width:22px!important;height:22px!important;color:var(--muted)}
+.dm-lab{font-size:10px;font-weight:600;color:var(--ink-2);padding:5px 5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu-item{padding:9px 12px;font-size:13px;color:var(--ink-2);cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:10px}
 .menu-item:hover{background:var(--surface-2);color:var(--ink)}
 .menu-item svg{width:15px;height:15px;color:var(--muted);flex:none}
@@ -2335,8 +2343,20 @@ function loadRecHistory(recId){
     if(res.error){bb.innerHTML='<div class="empty" style="padding:18px">Could not load history.</div>';return;}
     var rows=sortByTs(((res.data)||[]).map(function(r){return r.data;}).filter(Boolean));
     if(!rows.length){bb.innerHTML='<div class="empty" style="padding:18px">No changes recorded yet.</div>';return;}
-    bb.innerHTML='<div class="aud-list">'+rows.map(auditRowHTML).join("")+'</div>';
+    bb.innerHTML='<div class="aud-list">'+auditRowHTML(rows[0])+'</div>'+(rows.length>1?'<button class="btn sm" style="margin-top:12px" data-act="fullhist" data-id="'+recId+'">'+svg(IC_eye)+'View full history ('+rows.length+')</button>':'');
   }).catch(function(){var bb=document.getElementById("histbody");if(bb)bb.innerHTML='<div class="empty" style="padding:18px">Could not load history.</div>';});
+}
+function openFullHistory(recId){
+  if(!SB)return;
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay2";ov.style.zIndex="140";
+  ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>Change History</h3><div class="sub">who changed what · when</div></div><button class="icon-btn" data-act="closeview">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b" id="fullHistBody"><div class="empty" style="padding:24px">Loading…</div></div></div>';
+  document.body.appendChild(ov);
+  SB.from("records").select("data").eq("collection","__audit__").eq("data->>recId",recId).order("id",{ascending:false}).then(function(res){
+    var bb=document.getElementById("fullHistBody");if(!bb)return;
+    if(res.error){bb.innerHTML='<div class="empty" style="padding:24px">Could not load history.</div>';return;}
+    var rows=sortByTs(((res.data)||[]).map(function(r){return r.data;}).filter(Boolean));
+    bb.innerHTML=rows.length?'<div class="aud-list">'+rows.map(auditRowHTML).join("")+'</div>':'<div class="empty" style="padding:24px">No changes recorded.</div>';
+  }).catch(function(){var bb=document.getElementById("fullHistBody");if(bb)bb.innerHTML='<div class="empty" style="padding:24px">Could not load history.</div>';});
 }
 
 /* ============ NEW EXPENSE (quick page) ============ */
@@ -3184,6 +3204,7 @@ document.addEventListener("click",function(e){
   else if(act==="kitassign"){toggleKitAssign(a.getAttribute("data-id"),a.getAttribute("data-item"));}
   else if(act==="kitcollect"){toggleKitCollect(a.getAttribute("data-id"),a.getAttribute("data-item"));}
   else if(act==="kitreturnsave"){saveKitReturn(a.getAttribute("data-id"));}
+  else if(act==="fullhist"){openFullHistory(a.getAttribute("data-id"));}
   else if(act==="saveExp"){saveExpensePage($("#page"));}
   else if(act==="clearExp"){pageNewExpense($("#page"));}
   else if(act==="usermenu"){openUserMenu(a);}
@@ -3458,6 +3479,13 @@ function toggleKitAssign(id,item){var d=drById(id);if(!d)return;if(!d.kit)d.kit=
 function toggleKitCollect(id,item){var d=drById(id);if(!d||!d.kit)return;var k=d.kit.filter(function(x){return x.name===item;})[0];if(!k)return;
   k.collected=!k.collected;if(k.collected)k.collectedAt=isoToday();else delete k.collectedAt;
   persist();if(getRoute().indexOf("grd/drivers/"+id)===0)pageDetail($("#page"),"drivers",id);}
+function docsMiniCard(rec,id){
+  var docs=rec.docs||[];
+  var body=docs.length?'<div class="doc-mini">'+docs.map(function(dc){var img=/^image\//.test(dc.mime);
+    return '<div class="dm-tile" data-act="docviewd" data-did="'+dc.id+'" data-id="'+id+'" title="'+esc(dc.type)+' — '+esc(dc.name)+'"><div class="dm-th">'+(img?'<img src="'+dc.data+'" alt="">':'<span class="dm-ic">'+FILEIC+'</span>')+'</div><div class="dm-lab">'+esc(dc.type)+'</div></div>';
+  }).join("")+'</div>':'<div class="empty" style="padding:16px">'+FILEIC+'<h4 style="font-size:13px">No documents</h4></div>';
+  return '<div class="card"><div class="card-h"><h3>Documents <span style="color:var(--muted);font-weight:600">('+docs.length+')</span></h3>'+(can("edit")?'<button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_up)+'Manage</button>':'')+'</div><div class="card-b">'+body+'</div></div>';
+}
 function assetsCard(rec,id){
   var assigned=(rec.kit||[]).length,coll=(rec.kit||[]).filter(function(x){return x.collected;}).length;
   var tiles=ASSET_ITEMS.map(function(item){var k=kitFind(rec,item);var on=!!k,col=k&&k.collected;
@@ -3569,7 +3597,7 @@ function pageDetail(pg,ent,id){
     (can("edit")?'<button class="btn sm" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</button>':'')+
     (can("delete")?'<button class="btn sm danger" data-act="del" data-id="'+id+'">'+svg(IC_del)+'Delete</button>':'')+'</div>';
   html+='<div class="detail2">'+
-    '<div><div class="pvc">'+previewInner(ent,cfg,rec,"detail",id)+'</div></div>'+
+    '<div style="display:grid;gap:16px"><div class="pvc">'+previewInner(ent,cfg,rec,"detail",id)+'</div>'+(ent==="drivers"?docsMiniCard(rec,id):"")+'</div>'+
     '<div class="groups">'+groups.map(function(gr){return '<div class="card"><div class="card-h"><h3>'+esc(gr.g)+'</h3></div><div class="card-b">'+
       gr.items.map(function(f){return '<div class="kv-row"><div class="kk">'+esc(f.l)+'</div><div class="vv">'+detailVal(ent,f,rec)+'</div></div>';}).join("")+
       '</div></div>';}).join("")+'</div>'+
@@ -3580,10 +3608,6 @@ function pageDetail(pg,ent,id){
   if(ent==="housing")html+=houseAssetsCard(rec,id);
   if(ent==="drivers"){
     html+=assetsCard(rec,id);
-    var docs=rec.docs||[];
-    html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Documents</h3>'+(can("edit")?'<button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_up)+'Upload / manage</button>':'')+'</div><div class="card-b">'+
-      (docs.length?'<div class="doc-grid">'+docs.map(function(dc){var thumb=/^image\//.test(dc.mime)?'<img src="'+dc.data+'" alt="">':FILEIC;return '<div class="doc-card"><div class="doc-thumb" data-act="docviewd" data-did="'+dc.id+'" data-id="'+id+'">'+thumb+'</div><div class="doc-meta"><div class="doc-type">'+esc(dc.type)+'</div><div class="doc-name">'+esc(dc.name)+'</div></div></div>';}).join("")+'</div>':'<div class="empty" style="padding:22px">'+FILEIC+'<h4>No documents yet</h4><p>Upload Civil ID, passport, license and more.</p></div>')+
-    '</div></div>';
   }
   if(ent==="expenses"){
     var rc=rec.receipt;
@@ -3592,7 +3616,7 @@ function pageDetail(pg,ent,id){
        :'<div class="empty" style="padding:22px">'+FILEIC+'<h4>No receipt attached</h4><p>Attach the bill or receipt photo for this expense.</p></div>')+
     '</div></div>';
   }
-  if(SB_ON){html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Change History</h3><span class="hint">who edited this record</span></div><div class="card-b" id="histbody"><div class="empty" style="padding:18px">Loading…</div></div></div>';}
+  if(SB_ON){html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Change History</h3><span class="hint">latest change</span></div><div class="card-b" id="histbody"><div class="empty" style="padding:18px">Loading…</div></div></div>';}
   pg.innerHTML=html;
   if(SB_ON)loadRecHistory(id);
 }
