@@ -3318,13 +3318,14 @@ function saveDocsBatch(d,items){
     }).catch(function(){});
   });});
   chain.then(function(){
-    if(!d.docs)d.docs=[];
-    for(var i=out.length-1;i>=0;i--)d.docs.unshift(out[i]);
-    if(out.length)logAudit("edit","drivers",d.id,recLabel("drivers",d),[{f:"docs",l:"Documents",from:"",to:"added "+out.length+" file(s)"}]);
+    var live=drById(d.id)||d; // always mutate the CURRENT state object (realtime echo may have replaced it)
+    if(!live.docs)live.docs=[];
+    for(var i=out.length-1;i>=0;i--)live.docs.unshift(out[i]);
+    if(out.length)logAudit("edit","drivers",live.id,recLabel("drivers",live),[{f:"docs",l:"Documents",from:"",to:"added "+out.length+" file(s)"}]);
     persist();
-    hideLoader();refreshDocHost(d);
+    hideLoader();refreshDocHost(live);
     toast("Saved "+out.length+" document(s).","good");
-  }).catch(function(){hideLoader();refreshDocHost(d);});
+  }).catch(function(){hideLoader();refreshDocHost(drById(d.id)||d);});
 }
 function pickDoc(d,file){
   var body=document.getElementById("docBody");if(!body)return;
@@ -3361,11 +3362,11 @@ function saveDoc(d,file,type){
 }
 function extFor(mime){return /pdf/.test(mime)?"pdf":/png/.test(mime)?"png":/jpeg|jpg/.test(mime)?"jpg":"bin";}
 function commitDoc(d,doc){
-  function fin(){if(!d.docs)d.docs=[];d.docs.unshift(doc);persist();hideLoader();refreshDocHost(d);toast("Document saved: "+doc.type,"good");}
+  function fin(){var live=drById(d.id)||d;if(!live.docs)live.docs=[];live.docs.unshift(doc);persist();hideLoader();refreshDocHost(live);toast("Document saved: "+doc.type,"good");}
   if(SB_ON&&/^data:/.test(doc.data||"")){showLoader("Uploading document…");sbUpload("drivers/"+d.id+"/doc-"+doc.id+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){doc.data=url;fin();}).catch(function(e){hideLoader();toast("Document upload failed.","err");});}
   else fin();
 }
-function delDoc(d,did){if(!d.docs)return;var i=d.docs.findIndex(function(x){return x.id===did;});if(i>=0)d.docs.splice(i,1);persist();refreshDocHost(d);toast("Document removed.","good");}
+function delDoc(d,did){var live=drById(d.id)||d;if(!live.docs)return;var i=live.docs.findIndex(function(x){return x.id===did;});if(i>=0)live.docs.splice(i,1);persist();refreshDocHost(live);toast("Document removed.","good");}
 function fillRowsIfDrivers(){if(curEnt==="drivers"&&document.getElementById("tbody"))fillRows("drivers");}
 function viewDoc(d,did){
   var dc=(d.docs||[]).filter(function(x){return x.id===did;})[0];if(!dc)return;
