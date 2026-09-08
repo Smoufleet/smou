@@ -155,6 +155,16 @@ button.sb-glab:hover{color:var(--sidebar-ink)}
 .card-h h3{font-size:14.5px;font-weight:700}
 .card-h .hint{font-size:11px;color:var(--muted);font-family:"IBM Plex Mono"}
 .card-b{padding:15px 17px 17px}
+.dashclock{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(120deg,color-mix(in srgb,var(--teal) 12%,var(--surface)),var(--surface));border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--shadow);padding:15px 20px;margin-bottom:16px}
+.dashclock .dc-left{display:flex;align-items:center;gap:13px;min-width:0}
+.dashclock .dc-left>svg{width:30px;height:30px;color:var(--teal-ink);flex:none}
+.dashclock .dc-day{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:18px;color:var(--ink);line-height:1.1}
+.dashclock .dc-date{font-size:12.5px;color:var(--muted);margin-top:2px}
+.dashclock .dc-right{text-align:right}
+.dashclock .dc-time{font-family:"IBM Plex Mono","Plus Jakarta Sans",monospace;font-weight:700;font-size:26px;color:var(--teal-ink);letter-spacing:.01em;line-height:1;font-variant-numeric:tabular-nums}
+.dashclock .dc-time .dc-sec{color:var(--muted);font-weight:600}
+.dashclock .dc-tz{font-size:11.5px;color:var(--muted);margin-top:4px}
+@media(max-width:520px){.dashclock{padding:13px 15px}.dashclock .dc-time{font-size:22px}}
 .stat{padding:17px;position:relative;overflow:hidden}
 .stat .strip{position:absolute;left:0;top:0;bottom:0;width:3px}
 .stat .s-lab{font-family:"IBM Plex Mono";text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:var(--muted)}
@@ -1886,20 +1896,20 @@ var NAVGROUPS=[
   {lab:"GRD Operations",key:"grd",collapsible:true,items:[
     {r:"grd/drivers",t:"Employee",ent:"drivers",ic:'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><path d="M16 4a3.2 3.2 0 0 1 0 6M21 20v-1.5a4 4 0 0 0-3-3.9"/>'},
     {sub:true,key:"assets",lab:"Assets",ic:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',items:[
-      {r:"grd/vehicles",t:"Vehicles",ent:"vehicles",ic:'<path d="M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/>'},
       {r:"grd/sims",t:"SIM / Mobile",ent:"sims",ic:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'},
       {r:"grd/fuel",t:"Fuel Cards",ent:"fuel",ic:'<rect x="3" y="4" width="13" height="16" rx="2"/><path d="M16 8h2.5A1.5 1.5 0 0 1 20 9.5V17a2 2 0 0 0 0 0"/><path d="M7 8h5M7 12h5"/>'}
     ]},
     {r:"grd/housing",t:"Housing",ent:"housing",ic:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'},
     {r:"grd/compdocs",t:"Company Documents",ent:"compdocs",ic:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'},
-    {r:"grd/service",t:"Vehicle Service",ent:"service",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'},
+    {r:"grd/attendance",t:"Attendance / Leave",ent:"attendance",ic:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>'},
     {r:"grd/hiring",t:"Hiring / Onboarding",ent:"hiring",ic:'<circle cx="9" cy="7" r="3.2"/><path d="M3 20v-1.5a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4V20"/><path d="M19 8v6M16 11h6"/>'}
   ]},
   {lab:"Fleet Ops",key:"ops",collapsible:true,items:[
-    {r:"grd/fines",t:"Traffic Fines",ent:"fines",ic:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>'},
-    {r:"grd/incidents",t:"Accident / Incident",ent:"incidents",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
+    {r:"grd/vehicles",t:"Vehicles",ent:"vehicles",ic:'<path d="M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/>'},
+    {r:"grd/service",t:"Vehicle Service",ent:"service",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'},
     {r:"grd/maintenance",t:"Maintenance",ent:"maintenance",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'},
-    {r:"grd/attendance",t:"Attendance / Leave",ent:"attendance",ic:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>'}
+    {r:"grd/fines",t:"Traffic Fines",ent:"fines",ic:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>'},
+    {r:"grd/incidents",t:"Accident / Incident",ent:"incidents",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'}
   ]},
   {lab:"Finance",key:"finance",collapsible:true,items:[
     {r:"finance",t:"Dashboard",ic:'<path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/>'},
@@ -2809,6 +2819,22 @@ function openDriverDetail(name){
   ov.innerHTML='<div class="modal" style="max-width:760px"><div class="modal-h"><div style="display:flex;align-items:center;gap:12px"><span class="cava" style="width:40px;height:40px;border-radius:50%;background:var(--teal-bg);color:var(--teal-ink);display:grid;place-items:center;font-weight:700">'+esc(hireInitials(name))+'</span><div><h3>'+esc(name)+'</h3><div class="sub">'+(veh?esc(veh)+" · ":"")+platChips+" "+filtNote+'</div></div></div><button class="icon-btn" data-act="closeview">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div></div>';
   document.body.appendChild(ov);
 }
+var _clockTimer=null;
+function startDashClock(){
+  if(_clockTimer){clearInterval(_clockTimer);_clockTimer=null;}
+  var DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  function upd(){
+    var t=document.getElementById("dcTime");if(!t){if(_clockTimer){clearInterval(_clockTimer);_clockTimer=null;}return;}
+    var now=new Date();
+    var dy=document.getElementById("dcDay"),dt=document.getElementById("dcDate"),hi=document.getElementById("dcHi");
+    if(dy)dy.textContent=DAYS[now.getDay()];
+    if(dt)dt.textContent=now.getDate()+" "+MON[now.getMonth()]+" "+now.getFullYear();
+    var h=now.getHours(),m=now.getMinutes(),s=now.getSeconds(),ap=h>=12?"PM":"AM",h12=h%12;if(h12===0)h12=12;
+    t.innerHTML=h12+":"+String(m).padStart(2,"0")+'<span class="dc-sec">:'+String(s).padStart(2,"0")+'</span> '+ap;
+    if(hi)hi.textContent=(h<12?"Good morning":h<17?"Good afternoon":"Good evening");
+  }
+  upd();_clockTimer=setInterval(upd,1000);
+}
 function pageOverview(pg){
   var d=STATE.grd.drivers;
   var st=countBy(d,function(x){return x.status;});
@@ -2850,7 +2876,12 @@ function pageOverview(pg){
     '<div class="card"><div class="card-h"><h3>Housing</h3><span class="hint">'+houseAct+"/"+houseCap+' beds</span></div><div class="card-b">'+hbars(STATE.grd.housing.map(function(h){return {label:h.room.replace("SMOU ",""),value:num(h.actual)||0,color:cvar("--teal")};}),{max:Math.max.apply(null,STATE.grd.housing.map(function(h){return num(h.cap)||0;}))})+'</div></div>'+
   '</div>';
 
-  pg.innerHTML=kpis+charts;
+  var clockHTML='<div class="dashclock" id="dashClock"><div class="dc-left">'+
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>'+
+    '<div><div class="dc-day" id="dcDay">&nbsp;</div><div class="dc-date" id="dcDate">&nbsp;</div></div></div>'+
+    '<div class="dc-right"><div class="dc-time" id="dcTime">&nbsp;</div><div class="dc-tz" id="dcHi">&nbsp;</div></div></div>';
+  pg.innerHTML=clockHTML+kpis+charts;
+  startDashClock();
 }
 
 /* ============ FINANCE ANALYTICS ============ */
