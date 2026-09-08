@@ -464,6 +464,17 @@ select.urole{padding:5px 8px;border-radius:7px}
 .dp-row .dp-type,.dp-row .dp-other{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--ink);width:100%}
 .dp-row .dp-other{grid-column:1/-1}
 @media(max-width:520px){.dp-row{grid-template-columns:1fr}}
+/* loading overlay (uploads, etc.) */
+.loadov{position:fixed;inset:0;z-index:200;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(4px);display:grid;place-items:center;animation:fade .15s}
+.loadcard{text-align:center}
+.loadlogo{width:64px;height:64px;border-radius:18px;margin:0 auto 14px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--teal),var(--teal-2));box-shadow:var(--shadow-lg)}
+.loadlogo svg{width:42px;height:42px}
+.loadtxt{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:18px;color:var(--ink)}
+.loaddots{display:flex;gap:5px;justify-content:center;margin-top:11px}
+.loaddots span{width:7px;height:7px;border-radius:50%;background:var(--teal);opacity:.4;animation:ldot 1s infinite}
+.loaddots span:nth-child(2){animation-delay:.15s}
+.loaddots span:nth-child(3){animation-delay:.3s}
+@keyframes ldot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
 .menu-item{padding:9px 12px;font-size:13px;color:var(--ink-2);cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:10px}
 .menu-item:hover{background:var(--surface-2);color:var(--ink)}
 .menu-item svg{width:15px;height:15px;color:var(--muted);flex:none}
@@ -3211,7 +3222,7 @@ function renderDocsModal(d){
   dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("drag");});
   dz.addEventListener("dragleave",function(){dz.classList.remove("drag");});
   dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("drag");if(e.dataTransfer.files&&e.dataTransfer.files.length)pickDocs(d,e.dataTransfer.files);});
-  fi.addEventListener("change",function(){if(fi.files&&fi.files.length)pickDocs(d,fi.files);});
+  fi.addEventListener("change",function(){if(fi.files&&fi.files.length){var f=fi.files;pickDocs(d,f);}setTimeout(function(){try{fi.value="";}catch(e){}},0);});
 }
 /* multi-file: choose a type for each file, then save them all at once */
 function pickDocs(d,fileList){
@@ -3254,9 +3265,13 @@ function prepDoc(d,file,type){
     }
   });
 }
+function showLoader(msg){hideLoader();var el=document.createElement("div");el.id="loadov";el.className="loadov";el.innerHTML='<div class="loadcard"><div class="loadlogo">'+LOGO_SVG+'</div><div class="loadtxt">'+esc(msg||"Loading…")+'</div><div class="loaddots"><span></span><span></span><span></span></div></div>';document.body.appendChild(el);}
+function hideLoader(){var e=document.getElementById("loadov");if(e)e.remove();}
+// re-render the docs modal AND the detail page behind it, so uploads/deletes show instantly (no manual refresh)
+function refreshDocHost(d){var dd=drById(d.id)||d;renderDocsModal(dd);if(curEnt==="drivers"&&getRoute().indexOf("grd/drivers/"+dd.id)===0){var pg=$("#page");if(pg)pageDetail(pg,"drivers",dd.id);}fillRowsIfDrivers();}
 function saveDocsBatch(d,items){
   if(!items.length)return;
-  toast("Saving "+items.length+" documents…","good");
+  showLoader("Uploading "+items.length+" document"+(items.length>1?"s":"")+"…");
   var out=[];var chain=Promise.resolve();
   items.forEach(function(it){chain=chain.then(function(){
     return prepDoc(d,it.file,it.type).then(function(doc){
@@ -3268,9 +3283,10 @@ function saveDocsBatch(d,items){
     if(!d.docs)d.docs=[];
     for(var i=out.length-1;i>=0;i--)d.docs.unshift(out[i]);
     if(out.length)logAudit("edit","drivers",d.id,recLabel("drivers",d),[{f:"docs",l:"Documents",from:"",to:"added "+out.length+" file(s)"}]);
-    persist();renderDocsModal(d);fillRowsIfDrivers();
+    persist();
+    hideLoader();refreshDocHost(d);
     toast("Saved "+out.length+" document(s).","good");
-  });
+  }).catch(function(){hideLoader();refreshDocHost(d);});
 }
 function pickDoc(d,file){
   var body=document.getElementById("docBody");if(!body)return;
@@ -3307,11 +3323,11 @@ function saveDoc(d,file,type){
 }
 function extFor(mime){return /pdf/.test(mime)?"pdf":/png/.test(mime)?"png":/jpeg|jpg/.test(mime)?"jpg":"bin";}
 function commitDoc(d,doc){
-  function fin(){if(!d.docs)d.docs=[];d.docs.unshift(doc);persist();renderDocsModal(d);fillRowsIfDrivers();toast("Document saved: "+doc.type,"good");}
-  if(SB_ON&&/^data:/.test(doc.data||"")){toast("Uploading document…","good");sbUpload("drivers/"+d.id+"/doc-"+doc.id+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){doc.data=url;fin();}).catch(function(e){toast("Document upload failed.","err");});}
+  function fin(){if(!d.docs)d.docs=[];d.docs.unshift(doc);persist();hideLoader();refreshDocHost(d);toast("Document saved: "+doc.type,"good");}
+  if(SB_ON&&/^data:/.test(doc.data||"")){showLoader("Uploading document…");sbUpload("drivers/"+d.id+"/doc-"+doc.id+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){doc.data=url;fin();}).catch(function(e){hideLoader();toast("Document upload failed.","err");});}
   else fin();
 }
-function delDoc(d,did){if(!d.docs)return;var i=d.docs.findIndex(function(x){return x.id===did;});if(i>=0)d.docs.splice(i,1);persist();renderDocsModal(d);fillRowsIfDrivers();toast("Document removed.","good");}
+function delDoc(d,did){if(!d.docs)return;var i=d.docs.findIndex(function(x){return x.id===did;});if(i>=0)d.docs.splice(i,1);persist();refreshDocHost(d);toast("Document removed.","good");}
 function fillRowsIfDrivers(){if(curEnt==="drivers"&&document.getElementById("tbody"))fillRows("drivers");}
 function viewDoc(d,did){
   var dc=(d.docs||[]).filter(function(x){return x.id===did;})[0];if(!dc)return;
