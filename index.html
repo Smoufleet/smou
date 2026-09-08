@@ -3744,13 +3744,13 @@ function regFields(ent){return ENT[ent].fields.filter(function(f){return !f.g;})
 function slug(s){return s.replace(/[^a-z0-9]+/gi,"_").toLowerCase().replace(/^_|_$/g,"");}
 function xlsxReady(){return typeof XLSX!=="undefined";}
 function buildAOA(ent,withData,rows){
-  var fs=regFields(ent);var aoa=[fs.map(function(f){return f.l;})];
-  if(withData)(rows||store(ent)).forEach(function(r){aoa.push(fs.map(function(f){return r[f.k]==null?"":r[f.k];}));});
+  var fs=regFields(ent);var aoa=[["Reference ID"].concat(fs.map(function(f){return f.l;}))];
+  if(withData)(rows||store(ent)).forEach(function(r){aoa.push([r.id||""].concat(fs.map(function(f){return r[f.k]==null?"":r[f.k];})));});
   return aoa;
 }
 function makeWB(ent,withData,rows){
   var ws=XLSX.utils.aoa_to_sheet(buildAOA(ent,withData,rows));
-  var fs=regFields(ent);ws["!cols"]=fs.map(function(f){return {wch:Math.max(10,Math.min(28,f.l.length+3))};});
+  var fs=regFields(ent);ws["!cols"]=[{wch:16}].concat(fs.map(function(f){return {wch:Math.max(10,Math.min(28,f.l.length+3))};}));
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,ENT[ent].title.slice(0,31));return wb;
 }
 function csvFrom(ent,withData,rows){
@@ -3844,16 +3844,25 @@ function importSheet(ent,arraybuffer){
   try{var wb=XLSX.read(new Uint8Array(arraybuffer),{type:"array"});var ws=wb.Sheets[wb.SheetNames[0]];aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",blankrows:false});}
   catch(e){toast("Couldn't read that file. Use an Excel (.xlsx) or CSV file.","err");return;}
   if(!aoa||aoa.length<2){toast("No data rows found in the file.","err");return;}
-  var fs=regFields(ent);
+  var fs=regFields(ent),cfg=ENT[ent];
   var header=aoa[0].map(function(h){return String(h==null?"":h).trim().toLowerCase();});
-  var map=header.map(function(h){var f=fs.filter(function(x){return x.l.toLowerCase()===h||x.k.toLowerCase()===h;})[0];return f?f.k:null;});
-  if(!map.some(function(x){return x;})){toast("Columns didn't match. Use the blank template's headings.","err");return;}
-  var added=0;
-  for(var i=1;i<aoa.length;i++){var r=aoa[i],rec={},any=false;
-    for(var j=0;j<r.length;j++){var k=map[j];if(k){var v=r[j]==null?"":(typeof r[j]==="number"?String(r[j]):String(r[j]).trim());rec[k]=v;if(v)any=true;}}
-    if(!any)continue;rec.id=uid(ENT[ent].idp);store(ent).unshift(rec);added++;}
-  if(!added){toast("Nothing to import.","err");return;}
-  persist();renderApp();toast("Imported "+added+" row"+(added>1?"s":"")+" into "+ENT[ent].title+".","good");
+  var map=header.map(function(h){
+    if(h==="reference id"||h==="ref id"||h==="reference"||h==="refid"||h==="id")return "__refid__";
+    var f=fs.filter(function(x){return x.l.toLowerCase()===h||x.k.toLowerCase()===h;})[0];return f?f.k:null;});
+  if(!map.some(function(x){return x&&x!=="__refid__";})){toast("Columns didn't match. Use the blank template's headings.","err");return;}
+  var added=0,updated=0;
+  for(var i=1;i<aoa.length;i++){var r=aoa[i],rec={},any=false,refid="";
+    for(var j=0;j<r.length;j++){var k=map[j];if(!k)continue;var v=r[j]==null?"":(typeof r[j]==="number"?String(r[j]):String(r[j]).trim());
+      if(k==="__refid__"){refid=v;continue;}rec[k]=v;if(v)any=true;}
+    if(!any&&!refid)continue;
+    if(refid){var ex=store(ent).filter(function(x){return x.id===refid;})[0];
+      if(ex){if(!any)continue;var chg=diffRec(cfg,ex,rec);Object.assign(ex,rec);logAudit("edit",ent,ex.id,recLabel(ent,ex),chg);updated++;continue;}
+      // reference id given but not found → create WITH that id so it stays stable for future imports
+      if(!any)continue;rec.id=refid;store(ent).unshift(rec);logAudit("add",ent,rec.id,recLabel(ent,rec),[]);added++;continue;}
+    rec.id=uid(cfg.idp);store(ent).unshift(rec);logAudit("add",ent,rec.id,recLabel(ent,rec),[]);added++;}
+  if(!added&&!updated){toast("Nothing to import.","err");return;}
+  persist();renderApp();
+  toast("Import done — "+added+" new"+(updated?", "+updated+" updated":"")+" in "+ENT[ent].title+".","good");
 }
 document.addEventListener("click",function(e){
   var ab=e.target.closest("[data-actbtn]");
