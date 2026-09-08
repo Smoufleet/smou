@@ -490,6 +490,24 @@ select.urole{padding:5px 8px;border-radius:7px}
 .loaddots span:nth-child(2){animation-delay:.15s}
 .loaddots span:nth-child(3){animation-delay:.3s}
 @keyframes ldot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+/* employee assets / uniform kit */
+.kit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kit-tile{border:1px solid var(--line-2);border-radius:12px;overflow:hidden;background:var(--surface);transition:.13s}
+.kit-tile.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 8%,var(--surface))}
+.kit-tile.on.col{border-color:var(--good);background:var(--good-bg)}
+.kit-main{width:100%;display:flex;align-items:center;gap:9px;padding:11px 12px;background:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-2);text-align:left}
+.kit-tile.on .kit-main{color:var(--teal-ink)}
+.kit-tile.on.col .kit-main{color:var(--good-ink)}
+.kit-main svg{width:19px;height:19px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7}
+.kit-main[disabled]{cursor:default}
+.kit-col{display:flex;align-items:center;gap:7px;padding:8px 12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);cursor:pointer}
+.kit-tile.on.col .kit-col{color:var(--good-ink);font-weight:600}
+.kit-col input{width:15px;height:15px;accent-color:var(--good);cursor:pointer}
+.kit-return{display:flex;flex-direction:column;gap:2px}
+.kr-row{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:9px;font-size:13.5px;color:var(--ink);cursor:pointer}
+.kr-row:hover{background:var(--surface-2)}
+.kr-row input{width:17px;height:17px;accent-color:var(--teal);cursor:pointer}
+.kr-all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px;color:var(--ink-2)}
 .menu-item{padding:9px 12px;font-size:13px;color:var(--ink-2);cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:10px}
 .menu-item:hover{background:var(--surface-2);color:var(--ink)}
 .menu-item svg{width:15px;height:15px;color:var(--muted);flex:none}
@@ -1624,11 +1642,12 @@ var ENT={
     fields:[
       {g:"Vehicle"},
       {k:"plate",l:"Plate No.",t:"text",req:true},{k:"brand",l:"Brand",t:"datalist",opts:"brands"},
-      {k:"model",l:"Model",t:"text"},{k:"chassis",l:"Chassis No.",t:"text"},
+      {k:"model",l:"Model",t:"text"},{k:"color",l:"Color",t:"datalist",optsFn:function(){var base=["White","Black","Silver","Grey","Red","Blue","Green","Yellow","Brown","Orange","Maroon","Gold","Beige"];var used={};(STATE.grd.vehicles||[]).forEach(function(v){if(v.color)used[v.color]=1;});Object.keys(used).forEach(function(c){if(base.indexOf(c)<0)base.push(c);});return base;}},
+      {k:"chassis",l:"Chassis No.",t:"text"},
       {g:"Assignment"},
       {k:"driver",l:"Employee (Driver)",t:"emp"},{k:"status",l:"Status",t:"datalist",opts:"fleetStatuses"},
-      {k:"company",l:"Company / Platform",t:"datalist",opts:"companies"},{k:"issue",l:"Issue Date",t:"text",hint:"Date or note (e.g. OLD)"},
-      {k:"returned",l:"Return Date",t:"text",hint:"Date, or leave blank if still assigned"}
+      {k:"company",l:"Company / Platform",t:"datalist",opts:"companies"},{k:"issue",l:"Issue Date",t:"date"},
+      {k:"returned",l:"Return Date",t:"date",hint:"Leave blank if still assigned"}
     ]},
   fuel:{title:"Fuel Cards",singular:"Fuel Card",path:"grd.fuel",idp:"f",defsort:0,defdir:1,
     searchKeys:["name","card","civil","site","company","plate"],
@@ -1669,7 +1688,7 @@ var ENT={
       {k:"simSerial",l:"SIM Serial",t:"text"},{k:"mbSerial",l:"Handset Serial (IMEI)",t:"text"},
       {k:"simIssue",l:"Date of Issue",t:"date"},{k:"simReturn",l:"Date of Return",t:"date"}
     ]},
-  housing:{title:"Housing",singular:"Room / Flat",path:"grd.housing",idp:"h",defsort:0,defdir:1,
+  housing:{title:"Accommodation",singular:"Room / Flat",path:"grd.housing",idp:"h",defsort:0,defdir:1,
     searchKeys:["room"],filters:[],
     columns:[
       {h:"Room / Flat",v:function(r){return '<span class="nm">'+esc(r.room)+'</span>';},s:function(r){return r.room;}},
@@ -1899,7 +1918,7 @@ var NAVGROUPS=[
       {r:"grd/sims",t:"SIM / Mobile",ent:"sims",ic:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'},
       {r:"grd/fuel",t:"Fuel Cards",ent:"fuel",ic:'<rect x="3" y="4" width="13" height="16" rx="2"/><path d="M16 8h2.5A1.5 1.5 0 0 1 20 9.5V17a2 2 0 0 0 0 0"/><path d="M7 8h5M7 12h5"/>'}
     ]},
-    {r:"grd/housing",t:"Housing",ent:"housing",ic:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'},
+    {r:"grd/housing",t:"Accommodation",ent:"housing",ic:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/>'},
     {r:"grd/compdocs",t:"Company Documents",ent:"compdocs",ic:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'},
     {r:"grd/attendance",t:"Attendance / Leave",ent:"attendance",ic:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>'},
     {r:"grd/hiring",t:"Hiring / Onboarding",ent:"hiring",ic:'<circle cx="9" cy="7" r="3.2"/><path d="M3 20v-1.5a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4V20"/><path d="M19 8v6M16 11h6"/>'}
@@ -2259,10 +2278,16 @@ function saveForm(ent,id){
   var data=collectForm(ov,cfg);
   if(!data){toast("Please fill the required fields.","err");return;}
   var arr=store(ent);
-  if(id){var rec=arr.filter(function(r){return r.id===id;})[0];if(rec){var chg=diffRec(cfg,rec,data);Object.assign(rec,data);logAudit("edit",ent,id,recLabel(ent,rec),chg);}}
+  var termCheck=null;
+  if(id){var rec=arr.filter(function(r){return r.id===id;})[0];if(rec){
+    var wasTerm=/terminat/i.test(rec.status||"");var nowTerm=/terminat/i.test(data.status||"");
+    var chg=diffRec(cfg,rec,data);Object.assign(rec,data);logAudit("edit",ent,id,recLabel(ent,rec),chg);
+    if(ent==="drivers"&&nowTerm&&!wasTerm&&(rec.kit||[]).some(function(x){return !x.collected;}))termCheck=id;
+  }}
   else{data.id=uid(cfg.idp);arr.unshift(data);logAudit("add",ent,data.id,recLabel(ent,data),[]);}
   closeForm();renderApp();persist();
   toast((id?"Updated":"Added")+" "+cfg.singular.toLowerCase()+".","good");
+  if(termCheck)setTimeout(function(){assetReturnModal(termCheck);},80);
 }
 function closeForm(){var ov=$("#overlay");if(ov)ov.remove();}
 
@@ -2404,9 +2429,15 @@ function computeAlerts(){
   STATE.grd.drivers.forEach(function(x){[["Civil ID","cidExp"],["License","licExp"],["Health Card","healthExp"],["Passport","passExp"],["PCC","pccExp"]].forEach(function(dm){var dt=parseD(x[dm[1]]);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({cat:"Employee",title:x.name,sub:dm[0]+(x.nat?" · "+x.nat:""),date:dt,days:dd,kind:"date"});}});});
   (STATE.grd.compdocs||[]).forEach(function(c){var dt=parseD(c.expiry);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({cat:"Company",title:c.doc||"Document",sub:[c.plate?("Plate "+c.plate):"",c.user||"",c.refno||""].filter(Boolean).join(" · "),date:dt,days:dd,kind:"date"});}});
   (STATE.grd.service||[]).forEach(function(s){var si=svcInfo(s);if(si.due||si.soon)out.push({cat:"Service",title:"Vehicle "+(s.plate||"?"),sub:(s.user?s.user+" · ":"")+(si.due?(fmtKm(si.since)+" km since last service"):(fmtKm(si.remaining)+" km to service")),kind:"km",overdue:si.due,days:si.due?-1:5});});
-  (STATE.grd.hiring||[]).forEach(function(c){var dt=parseD(c.visaExpiry);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({cat:"Hiring",title:c.nameEn||"Candidate",sub:"Visa expiry"+(c.nat?" · "+c.nat:""),date:dt,days:dd,kind:"date"});}});
   (STATE.grd.maintenance||[]).forEach(function(m){var dt=parseD(m.nextDue);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({cat:"Maintenance",title:"Vehicle "+(m.plate||"?"),sub:"Service due"+(m.type?" · "+m.type:""),date:dt,days:dd,kind:"date"});}});
   out.sort(function(a,b){var ax=a.kind==="km"?(a.overdue?-1000:5):a.days;var bx=b.kind==="km"?(b.overdue?-1000:5):b.days;return ax-bx;});
+  return out;
+}
+// visa expiries live under Hiring / Onboarding (not the general Alerts tab)
+function computeVisaAlerts(){
+  var out=[];
+  (STATE.grd.hiring||[]).forEach(function(c){var dt=parseD(c.visaExpiry);if(dt){var dd=daysTo(dt);if(dd<=30)out.push({title:c.nameEn||"Candidate",id:c.id,sub:(c.nat||"")+(c.reference?" · "+c.reference:""),date:dt,days:dd});}});
+  out.sort(function(a,b){return a.days-b.days;});
   return out;
 }
 function renderAlertPanel(list){
@@ -2488,7 +2519,14 @@ function hiringDash(){
   var progCard='<div class="card"><div class="card-h"><h3>Candidate Progress</h3><span class="hint">'+ready+' fully ready</span></div><div class="card-b">'+
     sorted.slice(0,14).map(function(r){var p=hireProgress(r);var col=p.pct>=100?"var(--good)":p.pct>=50?"var(--amber)":"var(--crit)";return '<div class="crow" data-route="grd/hiring/'+r.id+'"><span class="cava">'+esc(hireInitials(r.nameEn))+'</span><span class="cnm">'+esc(r.nameEn||"—")+'</span><span class="ct"><span class="cf" style="width:'+p.pct+'%;background:'+col+'"></span></span><span class="cpc">'+p.pct+'%</span></div>';}).join("")+
   '</div></div>';
-  return '<div class="hd-top">'+ring+funnel+'</div><div class="hd-bottom">'+pendCard+progCard+'</div>';
+  // VISA EXPIRY (moved here from the Alerts tab)
+  var visa=computeVisaAlerts();
+  var visaCard='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>🛂 Visa Expiries</h3><span class="hint">'+(visa.length?visa.filter(function(v){return v.days<0;}).length+' expired · '+visa.filter(function(v){return v.days>=0;}).length+' within 30 days':'all clear')+'</span></div><div class="card-b">'+
+    (visa.length?visa.map(function(v){var expired=v.days<0;var sv=expired?"crit":"warn";var right=expired?Math.abs(v.days)+"d ago":v.days+"d left";var ds=v.date.getDate()+" "+MONS[v.date.getMonth()]+" "+v.date.getFullYear();
+      return '<div class="crow" data-route="grd/hiring/'+v.id+'" style="border-top:1px solid var(--line);grid-template-columns:auto 1fr auto"><span style="width:8px;height:8px;border-radius:50%;background:var(--'+sv+');flex:none"></span><span class="cnm" style="flex:1">'+esc(v.title)+(v.sub?'<div class="sub" style="font-size:11px;color:var(--muted);font-weight:400">'+esc(v.sub)+'</div>':'')+'</span><span style="text-align:right"><span class="pill '+sv+'">'+(expired?"Expired":"Due soon")+'</span><div class="mono" style="font-size:11px;color:var(--'+sv+');margin-top:3px">'+right+' · '+ds+'</div></span></div>';
+    }).join(""):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>No visa expiries</h4><p>No candidate visa expired or expiring within 30 days.</p></div>')+
+  '</div></div>';
+  return visaCard+'<div class="hd-top">'+ring+funnel+'</div><div class="hd-bottom">'+pendCard+progCard+'</div>';
 }
 function openPendDoc(key,label){
   var H=STATE.grd.hiring||[];
@@ -2873,7 +2911,7 @@ function pageOverview(pg){
   '<div class="grid g3" style="margin-bottom:16px">'+
     '<div class="card"><div class="card-h"><h3>Nationality</h3></div><div class="card-b">'+hbars(natItems,{})+'</div></div>'+
     '<div class="card"><div class="card-h"><h3>Fleet Status</h3></div><div class="card-b">'+hbars(fsItems,{})+'</div></div>'+
-    '<div class="card"><div class="card-h"><h3>Housing</h3><span class="hint">'+houseAct+"/"+houseCap+' beds</span></div><div class="card-b">'+hbars(STATE.grd.housing.map(function(h){return {label:h.room.replace("SMOU ",""),value:num(h.actual)||0,color:cvar("--teal")};}),{max:Math.max.apply(null,STATE.grd.housing.map(function(h){return num(h.cap)||0;}))})+'</div></div>'+
+    '<div class="card"><div class="card-h"><h3>Accommodation</h3><span class="hint">'+houseAct+"/"+houseCap+' beds</span></div><div class="card-b">'+hbars(STATE.grd.housing.map(function(h){return {label:h.room.replace("SMOU ",""),value:num(h.actual)||0,color:cvar("--teal")};}),{max:Math.max.apply(null,STATE.grd.housing.map(function(h){return num(h.cap)||0;}))})+'</div></div>'+
   '</div>';
 
   var clockHTML='<div class="dashclock" id="dashClock"><div class="dc-left">'+
@@ -3143,6 +3181,9 @@ document.addEventListener("click",function(e){
   else if(act==="seldel"){confirmDeleteSelected(curEnt);}
   else if(act==="selclear"){clearSel(curEnt);}
   else if(act==="dodelsel"){deleteSelected(a.getAttribute("data-ent"));}
+  else if(act==="kitassign"){toggleKitAssign(a.getAttribute("data-id"),a.getAttribute("data-item"));}
+  else if(act==="kitcollect"){toggleKitCollect(a.getAttribute("data-id"),a.getAttribute("data-item"));}
+  else if(act==="kitreturnsave"){saveKitReturn(a.getAttribute("data-id"));}
   else if(act==="saveExp"){saveExpensePage($("#page"));}
   else if(act==="clearExp"){pageNewExpense($("#page"));}
   else if(act==="usermenu"){openUserMenu(a);}
@@ -3399,6 +3440,48 @@ function commitDoc(d,doc){
 }
 function delDoc(d,did){var live=drById(d.id)||d;if(!live.docs)return;var i=live.docs.findIndex(function(x){return x.id===did;});if(i>=0)live.docs.splice(i,1);persist();refreshDocHost(live);toast("Document removed.","good");}
 function fillRowsIfDrivers(){if(curEnt==="drivers"&&document.getElementById("tbody"))fillRows("drivers");}
+/* ===== Employee assets / uniform kit ===== */
+var ASSET_ITEMS=["Mobile Stand","Delivery Bag","T-shirt","Pants","Jacket","Helmet","Cap","Gloves","Shoes","Safety Kit"];
+function kitIcon(item){
+  if(/helmet/i.test(item))return '<path d="M4 14a8 8 0 0 1 16 0"/><path d="M2 14h20v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/>';
+  if(/bag/i.test(item))return '<path d="M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><rect x="4" y="8" width="16" height="13" rx="2"/><path d="M9 12h6"/>';
+  if(/shoe/i.test(item))return '<path d="M2 17h20v2H2z"/><path d="M2 17V9l5 2 3-3 4 5h6a2 2 0 0 1 2 2"/>';
+  if(/t-shirt|jacket|pants|cap|glove/i.test(item))return '<path d="M6 4l3-1 3 2 3-2 3 1 3 4-3 2v9H6v-9L3 8z"/>';
+  if(/stand|mobile/i.test(item))return '<rect x="7" y="3" width="10" height="16" rx="2"/><path d="M10 21h4"/>';
+  return '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
+}
+function kitFind(rec,item){return (rec.kit||[]).filter(function(x){return x.name===item;})[0];}
+function toggleKitAssign(id,item){var d=drById(id);if(!d)return;if(!d.kit)d.kit=[];var i=d.kit.findIndex(function(x){return x.name===item;});
+  if(i>=0)d.kit.splice(i,1);else d.kit.push({name:item,collected:false,at:isoToday()});
+  persist();logAudit("edit","drivers",id,recLabel("drivers",d),[{f:"kit",l:"Assets",from:"",to:(i>=0?"unassigned: ":"assigned: ")+item}]);
+  if(getRoute().indexOf("grd/drivers/"+id)===0)pageDetail($("#page"),"drivers",id);}
+function toggleKitCollect(id,item){var d=drById(id);if(!d||!d.kit)return;var k=d.kit.filter(function(x){return x.name===item;})[0];if(!k)return;
+  k.collected=!k.collected;if(k.collected)k.collectedAt=isoToday();else delete k.collectedAt;
+  persist();if(getRoute().indexOf("grd/drivers/"+id)===0)pageDetail($("#page"),"drivers",id);}
+function assetsCard(rec,id){
+  var assigned=(rec.kit||[]).length,coll=(rec.kit||[]).filter(function(x){return x.collected;}).length;
+  var tiles=ASSET_ITEMS.map(function(item){var k=kitFind(rec,item);var on=!!k,col=k&&k.collected;
+    return '<div class="kit-tile'+(on?(col?" on col":" on"):"")+'">'+
+      '<button class="kit-main"'+(can("edit")?' data-act="kitassign" data-id="'+id+'" data-item="'+esc(item)+'"':' disabled')+'>'+svg(kitIcon(item))+'<span>'+esc(item)+'</span></button>'+
+      (on?'<label class="kit-col"><input type="checkbox"'+(can("edit")?' data-act="kitcollect" data-id="'+id+'" data-item="'+esc(item)+'"':' disabled')+(col?" checked":"")+'>'+(col?"Collected":"Mark collected")+'</label>':'')+
+    '</div>';
+  }).join("");
+  return '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Assets &amp; Uniform</h3><span class="hint">'+assigned+' assigned · '+coll+' returned</span></div><div class="card-b"><div class="kit-grid">'+tiles+'</div></div></div>';
+}
+function assetReturnModal(id){
+  var d=drById(id);if(!d)return;var pend=(d.kit||[]).filter(function(x){return !x.collected;});if(!pend.length)return;
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal" style="max-width:460px"><div class="modal-h"><div><h3>Collect assets before termination</h3><div class="sub">'+esc(d.name)+' — '+pend.length+' assigned asset(s) not yet collected</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b"><div class="banner amber" style="margin-bottom:14px">'+svg('<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')+'<div>This employee is being terminated. Tick every asset you have collected back.</div></div>'+
+    '<div class="kit-return"><label class="kr-row kr-all"><input type="checkbox" id="krAll"> <b>Select all</b></label>'+pend.map(function(k){return '<label class="kr-row"><input type="checkbox" class="kr-chk" data-item="'+esc(k.name)+'"> '+esc(k.name)+'</label>';}).join("")+'</div></div>'+
+    '<div class="modal-f"><button class="btn ghost" data-act="close">Later</button><button class="btn primary" data-act="kitreturnsave" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark collected</button></div></div>';
+  document.body.appendChild(ov);
+  var all=ov.querySelector("#krAll");if(all)all.addEventListener("change",function(){ov.querySelectorAll(".kr-chk").forEach(function(c){c.checked=all.checked;});});
+}
+function saveKitReturn(id){var d=drById(id);if(!d)return;var ov=$("#overlay");var n=0;
+  if(ov)$$(".kr-chk",ov).forEach(function(c){if(c.checked){var k=(d.kit||[]).filter(function(x){return x.name===c.getAttribute("data-item");})[0];if(k&&!k.collected){k.collected=true;k.collectedAt=isoToday();n++;}}});
+  if(n)logAudit("edit","drivers",id,recLabel("drivers",d),[{f:"kit",l:"Assets",from:"",to:"collected "+n+" asset(s) on termination"}]);
+  persist();closeForm();if(getRoute().indexOf("grd/drivers/"+id)===0)pageDetail($("#page"),"drivers",id);else renderApp();
+  toast(n?("Marked "+n+" asset(s) collected."):"No assets marked.","good");}
 function viewDoc(d,did){
   var dc=(d.docs||[]).filter(function(x){return x.id===did;})[0];if(!dc)return;
   var inner=/^image\//.test(dc.mime)?'<img src="'+dc.data+'" style="max-width:100%;border-radius:8px">':'<iframe src="'+dc.data+'" style="width:100%;height:70vh;border:0;border-radius:8px;background:#fff"></iframe>';
@@ -3496,6 +3579,7 @@ function pageDetail(pg,ent,id){
   if(ent==="payroll")html+=payrollCard(rec);
   if(ent==="housing")html+=houseAssetsCard(rec,id);
   if(ent==="drivers"){
+    html+=assetsCard(rec,id);
     var docs=rec.docs||[];
     html+='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Documents</h3>'+(can("edit")?'<button class="btn sm" data-act="docs" data-id="'+id+'">'+svg(IC_up)+'Upload / manage</button>':'')+'</div><div class="card-b">'+
       (docs.length?'<div class="doc-grid">'+docs.map(function(dc){var thumb=/^image\//.test(dc.mime)?'<img src="'+dc.data+'" alt="">':FILEIC;return '<div class="doc-card"><div class="doc-thumb" data-act="docviewd" data-did="'+dc.id+'" data-id="'+id+'">'+thumb+'</div><div class="doc-meta"><div class="doc-type">'+esc(dc.type)+'</div><div class="doc-name">'+esc(dc.name)+'</div></div></div>';}).join("")+'</div>':'<div class="empty" style="padding:22px">'+FILEIC+'<h4>No documents yet</h4><p>Upload Civil ID, passport, license and more.</p></div>')+
