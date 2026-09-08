@@ -455,6 +455,15 @@ select.urole{padding:5px 8px;border-radius:7px}
 .dropzone{border:1.5px dashed var(--line-2);border-radius:11px;padding:22px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
 .dropzone:hover,.dropzone.drag{border-color:var(--teal);background:var(--teal-bg);color:var(--teal-ink)}
 .dropzone svg{width:26px;height:26px;opacity:.6}
+.dp-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto}
+.dp-row{display:grid;grid-template-columns:1fr 170px;gap:10px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.dp-row .dp-name{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--ink)}
+.dp-row .dp-name svg{width:18px;height:18px;flex:none;color:var(--teal-ink)}
+.dp-row .dp-name .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-row .dp-name .sz{color:var(--muted);font-size:11px;font-family:"IBM Plex Mono";flex:none}
+.dp-row .dp-type,.dp-row .dp-other{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--ink);width:100%}
+.dp-row .dp-other{grid-column:1/-1}
+@media(max-width:520px){.dp-row{grid-template-columns:1fr}}
 .menu-item{padding:9px 12px;font-size:13px;color:var(--ink-2);cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:10px}
 .menu-item:hover{background:var(--surface-2);color:var(--ink)}
 .menu-item svg{width:15px;height:15px;color:var(--muted);flex:none}
@@ -3193,7 +3202,7 @@ function renderDocsModal(d){
     var thumb=/^image\//.test(dc.mime)?'<img src="'+dc.data+'" alt="">':FILEIC;
     return '<div class="doc-card"><div class="doc-thumb" data-act="docview" data-did="'+dc.id+'">'+thumb+'</div><div class="doc-meta"><div class="doc-type">'+esc(dc.type)+'</div><div class="doc-name">'+esc(dc.name)+' · '+fmtSize(dc.size)+'</div></div><div class="doc-act"><button data-act="docview" data-did="'+dc.id+'">View</button><button class="del" data-act="docdel" data-did="'+dc.id+'">Delete</button></div></div>';
   }).join("")+'</div>'):'<div class="empty" style="padding:20px">'+FILEIC+'<h4>No documents yet</h4><p>Upload Civil ID, passport, license and more.</p></div>';
-  var body='<div id="docBody">'+grid+'<div style="margin-top:14px"><input type="file" id="docFile" accept="image/*,application/pdf" hidden><div class="dropzone" id="dz">'+svg('<path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/>')+'<div style="margin-top:8px;font-weight:600;color:var(--ink-2)">Click or drop a file to upload</div><div style="font-size:11.5px">Image or PDF — it will ask which document it is</div></div></div></div>';
+  var body='<div id="docBody">'+grid+'<div style="margin-top:14px"><input type="file" id="docFile" accept="image/*,application/pdf" multiple hidden><div class="dropzone" id="dz">'+svg('<path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/>')+'<div style="margin-top:8px;font-weight:600;color:var(--ink-2)">Click or drop files to upload</div><div style="font-size:11.5px">Images or PDFs — you can pick several at once</div></div></div></div>';
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";ov.setAttribute("data-driver",d.id);
   ov.innerHTML='<div class="modal" style="max-width:640px"><div class="modal-h"><div><h3>Documents — '+esc(d.name)+'</h3><div class="sub">'+docs.length+' file(s) on record</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div><div class="modal-f"><button class="btn ghost" data-act="close">Done</button></div></div>';
   document.body.appendChild(ov);
@@ -3201,8 +3210,67 @@ function renderDocsModal(d){
   dz.addEventListener("click",function(){fi.click();});
   dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("drag");});
   dz.addEventListener("dragleave",function(){dz.classList.remove("drag");});
-  dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("drag");if(e.dataTransfer.files[0])pickDoc(d,e.dataTransfer.files[0]);});
-  fi.addEventListener("change",function(){if(fi.files[0])pickDoc(d,fi.files[0]);});
+  dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("drag");if(e.dataTransfer.files&&e.dataTransfer.files.length)pickDocs(d,e.dataTransfer.files);});
+  fi.addEventListener("change",function(){if(fi.files&&fi.files.length)pickDocs(d,fi.files);});
+}
+/* multi-file: choose a type for each file, then save them all at once */
+function pickDocs(d,fileList){
+  var body=document.getElementById("docBody");if(!body)return;
+  var files=Array.prototype.slice.call(fileList);
+  if(files.length===1){pickDoc(d,files[0]);return;} // single file → keep the simple flow
+  var rows=files.map(function(f,i){
+    return '<div class="dp-row" data-i="'+i+'"><div class="dp-name">'+svg(/pdf/i.test(f.type)?'<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/>':'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 15l-5-5L5 21"/>')+'<span class="t" title="'+esc(f.name)+'">'+esc(f.name)+'</span><span class="sz">'+fmtSize(f.size)+'</span></div>'+
+      '<select class="dp-type"><option value="">— type —</option>'+DOCTYPES.map(function(t){return '<option>'+t+'</option>';}).join("")+'</select>'+
+      '<input class="dp-other" placeholder="Specify name" hidden></div>';
+  }).join("");
+  body.innerHTML='<div class="banner info" style="margin-bottom:14px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div>Choose a type for each of the <b>'+files.length+'</b> files, then Save all.</div></div>'+
+    '<div class="dp-list">'+rows+'</div>'+
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn ghost" data-act="docback">Cancel</button><button class="btn primary" id="docSaveAll">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Save '+files.length+' documents</button></div>';
+  body.querySelectorAll(".dp-row").forEach(function(row){var sel=row.querySelector(".dp-type"),oth=row.querySelector(".dp-other");sel.addEventListener("change",function(){oth.hidden=sel.value!=="Other";});});
+  body.querySelector("#docSaveAll").addEventListener("click",function(){
+    var items=[],missing=false;
+    body.querySelectorAll(".dp-row").forEach(function(row){var i=+row.getAttribute("data-i");var sel=row.querySelector(".dp-type");var t=sel.value;if(!t){missing=true;return;}if(t==="Other"){var o=(row.querySelector(".dp-other").value||"").trim();if(!o){missing=true;return;}t=o;}items.push({file:files[i],type:t});});
+    if(missing){toast("Please choose a type for every file.","err");return;}
+    saveDocsBatch(d,items);
+  });
+}
+// prepare one doc (read + resize images) → resolves to a doc object with dataURL
+function prepDoc(d,file,type){
+  return new Promise(function(resolve,reject){
+    var MAX=4.5*1024*1024;var reader=new FileReader();
+    if(/^image\//.test(file.type)){
+      reader.onload=function(){var img=new Image();img.onload=function(){
+        var mx=1500,sc=Math.min(1,mx/Math.max(img.width,img.height));
+        var cw=Math.max(1,Math.round(img.width*sc)),ch=Math.max(1,Math.round(img.height*sc));
+        var cv=document.createElement("canvas");cv.width=cw;cv.height=ch;cv.getContext("2d").drawImage(img,0,0,cw,ch);
+        var data;try{data=cv.toDataURL("image/jpeg",0.82);}catch(e){data=reader.result;}
+        resolve({id:uid("doc"),type:type,name:file.name,mime:"image/jpeg",size:Math.round(data.length*0.73),data:data,at:new Date().toISOString()});
+      };img.onerror=function(){resolve({id:uid("doc"),type:type,name:file.name,mime:file.type,size:file.size,data:reader.result,at:new Date().toISOString()});};img.src=reader.result;};
+      reader.onerror=function(){reject();};reader.readAsDataURL(file);
+    } else {
+      if(file.size>MAX){toast("Skipped "+file.name+" — too large (max ~4 MB).","err");reject();return;}
+      reader.onload=function(){resolve({id:uid("doc"),type:type,name:file.name,mime:file.type||"application/octet-stream",size:file.size,data:reader.result,at:new Date().toISOString()});};
+      reader.onerror=function(){reject();};reader.readAsDataURL(file);
+    }
+  });
+}
+function saveDocsBatch(d,items){
+  if(!items.length)return;
+  toast("Saving "+items.length+" documents…","good");
+  var out=[];var chain=Promise.resolve();
+  items.forEach(function(it){chain=chain.then(function(){
+    return prepDoc(d,it.file,it.type).then(function(doc){
+      if(SB_ON&&/^data:/.test(doc.data||"")){return sbUpload("drivers/"+d.id+"/doc-"+doc.id+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){doc.data=url;out.push(doc);}).catch(function(){out.push(doc);});}
+      out.push(doc);
+    }).catch(function(){});
+  });});
+  chain.then(function(){
+    if(!d.docs)d.docs=[];
+    for(var i=out.length-1;i>=0;i--)d.docs.unshift(out[i]);
+    if(out.length)logAudit("edit","drivers",d.id,recLabel("drivers",d),[{f:"docs",l:"Documents",from:"",to:"added "+out.length+" file(s)"}]);
+    persist();renderDocsModal(d);fillRowsIfDrivers();
+    toast("Saved "+out.length+" document(s).","good");
+  });
 }
 function pickDoc(d,file){
   var body=document.getElementById("docBody");if(!body)return;
