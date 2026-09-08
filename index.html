@@ -455,8 +455,13 @@ select.urole{padding:5px 8px;border-radius:7px}
 .dropzone{border:1.5px dashed var(--line-2);border-radius:11px;padding:22px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
 .dropzone:hover,.dropzone.drag{border-color:var(--teal);background:var(--teal-bg);color:var(--teal-ink)}
 .dropzone svg{width:26px;height:26px;opacity:.6}
-.dp-list{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto}
-.dp-row{display:grid;grid-template-columns:1fr 170px;gap:10px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.stage-h{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--teal-ink);margin:14px 0 9px}
+.stage-h svg{width:15px;height:15px}
+.dp-list{display:flex;flex-direction:column;gap:8px;max-height:40vh;overflow-y:auto}
+.dp-row{display:grid;grid-template-columns:1fr 150px 34px;gap:10px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.dp-rm{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--crit);display:grid;place-items:center;cursor:pointer;flex:none}
+.dp-rm svg{width:14px;height:14px}
+.dp-rm:hover{background:var(--crit-bg);border-color:var(--crit)}
 .dp-row .dp-name{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--ink)}
 .dp-row .dp-name svg{width:18px;height:18px;flex:none;color:var(--teal-ink)}
 .dp-row .dp-name .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3202,18 +3207,19 @@ var DOCTYPES=["Civil ID","Passport","Driving License","Health Card","Visa","Resi
 function drById(id){return STATE.grd.drivers.filter(function(x){return x.id===id;})[0];}
 function fmtSize(n){n=n||0;return n<1024?n+" B":n<1048576?(n/1024).toFixed(0)+" KB":(n/1048576).toFixed(1)+" MB";}
 var FILEIC='<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+var DOCSTAGE=[],_docD=null;
 function openDocs(id){
   if(READONLY){toast("You have view-only access.","err");return;}
-  var d=drById(id);if(!d)return;if(!d.docs)d.docs=[];renderDocsModal(d);
+  var d=drById(id);if(!d)return;if(!d.docs)d.docs=[];DOCSTAGE=[];renderDocsModal(d);
 }
 function renderDocsModal(d){
-  closeForm();
+  closeForm();_docD=d;
   var docs=d.docs||[];
   var grid=docs.length?('<div class="doc-grid">'+docs.map(function(dc){
     var thumb=/^image\//.test(dc.mime)?'<img src="'+dc.data+'" alt="">':FILEIC;
     return '<div class="doc-card"><div class="doc-thumb" data-act="docview" data-did="'+dc.id+'">'+thumb+'</div><div class="doc-meta"><div class="doc-type">'+esc(dc.type)+'</div><div class="doc-name">'+esc(dc.name)+' · '+fmtSize(dc.size)+'</div></div><div class="doc-act"><button data-act="docview" data-did="'+dc.id+'">View</button><button class="del" data-act="docdel" data-did="'+dc.id+'">Delete</button></div></div>';
   }).join("")+'</div>'):'<div class="empty" style="padding:20px">'+FILEIC+'<h4>No documents yet</h4><p>Upload Civil ID, passport, license and more.</p></div>';
-  var body='<div id="docBody">'+grid+'<div style="margin-top:14px"><input type="file" id="docFile" accept="image/*,application/pdf" multiple hidden><div class="dropzone" id="dz">'+svg('<path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/>')+'<div style="margin-top:8px;font-weight:600;color:var(--ink-2)">Click or drop files to upload</div><div style="font-size:11.5px">Images or PDFs — you can pick several at once</div></div></div></div>';
+  var body='<div id="docBody">'+grid+'<div style="margin-top:14px"><input type="file" id="docFile" accept="image/*,application/pdf" multiple hidden><div class="dropzone" id="dz">'+svg('<path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/>')+'<div style="margin-top:8px;font-weight:600;color:var(--ink-2)">Click or drop files to add</div><div style="font-size:11.5px">Add one at a time or several — they line up below, then Save all</div></div><div id="docStage"></div></div></div>';
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";ov.setAttribute("data-driver",d.id);
   ov.innerHTML='<div class="modal" style="max-width:640px"><div class="modal-h"><div><h3>Documents — '+esc(d.name)+'</h3><div class="sub">'+docs.length+' file(s) on record</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div><div class="modal-f"><button class="btn ghost" data-act="close">Done</button></div></div>';
   document.body.appendChild(ov);
@@ -3221,8 +3227,40 @@ function renderDocsModal(d){
   dz.addEventListener("click",function(){fi.click();});
   dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("drag");});
   dz.addEventListener("dragleave",function(){dz.classList.remove("drag");});
-  dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("drag");if(e.dataTransfer.files&&e.dataTransfer.files.length)pickDocs(d,e.dataTransfer.files);});
-  fi.addEventListener("change",function(){if(fi.files&&fi.files.length){var f=fi.files;pickDocs(d,f);}setTimeout(function(){try{fi.value="";}catch(e){}},0);});
+  dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("drag");if(e.dataTransfer.files&&e.dataTransfer.files.length)stageFiles(e.dataTransfer.files);});
+  fi.addEventListener("change",function(){if(fi.files&&fi.files.length)stageFiles(fi.files);setTimeout(function(){try{fi.value="";}catch(e){}},0);});
+  renderStage();
+}
+// add picked files to the pending queue (one at a time or several) — nothing saves yet
+function stageFiles(fileList){
+  Array.prototype.slice.call(fileList).forEach(function(f){DOCSTAGE.push({file:f,sel:"",other:""});});
+  renderStage();
+}
+function renderStage(){
+  var wrap=document.getElementById("docStage");if(!wrap)return;
+  if(!DOCSTAGE.length){wrap.innerHTML="";return;}
+  wrap.innerHTML='<div class="stage-h">'+svg('<path d="M20 6 9 17l-5-5"/>')+DOCSTAGE.length+' file(s) ready — choose a type for each, then Save all</div>'+
+    '<div class="dp-list">'+DOCSTAGE.map(function(it,i){
+      var isImg=/^image\//.test(it.file.type);
+      return '<div class="dp-row" data-si="'+i+'"><div class="dp-name">'+svg(isImg?'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 15l-5-5L5 21"/>':'<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/>')+'<span class="t" title="'+esc(it.file.name)+'">'+esc(it.file.name)+'</span><span class="sz">'+fmtSize(it.file.size)+'</span></div>'+
+        '<select class="dp-type"><option value="">— type —</option>'+DOCTYPES.map(function(t){return '<option'+(it.sel===t?' selected':'')+'>'+t+'</option>';}).join("")+'</select>'+
+        '<input class="dp-other" placeholder="Specify name" value="'+esc(it.other||"")+'"'+(it.sel==="Other"?"":" hidden")+'>'+
+        '<button class="dp-rm" title="Remove" data-si="'+i+'">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>';
+    }).join("")+'</div>'+
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="btn ghost" id="stageClear">Clear queue</button><button class="btn primary" id="stageSave">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Save '+DOCSTAGE.length+' document'+(DOCSTAGE.length>1?"s":"")+'</button></div>';
+  wrap.querySelectorAll(".dp-row").forEach(function(row){
+    var i=+row.getAttribute("data-si");var sel=row.querySelector(".dp-type"),oth=row.querySelector(".dp-other");
+    sel.addEventListener("change",function(){DOCSTAGE[i].sel=sel.value;oth.hidden=sel.value!=="Other";});
+    oth.addEventListener("input",function(){DOCSTAGE[i].other=oth.value;});
+    row.querySelector(".dp-rm").addEventListener("click",function(){DOCSTAGE.splice(i,1);renderStage();});
+  });
+  wrap.querySelector("#stageClear").addEventListener("click",function(){DOCSTAGE=[];renderStage();});
+  wrap.querySelector("#stageSave").addEventListener("click",function(){
+    var items=[],missing=false;
+    DOCSTAGE.forEach(function(it){var t=it.sel==="Other"?(it.other||"").trim():it.sel;if(!t){missing=true;return;}items.push({file:it.file,type:t});});
+    if(missing){toast("Choose a type for every file first.","err");return;}
+    DOCSTAGE=[];saveDocsBatch(_docD,items);
+  });
 }
 /* multi-file: choose a type for each file, then save them all at once */
 function pickDocs(d,fileList){
