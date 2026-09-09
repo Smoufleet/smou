@@ -2158,20 +2158,12 @@ function aiContext(){
 }
 /* ---- Floating action dock: Reports, Notes, and AI (AI only in cloud build) ---- */
 function ensureFabDock(){
-  if(document.getElementById("fabdock"))return;
-  var dock=document.createElement("div");dock.id="fabdock";dock.className="fabdock";document.body.appendChild(dock);
-  // Reports & Export quick access
-  var rf=document.createElement("button");rf.id="repfab";rf.className="minifab";rf.title="Reports & Export";
-  rf.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>';
-  rf.addEventListener("click",function(){toggleReports();});
-  dock.appendChild(rf);
-  // Daily Notes
-  var nf=document.createElement("button");nf.id="notefab";nf.className="minifab";nf.title="Daily Notes";
-  nf.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M4 20V4h11l5 5v0"/><path d="M15 4v5h5"/><path d="M8 13h6M8 16.5h4"/></svg>';
-  nf.addEventListener("click",function(){toggleNotes();});
-  dock.appendChild(nf);
+  if(!document.getElementById("fabdock")){
+    var dock=document.createElement("div");dock.id="fabdock";dock.className="fabdock";document.body.appendChild(dock);
+  }
+  // Notes & Reports live in the top-right profile menu now; their panels are built here (hidden) and opened from there.
   buildReportsPanel();buildNotesPanel();
-  ensureAIPanel();
+  ensureAIPanel(); // AI FAB is the only floating button (cloud build only)
 }
 function closeFabPanels(except){
   ["aipanel","notepanel","reppanel"].forEach(function(pid){if(pid===except)return;var p=document.getElementById(pid);if(p)p.hidden=true;});
@@ -3503,6 +3495,8 @@ document.addEventListener("click",function(e){
   else if(act==="saveExp"){saveExpensePage($("#page"));}
   else if(act==="clearExp"){pageNewExpense($("#page"));}
   else if(act==="usermenu"){openUserMenu(a);}
+  else if(act==="opennotes"){closeRowMenu();setTimeout(function(){var p=document.getElementById("notepanel");if(p&&p.hidden)toggleNotes();},0);}
+  else if(act==="openreports"){closeRowMenu();setTimeout(function(){var p=document.getElementById("reppanel");if(p&&p.hidden)toggleReports();},0);}
   else if(act==="logout"){doLogout();}
 });
 function openUserMenu(btn){
@@ -3510,6 +3504,8 @@ function openUserMenu(btn){
   var m=document.createElement("div");m.className="popmenu";m.id="rowmenu";
   var nm=(USER&&(USER.email||""))||"";
   m.innerHTML='<div style="padding:10px 12px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px;word-break:break-all">'+esc(nm)+'</div><div class="sub" style="font-size:11.5px;color:var(--muted)">Signed in · '+esc(roleLabel(ROLE))+'</div></div>'+
+    '<div class="menu-item" data-act="opennotes">'+svg('<path d="M12 20h9M4 20V4h11l5 5"/><path d="M15 4v5h5"/><path d="M8 13h6M8 16.5h4"/>')+'Daily Notes</div>'+
+    '<div class="menu-item" data-act="openreports">'+svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 18h4"/>')+'Reports &amp; Export</div>'+
     (ROLE==="admin"?'<div class="menu-item" data-route="users">'+svg('<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/>')+'Users &amp; Roles</div>':'')+
     '<div class="menu-item danger" data-act="logout">'+svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>')+'Log out</div>';
   document.body.appendChild(m);
