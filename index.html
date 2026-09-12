@@ -675,6 +675,19 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 /* On the detail page the left column has the profile card AND the documents below it;
    keep the profile card NON-sticky here so documents never slide up and hide behind it. */
 .detail2 .pvc{position:static;top:auto}
+/* Fuel Tracker */
+.ft-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.ft-row:first-child{border-top:0}
+.ft-rank{width:26px;height:26px;flex:none;border-radius:50%;background:var(--surface-3);color:var(--ink-2);display:grid;place-items:center;font-weight:700;font-size:12px;font-family:"IBM Plex Mono"}
+.ft-main{flex:1;min-width:0}
+.ft-plate{font-weight:700;font-size:13.5px;font-family:"IBM Plex Mono"}
+.ft-veh{font-weight:400;font-size:11.5px;color:var(--muted)}
+.ft-bar{height:7px;border-radius:5px;background:var(--surface-3);overflow:hidden;margin:5px 0}
+.ft-bar>span{display:block;height:100%;border-radius:5px}
+.ft-sub{font-size:11.5px;color:var(--muted)}
+.ft-cpk{text-align:right;flex:none;min-width:70px}
+.ft-cpk b{font-family:"IBM Plex Mono";font-size:16px;display:block}
+.ft-cpk span{font-size:10px;color:var(--muted)}
 @media(max-width:820px){.ff-cols,.detail2{grid-template-columns:1fr}.pvc{position:static}}
 @media(max-width:600px){.ff-actionbar .note{display:none}.ff-top .in,.ff-body,.ff-actionbar .in{padding-left:16px;padding-right:16px}.ff-ttl h2{font-size:19px}.pvc{padding:20px 16px}}
 /* ===== audit / activity timeline ===== */
@@ -1699,6 +1712,7 @@ var NAVGROUPS=[
   {lab:"Fleet Ops",key:"ops",collapsible:true,items:[
     {r:"grd/vehicles",t:"Vehicles",ent:"vehicles",ic:'<path d="M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/>'},
     {r:"grd/service",t:"Vehicle Service",ent:"service",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'},
+    {r:"fueltracker",t:"Fuel Tracker",ic:'<path d="M3 22V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v18M2 22h14"/><path d="M14 9h3l3 3v6a1.5 1.5 0 0 1-3 0v-3h-3"/><path d="M5 8h5"/>'},
     {r:"grd/maintenance",t:"Maintenance",ent:"maintenance",ic:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/>'},
     {r:"grd/fines",t:"Traffic Fines",ent:"fines",ic:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>'},
     {r:"grd/incidents",t:"Accident / Incident",ent:"incidents",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'}
@@ -1739,7 +1753,7 @@ function routeKind(route){
   if(route==="alerts")return {v:"car",p:PAT_CONE};
   if(route.indexOf("finance")===0)return {v:"car",p:PAT_FUEL};
   if(route.indexOf("grd/drivers")===0||route==="hiring"||route.indexOf("grd/hiring")===0)return {v:"bike",p:PAT_HELMET};
-  if(route.indexOf("grd/vehicles")===0||route.indexOf("grd/service")===0)return {v:"car",p:PAT_CAR};
+  if(route.indexOf("grd/vehicles")===0||route.indexOf("grd/service")===0||route==="fueltracker")return {v:"car",p:PAT_CAR};
   if(route.indexOf("grd/sims")===0||route.indexOf("grd/fuel")===0)return {v:"bike",p:PAT_ROAD};
   return {v:"car",p:PAT_ROAD};
 }
@@ -1967,6 +1981,7 @@ function renderPage(){
   var P=route.split("/");
   if(route==="users"){setTitle("Users & Roles","Admin · manage staff access");newBtn.hidden=true;pageUsers(pg);return;}
   if(route==="reports"){newBtn.hidden=true;pageReports(pg);return;}
+  if(route==="fueltracker"){setTitle("Fuel Tracker","Fleet Ops · fuel consumption & efficiency");newBtn.hidden=true;pageFuelTracker(pg);return;}
   if(route==="alerts"){setTitle("Alerts & Expiries","Expired + expiring within 30 days");newBtn.hidden=true;pageAlerts(pg);return;}
   if(route==="activity"){setTitle("Activity Log","Every change · who & when");newBtn.hidden=true;pageActivity(pg);return;}
   if(route==="orders"){setTitle("Order Overview","Driver performance · Talabat & Keeta");newBtn.hidden=true;pageOrders(pg);return;}
@@ -3566,6 +3581,7 @@ function openRowMenu(btn,ent,id){
   if(ent==="drivers"&&can("edit"))items+='<div class="menu-item" data-act="docs" data-id="'+id+'">'+svg(IC_docs)+'Documents'+((rec&&rec.docs&&rec.docs.length)?' ('+rec.docs.length+')':'')+'</div>';
   if(ASSETENTS[ent]&&can("edit"))items+='<div class="menu-item" data-act="handover" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_hand)+'Handover / Assign</div>';
   if(ent==="service"&&can("edit")){items+='<div class="menu-item" data-act="kmadd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add today’s KM</div>';items+='<div class="menu-item" data-act="svcdone" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Mark serviced</div>';}
+  if(ent==="fuel"&&can("edit")){items+='<div class="menu-item" data-act="fueladd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add fuel entry</div>';}
   if(ent==="payroll")items+='<div class="menu-item" data-act="payslip" data-id="'+id+'">'+svg(IC_pdf)+'Payslip PDF</div>';
   else items+='<div class="menu-item" data-act="entrypdf" data-ent="'+ent+'" data-id="'+id+'">'+svg(IC_pdf)+'Download PDF</div>';
   if(can("edit"))items+='<div class="menu-item" data-act="edit" data-id="'+id+'">'+svg(IC_edit)+'Edit</div>';
@@ -3630,6 +3646,7 @@ function pageDetail(pg,ent,id){
   '</div>';
   if(ASSETENTS[ent])html+=assetHistoryCard(ent,rec,id);
   if(ent==="service")html+=serviceCard(rec,id);
+  if(ent==="fuel")html+=fuelCard(rec,id);
   if(ent==="payroll")html+=payrollCard(rec);
   if(ent==="housing")html+=houseAssetsCard(rec,id);
   if(ent==="drivers"){
@@ -3915,6 +3932,144 @@ function markServiced(id){
   toast("Marked serviced at "+fmtKm(rec.lastService)+" km — counter reset.","good");
 }
 function kmDel(id,aid){if(READONLY)return;var rec=recById("service",id);if(!rec||!rec.kmlog)return;var e=rec.kmlog.filter(function(x){return x.id===aid;})[0];if(e){rec.odo=Math.max(0,(num(rec.odo)||0)-(num(e.km)||0));rec.kmlog=rec.kmlog.filter(function(x){return x.id!==aid;});}persist();pageDetail($("#page"),"service",id);toast("KM entry removed.","good");}
+
+/* ============ FUEL DAILY LOG (per fuel card) ============ */
+function platesList(){var s={};(STATE.grd.vehicles||[]).forEach(function(v){if(v.plate)s[String(v.plate).trim()]=1;});(STATE.grd.service||[]).forEach(function(v){if(v.plate)s[String(v.plate).trim()]=1;});(STATE.grd.fuel||[]).forEach(function(v){if(v.plate)s[String(v.plate).trim()]=1;});return Object.keys(s).filter(Boolean).sort();}
+function vehByPlate(p){p=String(p||"").trim();if(!p)return null;return (STATE.grd.vehicles||[]).filter(function(v){return String(v.plate||"").trim()===p;})[0]||null;}
+function fuelStats(rec){
+  var fills=rec.fills||[];var now=TODAY;var m0=new Date(now.getFullYear(),now.getMonth(),1);
+  var spentM=0,litM=0,spentAll=0,fillsAll=0;
+  fills.forEach(function(x){var amt=num(x.amount)||0;if((x.type||"Fill")==="Fill"){spentAll+=amt;fillsAll++;var d=parseD(x.date);if(d&&d>=m0){spentM+=amt;litM+=num(x.liters)||0;}}});
+  return {spentM:spentM,litM:litM,spentAll:spentAll,fillsAll:fillsAll,bal:num(rec.bal)};
+}
+function fuelCard(rec,id){
+  var fills=(rec.fills||[]);var st=fuelStats(rec);var ed=can("edit");
+  var low=st.bal!=null&&st.bal<5;
+  var status='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Fuel Status</h3>'+(ed?'<button class="btn sm amber" data-act="fueladd" data-id="'+id+'">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add fuel entry</button>':'')+'</div><div class="card-b">'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center">'+
+      '<div><div class="mono nm" style="font-size:22px;color:var(--'+(low?"crit":"good")+')">'+(st.bal!=null?st.bal.toFixed(3):"—")+'</div><div style="font-size:11px;color:var(--muted)">Balance (KWD)</div></div>'+
+      '<div><div class="mono nm" style="font-size:22px;color:var(--amber-2)">'+money(st.spentM)+'</div><div style="font-size:11px;color:var(--muted)">Filled this month</div></div>'+
+      '<div><div class="mono nm" style="font-size:22px">'+(st.litM?st.litM.toFixed(1):"—")+'</div><div style="font-size:11px;color:var(--muted)">Litres this month</div></div>'+
+    '</div>'+(low?'<div class="banner amber" style="margin-top:12px">'+svg('<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')+'<div>Low balance — recharge soon.</div></div>':'')+
+  '</div></div>';
+  var log='<div class="card" style="margin-top:16px"><div class="card-h"><h3>Daily Fuel Log</h3><span class="hint">'+fills.length+' entries</span></div><div class="card-b">'+
+    (fills.length?fills.slice(0,80).map(function(l){var isRe=(l.type||"Fill")==="Recharge";var amt=num(l.amount)||0;
+      return '<div class="ho-row"><div style="flex:1"><div class="ho-to">'+(isRe?'<span class="pill good">Recharge</span> +':'<span class="pill neutral">Fill</span> ')+money(amt)+' KWD'+(l.liters?' · '+esc(l.liters)+' L':'')+'</div><div class="ho-reason">'+(l.plate?'Vehicle: '+esc(l.plate):'No vehicle')+(l.note?' · '+esc(l.note):'')+'</div></div><div class="ho-side"><div class="mono ho-date">'+esc(fmtD(l.date))+'</div>'+(ed?'<div class="ho-acts"><button class="btn ghost sm danger" data-act="fueldel" data-id="'+id+'" data-aid="'+l.id+'">'+svg(IC_del)+'</button></div>':'')+'</div></div>';
+    }).join(""):'<div class="empty" style="padding:20px">'+svg('<path d="M3 3v18h18M7 14l3-3 3 2 4-5"/>')+'<h4>No fuel entries yet</h4><p>Add daily fuel fills — they feed the Fuel Tracker.</p></div>')+
+  '</div></div>';
+  return status+log;
+}
+function openFuel(id){
+  if(READONLY){toast("You have view-only access.","err");return;}
+  var rec=recById("fuel",id);if(!rec)return;
+  var plates=platesList();var dl=plates.map(function(p){return '<option value="'+esc(p)+'">';}).join("");
+  var body='<div class="form-grid">'+
+    '<div class="field"><label>Type</label><select id="flType"><option>Fill</option><option>Recharge</option></select></div>'+
+    '<div class="field"><label>Amount (KWD) <span class="req">*</span></label><input type="number" id="flAmt" min="0" step="any" placeholder="e.g. 5"></div>'+
+    '<div class="field"><label>Litres <span style="color:var(--muted);font-weight:400">(optional)</span></label><input type="number" id="flLit" min="0" step="any" placeholder="e.g. 22"></div>'+
+    '<div class="field"><label>Date</label><input type="date" id="flDate" value="'+isoToday()+'"></div>'+
+    '<div class="field wide"><label>Vehicle / Plate</label><input id="flPlate" list="flPlateDL" value="'+esc(rec.plate||"")+'" placeholder="Type or pick plate"><datalist id="flPlateDL">'+dl+'</datalist></div>'+
+    '<div class="field wide"><label>Note</label><input id="flNote" placeholder="Optional — station, remark…"></div>'+
+  '</div>';
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal" style="max-width:520px"><div class="modal-h"><div><h3>Add fuel entry</h3><div class="sub">'+esc(rec.card||"Fuel card")+(rec.name?" · "+esc(rec.name):"")+' · Balance '+(num(rec.bal)!=null?num(rec.bal).toFixed(3):"—")+' KWD</div></div><button class="icon-btn" data-act="close">'+svg(IC_x)+'</button></div><div class="modal-b">'+body+'</div><div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn amber" data-act="fuelsave" data-id="'+id+'">'+svg('<path d="M20 6 9 17l-5-5"/>')+'Add entry</button></div></div>';
+  document.body.appendChild(ov);setTimeout(function(){var i=ov.querySelector("#flAmt");if(i)i.focus();},60);
+}
+function saveFuel(id){
+  var ov=$("#overlay");var rec=recById("fuel",id);if(!rec||!ov)return;
+  var amt=num(($("#flAmt",ov)||{}).value);if(amt==null||amt<0){toast("Enter the amount (KWD).","err");return;}
+  var type=(($("#flType",ov)||{}).value)||"Fill";
+  var lit=num(($("#flLit",ov)||{}).value);
+  var date=(($("#flDate",ov)||{}).value)||isoToday();
+  var plate=((($("#flPlate",ov)||{}).value)||"").trim();
+  var note=((($("#flNote",ov)||{}).value)||"").trim();
+  if(!rec.fills)rec.fills=[];
+  rec.fills.unshift({id:uid("fl"),date:date,type:type,amount:amt,liters:(lit!=null?lit:""),plate:plate,note:note,at:new Date().toISOString()});
+  var cur=num(rec.bal)||0;rec.bal=(type==="Recharge")?(cur+amt):(cur-amt);
+  logAudit("edit","fuel",id,recLabel("fuel",rec),[{f:"fuel",l:"Fuel entry",from:"",to:type+" "+money(amt)+" KWD"+(plate?" · "+plate:"")}]);
+  closeForm();persist();if(getRoute().indexOf(id)>=0)pageDetail($("#page"),"fuel",id);else renderApp();
+  toast(type+" "+money(amt)+" KWD saved · balance "+((num(rec.bal)||0).toFixed(3))+" KWD",(num(rec.bal)<5?"err":"good"));
+}
+function fuelDel(id,aid){
+  if(READONLY)return;var rec=recById("fuel",id);if(!rec||!rec.fills)return;
+  var e=rec.fills.filter(function(x){return x.id===aid;})[0];
+  if(e){var amt=num(e.amount)||0;var cur=num(rec.bal)||0;rec.bal=((e.type||"Fill")==="Recharge")?(cur-amt):(cur+amt);rec.fills=rec.fills.filter(function(x){return x.id!==aid;});}
+  persist();pageDetail($("#page"),"fuel",id);toast("Fuel entry removed.","good");
+}
+
+/* ============ FUEL & EFFICIENCY TRACKER (Fleet Ops) ============ */
+var fuelTrackPeriod="month";
+function ftInRange(d,s,e){return !!d&&(!s||d>=s)&&(!e||d<=e);}
+function ftRange(k){
+  var n=TODAY,y=n.getFullYear(),m=n.getMonth();
+  if(k==="month")return {start:new Date(y,m,1),end:null,prevStart:new Date(y,m-1,1),prevEnd:new Date(y,m,0),label:MON[m]+" "+y};
+  if(k==="last")return {start:new Date(y,m-1,1),end:new Date(y,m,0),prevStart:new Date(y,m-2,1),prevEnd:new Date(y,m-1,0),label:MON[(m+11)%12]+" "+(m===0?y-1:y)};
+  if(k==="q")return {start:new Date(y,m-2,1),end:null,prevStart:new Date(y,m-5,1),prevEnd:new Date(y,m-2,0),label:"Last 3 months"};
+  return {start:null,end:null,prevStart:null,prevEnd:null,label:"All time"};
+}
+function ftAgg(start,end){
+  var km={},fuel={},lit={},cnt={};
+  (STATE.grd.service||[]).forEach(function(s){var p=String(s.plate||"").trim();if(!p)return;(s.kmlog||[]).forEach(function(l){if(ftInRange(parseD(l.date),start,end))km[p]=(km[p]||0)+(num(l.km)||0);});});
+  (STATE.grd.fuel||[]).forEach(function(c){(c.fills||[]).forEach(function(x){if((x.type||"Fill")!=="Fill")return;var p=String(x.plate||c.plate||"").trim();if(!p)return;if(ftInRange(parseD(x.date),start,end)){fuel[p]=(fuel[p]||0)+(num(x.amount)||0);lit[p]=(lit[p]||0)+(num(x.liters)||0);cnt[p]=(cnt[p]||0)+1;}});});
+  return {km:km,fuel:fuel,lit:lit,cnt:cnt};
+}
+function pageFuelTracker(pg){
+  var R=ftRange(fuelTrackPeriod);var A=ftAgg(R.start,R.end);var P=ftAgg(R.prevStart,R.prevEnd);
+  var plates={};Object.keys(A.km).forEach(function(p){plates[p]=1;});Object.keys(A.fuel).forEach(function(p){plates[p]=1;});
+  var rows=Object.keys(plates).map(function(p){
+    var km=A.km[p]||0,fu=A.fuel[p]||0,li=A.lit[p]||0;
+    var v=vehByPlate(p);
+    return {plate:p,km:km,fuel:fu,lit:li,cpk:(km>0?fu/km:null),kpl:(li>0?km/li:null),driver:(v&&v.driver)||"",veh:(v&&(v.vehType||v.brand))||""};
+  });
+  var totKm=rows.reduce(function(a,r){return a+r.km;},0);
+  var totFuel=rows.reduce(function(a,r){return a+r.fuel;},0);
+  var fleetCpk=totKm>0?totFuel/totKm:null;
+  // previous-period fleet cost/km for the trend delta
+  var pKm=0,pFuel=0;Object.keys(P.km).forEach(function(p){pKm+=P.km[p];});Object.keys(P.fuel).forEach(function(p){pFuel+=P.fuel[p];});
+  var prevCpk=pKm>0?pFuel/pKm:null;
+  var delta=(fleetCpk!=null&&prevCpk!=null&&prevCpk>0)?((fleetCpk-prevCpk)/prevCpk*100):null;
+  // rankable = both km & fuel present; else data gap
+  var rankable=rows.filter(function(r){return r.cpk!=null;}).sort(function(a,b){return b.cpk-a.cpk;});
+  var noKm=rows.filter(function(r){return r.fuel>0&&r.km<=0;});
+  var noFuel=rows.filter(function(r){return r.km>0&&r.fuel<=0;});
+  var maxCpk=rankable.length?rankable[0].cpk:0;
+  var top=rankable[0];
+  // period tabs
+  var tabs='<div class="sub-tabs" style="margin-bottom:16px">'+[["month","This month"],["last","Last month"],["q","Last 3 months"],["all","All time"]].map(function(t){return '<button class="sub-tab'+(fuelTrackPeriod===t[0]?" active":"")+'" data-act="ftperiod" data-p="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
+  // KPI cards
+  function kpi(lab,val,sub,col){return '<div class="stat card"><span class="strip" style="background:'+(col||"var(--teal)")+'"></span><div class="s-lab">'+lab+'</div><div class="s-val">'+val+'</div><div class="s-sub">'+(sub||"&nbsp;")+'</div></div>';}
+  var deltaTxt=delta==null?"vs last period: —":((delta>=0?"▲ ":"▼ ")+Math.abs(delta).toFixed(0)+"% vs last period");
+  var deltaCol=delta==null?"var(--muted)":(delta>0?"var(--crit)":"var(--good)");
+  var kpis='<div class="stat-grid" style="margin-bottom:16px">'+
+    kpi("Fleet Distance",fmtKm(totKm)+" km",R.label,"var(--teal)")+
+    kpi("Fuel Spend",money(totFuel)+" KWD",R.label,"var(--amber)")+
+    kpi("Fleet Cost / km",fleetCpk!=null?fleetCpk.toFixed(3)+" KWD":"—","<span style='color:"+deltaCol+"'>"+deltaTxt+"</span>","var(--indigo)")+
+    kpi("Top Consumer",top?esc(top.plate):"—",top?top.cpk.toFixed(3)+" KWD/km":"need km + fuel","var(--crit)")+
+  '</div>';
+  // ranked list
+  var list='<div class="card"><div class="card-h"><h3>Consumption by Vehicle</h3><span class="hint">worst first · cost per km</span></div><div class="card-b">'+
+    (rankable.length?rankable.map(function(r,i){
+      var w=maxCpk>0?Math.max(5,Math.round(r.cpk/maxCpk*100)):0;
+      var col=i===0?"var(--crit)":i<3?"var(--amber)":"var(--teal)";
+      return '<div class="ft-row"><span class="ft-rank">'+(i+1)+'</span>'+
+        '<div class="ft-main"><div class="ft-plate">'+esc(r.plate)+(r.veh?' <span class="ft-veh">'+esc(r.veh)+'</span>':'')+(r.driver?' <span class="ft-veh">· '+esc(r.driver)+'</span>':'')+'</div>'+
+        '<div class="ft-bar"><span style="width:'+w+'%;background:'+col+'"></span></div>'+
+        '<div class="ft-sub">'+fmtKm(r.km)+' km · '+money(r.fuel)+' KWD'+(r.kpl!=null?' · '+r.kpl.toFixed(1)+' km/L':'')+'</div></div>'+
+        '<div class="ft-cpk"><b style="color:'+col+'">'+r.cpk.toFixed(3)+'</b><span>KWD/km</span></div></div>';
+    }).join(""):'<div class="empty" style="padding:26px">'+svg('<path d="M3 3v18h18M7 14l3-3 3 2 4-5"/>')+'<h4>Not enough data yet</h4><p>Add daily KM in Vehicle Service and daily fuel in Fuel Cards — a vehicle needs both (with a matching plate) to rank here.</p></div>')+
+  '</div></div>';
+  // data-gap alerts
+  var gaps="";
+  if(noKm.length||noFuel.length){
+    gaps='<div class="card" style="margin-top:16px"><div class="card-h"><h3>⚠️ Data Gaps</h3><span class="hint">fix these for accurate cost/km</span></div><div class="card-b">'+
+      (noKm.length?'<div style="margin-bottom:8px"><b style="font-size:13px">Fuel logged but no KM ('+noKm.length+'):</b> <span style="color:var(--muted);font-size:12.5px">'+noKm.map(function(r){return esc(r.plate);}).join(", ")+'</span><div class="sub" style="font-size:11.5px;color:var(--muted)">Add daily KM for these in Vehicle Service.</div></div>':'')+
+      (noFuel.length?'<div><b style="font-size:13px">KM logged but no fuel ('+noFuel.length+'):</b> <span style="color:var(--muted);font-size:12.5px">'+noFuel.map(function(r){return esc(r.plate);}).join(", ")+'</span><div class="sub" style="font-size:11.5px;color:var(--muted)">Add fuel fills for these in Fuel Cards (with the matching plate).</div></div>':'')+
+    '</div></div>';
+  }
+  var help='<div class="banner info" style="margin-top:16px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div style="font-size:12.5px">Cost/km = fuel spent ÷ km driven for each vehicle (matched by plate). Lower is better. Log daily KM in <b>Vehicle Service</b> and daily fuel in <b>Fuel Cards</b> — the tracker updates automatically.</div></div>';
+  pg.innerHTML=tabs+kpis+list+gaps+help;
+  if(LANG==="ar")transEl(pg);
+}
 function serviceCard(rec,id){
   var s=svcInfo(rec);var log=rec.kmlog||[];var bar=Math.min(100,Math.round(s.since/(s.interval||5000)*100));
   var col=s.due?"var(--crit)":s.soon?"var(--amber)":"var(--teal)";
@@ -3936,6 +4091,10 @@ document.addEventListener("click",function(e){
   else if(act==="kmsave"){saveKm(id);}
   else if(act==="svcdone"){markServiced(id);}
   else if(act==="kmdel"){kmDel(id,aid);}
+  else if(act==="fueladd"){openFuel(id);}
+  else if(act==="fuelsave"){saveFuel(id);}
+  else if(act==="fueldel"){fuelDel(id,aid);}
+  else if(act==="ftperiod"){fuelTrackPeriod=a.getAttribute("data-p")||"month";pageFuelTracker($("#page"));}
   else if(act==="payslip"){payslipPDF(id);}
   else if(act==="handover"){openHandover(ent||curEnt,id);}
   else if(act==="hosave"){saveHandover(ent,id);}
