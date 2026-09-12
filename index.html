@@ -895,7 +895,7 @@ if(!STATE){ try{var ls=localStorage.getItem("smou-erp");if(ls)STATE=JSON.parse(l
 if(!STATE) STATE=clone(window.__SEEDSTATE__);
 if(STATE&&STATE.grd){["compdocs","service","hiring","fines","incidents","maintenance","attendance","perf","orderlog"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});}
 if(STATE&&!STATE.finance)STATE.finance={expenses:[]};
-if(STATE&&STATE.finance){["payroll","income","budgets"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});}
+if(STATE&&STATE.finance){["payroll","income","budgets","funds"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});}
 // sanitize zone lookup junk
 if(STATE.lookups&&STATE.lookups.zones){STATE.lookups.zones=STATE.lookups.zones.filter(function(z){return z&&["CO.","DRIVER","HEADER"].indexOf(z)<0;});
   ["MAHBOULA","JAHRA","ARDIYA","SALMIYA","FARWANIYA","FAHAHEEL","OTHERS"].forEach(function(z){if(STATE.lookups.zones.indexOf(z)<0)STATE.lookups.zones.push(z);});}
@@ -993,8 +993,8 @@ function sbClient(){
   }
   return SB;
 }
-var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["perf",function(){return STATE.grd.perf;}],["orderlog",function(){return STATE.grd.orderlog;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["expenses",function(){return STATE.finance.expenses;}]];
-var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],orderlog:["grd","orderlog"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],expenses:["finance","expenses"]};
+var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",function(){return STATE.grd.vehicles;}],["fuel",function(){return STATE.grd.fuel;}],["sims",function(){return STATE.grd.sims;}],["housing",function(){return STATE.grd.housing;}],["compdocs",function(){return STATE.grd.compdocs;}],["service",function(){return STATE.grd.service;}],["hiring",function(){return STATE.grd.hiring;}],["fines",function(){return STATE.grd.fines;}],["incidents",function(){return STATE.grd.incidents;}],["maintenance",function(){return STATE.grd.maintenance;}],["attendance",function(){return STATE.grd.attendance;}],["perf",function(){return STATE.grd.perf;}],["orderlog",function(){return STATE.grd.orderlog;}],["payroll",function(){return STATE.finance.payroll;}],["income",function(){return STATE.finance.income;}],["budgets",function(){return STATE.finance.budgets;}],["funds",function(){return STATE.finance.funds;}],["expenses",function(){return STATE.finance.expenses;}]];
+var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],orderlog:["grd","orderlog"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],funds:["finance","funds"],expenses:["finance","expenses"]};
 var shadow={};
 /* ---- offline-safe outbox: rows that failed to sync are remembered across refreshes and auto-retried ---- */
 var PENDING=(function(){try{return JSON.parse(localStorage.getItem("smou-pending")||"[]")||[];}catch(e){return [];}})();
@@ -1080,9 +1080,9 @@ function diffRec(cfg,oldRec,newData){
 function recLabel(ent,rec){return pvPrimary(ent,rec);}
 function snapshotShadow(){shadow={};COLLS.forEach(function(c){c[1]().forEach(function(r){shadow[c[0]+"/"+r.id]=JSON.stringify(r);});});}
 function applyRows(rows){
-  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],expenses:[]};
+  var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],funds:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
-  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.grd.orderlog=buckets.orderlog;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.expenses=buckets.expenses;
+  STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.grd.orderlog=buckets.orderlog;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.funds=buckets.funds;STATE.finance.expenses=buckets.expenses;
   snapshotShadow();stripPendingDel();_lastSig=dataSig(rows);cacheSave();
 }
 var _lastSig="";
@@ -1676,8 +1676,30 @@ var ENT={
       {k:"platform",l:"Platform",t:"select",opts:"platforms"},{k:"payment",l:"Payment Method",t:"select",opts:"payments"},
       {k:"vehType",l:"Vehicle / Rider Type",t:"datalist",opts:"finVehTypes"},{k:"plate",l:"Vehicle / Plate",t:"text"},
       {k:"driver",l:"Employee / Rider",t:"emp"},
+      {g:"Accounting"},
+      {k:"costType",l:"Cost Type",t:"select",optsFn:function(){return ["Variable","Fixed"];},hint:"Variable = badhta with work (fuel, salary). Fixed = har mahine same (rent, SIM)."},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega (fine/advance). P&L me company cost nahi ginega."},
+      {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver se paisa mil gaya (settle)."},
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
+    ]},
+  funds:{title:"Petty Cash Fund",singular:"Fund Top-up",path:"finance.funds",idp:"fund",defsort:0,defdir:-1,
+    searchKeys:["source","note","by"],
+    filters:[{k:"source",lab:"All sources",opts:null}],
+    columns:[
+      {h:"Date",v:function(r){return '<span class="mono">'+fmtD(r.date)+'</span>';},s:function(r){var d=parseD(r.date);return d?d.getTime():0;}},
+      {h:"Source",v:function(r){return '<span class="nm">'+esc(r.source||"—")+'</span>';},s:function(r){return (r.source||"").toLowerCase();}},
+      {h:"Amount In (KWD)",v:function(r){return '<span class="mono nm" style="color:var(--good)">+'+money(num(r.amount))+'</span>';},s:function(r){return num(r.amount)||0;}},
+      {h:"Received By",v:function(r){return esc(r.by||"—");},s:function(r){return r.by;}},
+      {h:"Note",v:function(r){return esc(r.note||"—");},s:function(r){return r.note;}}
+    ],
+    fields:[
+      {g:"Fund Received"},
+      {k:"date",l:"Date",t:"date",req:true},{k:"amount",l:"Amount In (KWD)",t:"number",req:true},
+      {k:"source",l:"Source (kahan se aaya)",t:"datalist",optsFn:function(){return distinct(STATE.finance.funds||[],"source").concat(["Company A/C","Abu Nasser","Bank","Owner","Cash","Other"]).filter(function(v,i,a){return a.indexOf(v)===i;});},req:true},
+      {k:"by",l:"Received By",t:"emp"},
+      {g:"Note"},{k:"note",l:"Note",t:"textarea",wide:true}
     ]}
 };
 /* ---- Universal attachment: every register gets an "Attachment" (file + name) on its entry form.
@@ -1735,7 +1757,8 @@ var NAVGROUPS=[
     {r:"finance/log",t:"Expense Log",cnt:function(){return STATE.finance.expenses.length;},ic:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'},
     {r:"finance/new",t:"New Expense",amber:true,ic:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'},
     {r:"grd/income",t:"Income / Revenue",ent:"income",ic:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
-    {r:"grd/payroll",t:"Payroll",ent:"payroll",ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v6M18 9v6"/>'}
+    {r:"grd/payroll",t:"Payroll",ent:"payroll",ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v6M18 9v6"/>'},
+    {r:"grd/funds",t:"Petty Cash Fund",ent:"funds",ic:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>'}
   ]}
 ];
 var NAVOPEN=(function(){try{var s=JSON.parse(localStorage.getItem("smou-navopen")||"{}");return s&&typeof s==="object"?s:{};}catch(e){return {};}})();
@@ -2005,7 +2028,7 @@ function renderPage(){
   else if(route==="finance/log"){setTitle("Expense Log","Finance · all entries");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageRegister(pg,"expenses");}
   else if(route.indexOf("grd/")===0){var ent=P[1];if(!ENT[ent]){go("overview");return;}
     if(P[2]){newBtn.hidden=true;pageDetail(pg,ent,P[2]);}
-    else{setTitle(ENT[ent].title,((ent==="payroll"||ent==="income")?"Finance":"GRD Operations")+" · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;if(ent==="hiring")pageHiring(pg);else pageRegister(pg,ent);}}
+    else{setTitle(ENT[ent].title,((ent==="payroll"||ent==="income"||ent==="funds")?"Finance":"GRD Operations")+" · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;if(ent==="hiring")pageHiring(pg);else pageRegister(pg,ent);}}
   else {go("overview");}
   if(!can("edit")&&newBtn)newBtn.hidden=true;
 }
@@ -3140,6 +3163,17 @@ function pageOverview(pg){
 function eAmt(e){return num(e.amount)||0;}
 function mKey(e){var d=parseD(e.date);if(d)return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");var mi=MON.indexOf(e.month);if(mi>=0)return TODAY.getFullYear()+"-"+String(mi+1).padStart(2,"0");return "";}
 function mKeyOf(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
+/* ---- Petty cash / accounting helpers ---- */
+function isPettyPay(e){return !/company\s*a\/?c|company\s*account/i.test(e.payment||"");} // Company A/C paid = not from petty cash
+function isRecov(e){return /^y/i.test(e.recoverable||"");}       // recoverable from driver
+function isRecovered(e){return /^y/i.test(e.recovered||"");}
+function isFixed(e){return /fixed/i.test(e.costType||"");}
+function pettyBalance(){ // current running petty-cash balance (all-time): total funds in − petty-cash spends
+  var fin=(STATE.finance.funds||[]).reduce(function(a,f){return a+(num(f.amount)||0);},0);
+  var out=(STATE.finance.expenses||[]).filter(isPettyPay).reduce(function(a,e){return a+(num(e.amount)||0);},0);
+  return fin-out;
+}
+function recoverableOutstanding(){return (STATE.finance.expenses||[]).filter(function(e){return isRecov(e)&&!isRecovered(e);}).reduce(function(a,b){return a+(num(b.amount)||0);},0);}
 function prettyMonth(mk){var p=mk.split("-");return MONS[(+p[1])-1]+" '"+p[0].slice(2);}
 function avg(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:0;}
 function stdev(a,m){if(a.length<2)return 0;var v=a.reduce(function(x,y){return x+(y-m)*(y-m);},0)/a.length;return Math.sqrt(v);}
@@ -3227,7 +3261,15 @@ function pageFinance(pg){
   var incP=incAll.filter(function(e){return inPeriod(e,finPeriod);});
   var incomeTotal=incP.reduce(function(a,b){return a+(num(b.amount)||0);},0);
   var payrollTotal=(STATE.finance.payroll||[]).filter(function(pr){return inPeriodMK(payMK(pr),finPeriod);}).reduce(function(a,b){return a+netPay(b);},0);
-  var netProfit=incomeTotal-(total+payrollTotal);
+  var companyExp=ex.filter(function(e){return !isRecov(e);}).reduce(function(a,b){return a+eAmt(b);},0);
+  var recovExp=total-companyExp; // money spent that will come back from drivers (receivable, not a real cost)
+  var fixedTotal=ex.filter(isFixed).reduce(function(a,b){return a+eAmt(b);},0);
+  var varTotal=companyExp-fixedTotal; // variable company cost (exclude recoverables)
+  var netProfit=incomeTotal-(companyExp+payrollTotal);
+  var pettyBal=pettyBalance();
+  var fundInP=(STATE.finance.funds||[]).filter(function(f){return inPeriod(f,finPeriod);}).reduce(function(a,f){return a+(num(f.amount)||0);},0);
+  var pettyOutP=ex.filter(isPettyPay).reduce(function(a,e){return a+eAmt(e);},0);
+  var recovOut=recoverableOutstanding();
   function profByKey(keyFn){var m={};incP.forEach(function(e){var k=(keyFn(e)||"").trim();if(k)m[k]=(m[k]||0)+(num(e.amount)||0);});ex.forEach(function(e){var k=(keyFn(e)||"").trim();if(k)m[k]=(m[k]||0)-eAmt(e);});return Object.keys(m).map(function(k){return {label:k,value:Math.round(m[k]*1000)/1000};}).sort(function(a,b){return b.value-a.value;});}
   var vehPnl=profByKey(function(e){return e.plate;}).slice(0,8);
   var drvPnl=profByKey(function(e){return e.driver;}).slice(0,8);
@@ -3297,9 +3339,15 @@ function pageFinance(pg){
   // ---- P&L card + deep sections ----
   var pnl='<div class="grid g4" style="margin-bottom:16px">'+
     stat({l:"Income",v:money(incomeTotal)+" KD",c:"var(--good)",s:incP.length+" entries"})+
-    stat({l:"Expenses",v:money(total)+" KD",c:"var(--amber)",s:ex.length+" entries"})+
+    stat({l:"Company Expenses",v:money(companyExp+payrollTotal)+" KD",c:"var(--amber)",s:"incl. payroll"+(recovExp>0?" · "+money(recovExp)+" recoverable excl.":"")})+
     stat({l:"Payroll",v:money(payrollTotal)+" KD",c:"var(--indigo)",s:"net salaries"})+
     stat({l:"Net Profit",v:money(netProfit)+" KD",c:(netProfit>=0?"var(--good)":"var(--crit)"),s:(netProfit>=0?"profit":"loss")+" · "+periodLabel(finPeriod)})+
+  '</div>';
+  var acct='<div class="grid g4" style="margin-bottom:16px">'+
+    stat({l:"Petty Cash Balance",v:money(pettyBal)+" KD",c:(pettyBal<20?"var(--crit)":"var(--good)"),s:(pettyBal<20?"low — top up soon":"available now")})+
+    stat({l:"Fund In",v:money(fundInP)+" KD",c:"var(--teal)",s:"received · "+periodLabel(finPeriod)})+
+    stat({l:"Recoverable",v:money(recovOut)+" KD",c:"var(--indigo)",s:"to collect from drivers"})+
+    stat({l:"Fixed / Variable",v:money(fixedTotal)+" / "+money(varTotal),c:"var(--amber)",s:"company cost · "+periodLabel(finPeriod)})+
   '</div>';
   var budCard='<div class="card"><div class="card-h"><h3>Budget vs Actual</h3><span class="hint">'+prettyMonth(tm)+(can("edit")?' · <a data-act="editbudgets" style="color:var(--teal);cursor:pointer">edit</a>':'')+'</span></div><div class="card-b">'+
     (budCats.length?budCats.map(function(c){var act=thisMonthCat[c]||0,bud=bmap[c];var pct=Math.min(100,Math.round(act/bud*100));var over=act>bud;var col=over?"var(--crit)":pct>=80?"var(--amber)":"var(--good)";return '<div style="margin:11px 0"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>'+esc(c)+'</span><span class="mono">'+money(act)+' / '+money(bud)+(over?' <span style="color:var(--crit);font-weight:700">OVER</span>':'')+'</span></div><div class="bt" style="height:8px"><div class="bf" style="width:'+pct+'%;background:'+col+'"></div></div></div>';}).join(""):'<div class="empty" style="padding:20px">'+svg('<path d="M3 3v18h18"/>')+'<h4>No budgets set</h4><p>Set a monthly budget per category to track over/under-spend.</p>'+(can("edit")?'<button class="btn sm" data-act="editbudgets" style="margin-top:10px">Set budgets</button>':'')+'</div>')+
@@ -3312,9 +3360,9 @@ function pageFinance(pg){
     '<div class="card"><div class="card-h"><h3>Fuel Efficiency</h3><span class="hint">km per KD</span></div><div class="card-b">'+(effItems.length?hbars(effItems,{}):'<div class="empty" style="padding:18px">'+svg('<path d="M3 13l2-5h14l2 5v5"/>')+'<h4>Not enough data</h4><p>Add KM logs (Vehicle Service) + Fuel expenses per vehicle.</p></div>')+'</div></div>'+
     budCard+
   '</div>';
-  var cta='<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn amber" data-route="finance/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>New Expense</button><button class="btn" data-route="grd/income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Income</button><button class="btn" data-route="finance/log">Expense Log</button>'+(hasDemo?'<button class="btn ghost" data-act="clearsample">Clear sample data</button>':'')+'</div>';
+  var cta='<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn amber" data-route="finance/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>New Expense</button><button class="btn" data-route="grd/income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Income</button><button class="btn" data-route="grd/funds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Add Fund</button><button class="btn" data-route="finance/log">Expense Log</button>'+(hasDemo?'<button class="btn ghost" data-act="clearsample">Clear sample data</button>':'')+'</div>';
 
-  pg.innerHTML=chips+sampleBar+pnl+kpis+insHtml+deep+trend+breakdown+cta;
+  pg.innerHTML=chips+sampleBar+pnl+acct+kpis+insHtml+deep+trend+breakdown+cta;
 }
 
 /* ============ SAMPLE EXPENSES (demo) ============ */
@@ -3756,7 +3804,7 @@ function openRowMenu(btn,ent,id){
 function openDetail(ent,id){go(ent==="expenses"?"finance/log/"+id:"grd/"+ent+"/"+id);}
 
 /* ============ DETAIL PAGE ============ */
-function crumbFor(ent){return ent==="expenses"?"Finance · Expense Log":ent==="payroll"?"Finance · Payroll":ent==="income"?"Finance · Income":"GRD Operations · "+ENT[ent].title;}
+function crumbFor(ent){return ent==="expenses"?"Finance · Expense Log":ent==="payroll"?"Finance · Payroll":ent==="income"?"Finance · Income":ent==="funds"?"Finance · Petty Cash Fund":"GRD Operations · "+ENT[ent].title;}
 function detailSubtitle(ent,r){
   if(ent==="drivers")return [r.nat,r.veh,r.site,cap(r.status)].filter(Boolean).join(" · ");
   if(ent==="vehicles")return [r.brand,r.model,r.plate].filter(Boolean).join(" · ");
@@ -4424,7 +4472,7 @@ if(SB_ON){
   try{var _cc=JSON.parse(localStorage.getItem("smou-cache")||"null");
     if(_cc&&_cc.grd){STATE.grd=Object.assign(STATE.grd||{},_cc.grd);if(_cc.finance)STATE.finance=Object.assign(STATE.finance||{},_cc.finance);
       ["drivers","vehicles","fuel","sims","housing","compdocs","service","hiring","fines","incidents","maintenance","attendance","perf","orderlog"].forEach(function(k){if(!STATE.grd[k])STATE.grd[k]=[];});
-      ["payroll","income","budgets","expenses"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});
+      ["payroll","income","budgets","funds","expenses"].forEach(function(k){if(!STATE.finance[k])STATE.finance[k]=[];});
       snapshotShadow();_hadCache=true;}
   }catch(e){}
   if(_hadCache)renderApp();else showSplash("Connecting…");
