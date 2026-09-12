@@ -905,6 +905,20 @@ function avatarHTML(r,sz){var s=sz||30;
   if(r.photo)return '<img class="mini-ava" style="width:'+s+'px;height:'+s+'px" src="'+esc(r.photo)+'" alt="">';
   var ini=((r.name||"?").trim().charAt(0)||"?").toUpperCase();
   return '<span class="mini-ava ini" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.42)+'px">'+esc(ini)+'</span>';}
+/* ---- Employee photo auto-link: one photo (uploaded on the Employee) shows wherever that person's name appears ---- */
+function empPhotoByName(name){
+  if(!name)return "";var n=String(name).trim().toLowerCase();if(!n)return "";
+  var ds=(STATE.grd&&STATE.grd.drivers)||[];
+  for(var i=0;i<ds.length;i++){if(String(ds[i].name||"").trim().toLowerCase()===n&&ds[i].photo)return ds[i].photo;}
+  return "";
+}
+// avatar for a person referenced only by name (photo if that employee has one, else initials)
+function nameAvatar(name,sz){return avatarHTML({photo:empPhotoByName(name),name:name},sz||26);}
+// table cell: employee photo + name, side by side
+function nameCell(name){
+  if(!name||!String(name).trim())return '<span style="color:var(--muted)">—</span>';
+  return '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+nameAvatar(name,26)+'<span class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(name)+'</span></div>';
+}
 function expClass(days){if(days<0)return "crit";if(days<=30)return "crit";if(days<=90)return "warn";return "good";}
 function expCell(s){var d=parseD(s);if(!d)return '<span style="color:var(--muted)">—</span>';var dd=daysTo(d);
   return '<span class="mono" style="color:var(--'+expClass(dd)+')">'+d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)+'</span>';}
@@ -1368,7 +1382,7 @@ var ENT={
     columns:[
       {h:"Plate",v:function(r){return '<span class="mono nm">'+esc(r.plate||"—")+'</span>';},s:function(r){return r.plate;}},
       {h:"Brand / Model",v:function(r){return '<span class="nm">'+esc(r.brand||"—")+'</span>'+(r.model?' <span class="sub">'+esc(r.model)+'</span>':"");},s:function(r){return r.brand;}},
-      {h:"Driver",v:function(r){return esc(r.driver||"—");},s:function(r){return (r.driver||"").toLowerCase();}},
+      {h:"Driver",v:function(r){return nameCell(r.driver);},s:function(r){return (r.driver||"").toLowerCase();}},
       {h:"Status",v:function(r){return r.status?pill(r.status,statusClass(r.status)):"—";},s:function(r){return r.status;}},
       {h:"Company",v:function(r){return esc(r.company||"—");},s:function(r){return r.company;}},
       {h:"Chassis",v:function(r){return '<span class="mono">'+esc(r.chassis||"—")+'</span>';},s:function(r){return r.chassis;}}
@@ -1387,7 +1401,7 @@ var ENT={
     searchKeys:["name","card","civil","site","company","plate"],
     filters:[{k:"company",lab:"All companies",opts:null},{k:"site",lab:"All sites",opts:"sites"},{k:"vehType",lab:"All vehicles",opts:"vehicleTypes"}],
     columns:[
-      {h:"Holder",v:function(r){return '<span class="nm">'+esc(r.name||"—")+'</span>';},s:function(r){return (r.name||"").toLowerCase();}},
+      {h:"Holder",v:function(r){return nameCell(r.name);},s:function(r){return (r.name||"").toLowerCase();}},
       {h:"Card No.",v:function(r){return '<span class="mono">'+esc(r.card||"—")+'</span>';},s:function(r){return r.card;}},
       {h:"Vehicle",v:function(r){return esc(r.vehType||"—");},s:function(r){return r.vehType;}},
       {h:"Recharge",v:function(r){return '<span class="mono">'+esc(r.recharge||"—")+'</span>';},s:function(r){return num(r.recharge)||0;}},
@@ -1409,7 +1423,7 @@ var ENT={
     filters:[{k:"company",lab:"All companies",opts:null}],
     columns:[
       {h:"Mobile No.",v:function(r){return '<span class="mono nm">'+esc(r.mobile||"—")+'</span>';},s:function(r){return r.mobile;}},
-      {h:"Holder",v:function(r){return esc(r.name||"—");},s:function(r){return (r.name||"").toLowerCase();}},
+      {h:"Holder",v:function(r){return nameCell(r.name);},s:function(r){return (r.name||"").toLowerCase();}},
       {h:"Civil ID",v:function(r){return '<span class="mono">'+esc(r.civil||"—")+'</span>';},s:function(r){return r.civil;}},
       {h:"SIM Serial",v:function(r){return '<span class="mono">'+esc(r.simSerial||"—")+'</span>';},s:function(r){return r.simSerial;}},
       {h:"Issued",v:function(r){return '<span class="mono">'+fmtD(r.simIssue)+'</span>';},s:function(r){var d=parseD(r.simIssue);return d?d.getTime():0;}}
@@ -1491,7 +1505,7 @@ var ENT={
     columns:[
       {h:"Date",v:function(r){return '<span class="mono">'+fmtD(r.date)+'</span>';},s:function(r){var d=parseD(r.date);return d?d.getTime():0;}},
       {h:"Vehicle",v:function(r){return '<span class="mono nm">'+esc(r.plate||"—")+'</span>';},s:function(r){return r.plate||"";}},
-      {h:"Driver",v:function(r){return esc(r.driver||"—");},s:function(r){return (r.driver||"").toLowerCase();}},
+      {h:"Driver",v:function(r){return nameCell(r.driver);},s:function(r){return (r.driver||"").toLowerCase();}},
       {h:"Violation",v:function(r){return esc(r.reason||"—");},s:function(r){return r.reason;}},
       {h:"Amount",v:function(r){return '<span class="mono nm" style="color:var(--amber-2)">'+money(num(r.amount))+'</span>';},s:function(r){return num(r.amount)||0;}},
       {h:"Status",v:function(r){return r.status?pill(cap(r.status),statusClass(r.status)):"—";},s:function(r){return r.status;}}
@@ -1513,7 +1527,7 @@ var ENT={
     columns:[
       {h:"Date",v:function(r){return '<span class="mono">'+fmtD(r.date)+'</span>';},s:function(r){var d=parseD(r.date);return d?d.getTime():0;}},
       {h:"Vehicle",v:function(r){return '<span class="mono nm">'+esc(r.plate||"—")+'</span>';},s:function(r){return r.plate||"";}},
-      {h:"Driver",v:function(r){return esc(r.driver||"—");},s:function(r){return (r.driver||"").toLowerCase();}},
+      {h:"Driver",v:function(r){return nameCell(r.driver);},s:function(r){return (r.driver||"").toLowerCase();}},
       {h:"Type",v:function(r){return esc(r.type||"—");},s:function(r){return r.type;}},
       {h:"Severity",v:function(r){return r.severity?pill(r.severity,statusClass(r.severity)):"—";},s:function(r){return r.severity;}},
       {h:"Cost",v:function(r){return '<span class="mono nm" style="color:var(--amber-2)">'+money(num(r.cost))+'</span>';},s:function(r){return num(r.cost)||0;}},
@@ -1555,7 +1569,7 @@ var ENT={
     searchKeys:["driver","type","reason"],
     filters:[{k:"type",lab:"All types",opts:null},{k:"status",lab:"All statuses",opts:null}],
     columns:[
-      {h:"Employee",v:function(r){return '<span class="nm">'+esc(r.driver||"—")+'</span>';},s:function(r){return (r.driver||"").toLowerCase();}},
+      {h:"Employee",v:function(r){return nameCell(r.driver);},s:function(r){return (r.driver||"").toLowerCase();}},
       {h:"Type",v:function(r){return r.type?pill(r.type,statusClass(r.type)):"—";},s:function(r){return r.type;}},
       {h:"From",v:function(r){return '<span class="mono">'+fmtD(r.fromDate)+'</span>';},s:function(r){var d=parseD(r.fromDate);return d?d.getTime():0;}},
       {h:"To",v:function(r){return '<span class="mono">'+fmtD(r.toDate)+'</span>';},s:function(r){var d=parseD(r.toDate);return d?d.getTime():0;}},
@@ -1580,7 +1594,7 @@ var ENT={
     columns:[
       {h:"Date",v:function(r){return '<span class="mono">'+fmtD(r.date)+'</span>';},s:function(r){var d=parseD(r.date);return d?d.getTime():0;}},
       {h:"Platform",v:function(r){return r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—";},s:function(r){return r.platform;}},
-      {h:"Driver",v:function(r){return esc(r.driver||"—");},s:function(r){return (r.driver||"").toLowerCase();}},
+      {h:"Driver",v:function(r){return nameCell(r.driver);},s:function(r){return (r.driver||"").toLowerCase();}},
       {h:"Vehicle",v:function(r){return '<span class="mono">'+esc(r.plate||"—")+'</span>';},s:function(r){return r.plate;}},
       {h:"Amount",v:function(r){return '<span class="mono nm" style="color:var(--good)">'+money(num(r.amount))+'</span>';},s:function(r){return num(r.amount)||0;}}
     ],
@@ -1596,7 +1610,7 @@ var ENT={
     searchKeys:["employee","month","status","year"],
     filters:[{k:"month",lab:"All months",opts:"months"},{k:"status",lab:"All statuses",opts:null},{k:"year",lab:"All years",opts:null}],
     columns:[
-      {h:"Employee",v:function(r){return '<span class="nm">'+esc(r.employee||"—")+'</span>';},s:function(r){return (r.employee||"").toLowerCase();}},
+      {h:"Employee",v:function(r){return nameCell(r.employee);},s:function(r){return (r.employee||"").toLowerCase();}},
       {h:"Period",v:function(r){return '<span class="mono">'+esc((r.month||"")+" "+(r.year||""))+'</span>';},s:function(r){return (r.year||"")+"-"+esc(r.month||"");}},
       {h:"Basic",v:function(r){return '<span class="mono">'+money(num(r.basic))+'</span>';},s:function(r){return num(r.basic)||0;}},
       {h:"Deductions",v:function(r){return '<span class="mono" style="color:var(--crit)">'+money(dedTotal(r))+'</span>';},s:function(r){return dedTotal(r);}},
@@ -1623,7 +1637,7 @@ var ENT={
       {h:"Amount (KWD)",v:function(r){return '<span class="mono nm" style="color:var(--amber-2)">'+money(num(r.amount))+'</span>'+(r.receipt?' <span class="docbadge" title="receipt attached">'+svg('<path d="M21 8v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h9z"/><path d="M13 2v6h6"/>')+'</span>':'');},s:function(r){return num(r.amount)||0;}},
       {h:"Platform",v:function(r){return r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—";},s:function(r){return r.platform;}},
       {h:"Payment",v:function(r){return esc(r.payment||"—");},s:function(r){return r.payment;}},
-      {h:"Driver / Ref",v:function(r){return esc(r.driver||r.plate||"—");},s:function(r){return r.driver;}}
+      {h:"Driver / Ref",v:function(r){return r.driver?nameCell(r.driver):('<span class="mono">'+esc(r.plate||"—")+'</span>');},s:function(r){return r.driver;}}
     ],
     fields:[
       {g:"Entry"},
@@ -2046,6 +2060,9 @@ function pvAva(ent,rec,primary,mode,id){
     }
     return '<div class="pvc-ava">'+(rec.photo?'<span class="ava-clip"><img src="'+esc(rec.photo)+'" alt=""></span>':esc(initial))+'</div>';
   }
+  // linked employee photo — if this record names an employee who has a photo, show it here too
+  var linkName=rec.driver||rec.employee||((ent==="fuel"||ent==="sims")?rec.name:"");
+  if(linkName){var lp=empPhotoByName(linkName);if(lp)return '<div class="'+(mode==="detail"?"detail-ava":"pvc-ava")+'"><span class="ava-clip"><img src="'+esc(lp)+'" alt=""></span></div>';}
   var vt=(rec.veh||rec.vehType||"")+"";
   if(/bike|motor|scoot/i.test(vt))return '<div class="pvc-ava">'+vIcon("bike")+'</div>';
   if(/car|sedan|van|vehicle/i.test(vt)||ent==="vehicles"||ent==="fuel")return '<div class="pvc-ava">'+vIcon("car")+'</div>';
