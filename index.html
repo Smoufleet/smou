@@ -1684,7 +1684,7 @@ var ENT={
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
-  funds:{title:"Petty Cash Fund",singular:"Fund Top-up",path:"finance.funds",idp:"fund",defsort:0,defdir:-1,
+  funds:{title:"Company Wallet",singular:"Wallet Top-up",path:"finance.funds",idp:"fund",defsort:0,defdir:-1,
     searchKeys:["source","note","by"],
     filters:[{k:"source",lab:"All sources",opts:null}],
     columns:[
@@ -1695,7 +1695,7 @@ var ENT={
       {h:"Note",v:function(r){return esc(r.note||"—");},s:function(r){return r.note;}}
     ],
     fields:[
-      {g:"Fund Received"},
+      {g:"Cash Received"},
       {k:"date",l:"Date",t:"date",req:true},{k:"amount",l:"Amount In (KWD)",t:"number",req:true},
       {k:"source",l:"Source (kahan se aaya)",t:"datalist",optsFn:function(){return distinct(STATE.finance.funds||[],"source").concat(["Company A/C","Abu Nasser","Bank","Owner","Cash","Other"]).filter(function(v,i,a){return a.indexOf(v)===i;});},req:true},
       {k:"by",l:"Received By",t:"emp"},
@@ -1758,7 +1758,7 @@ var NAVGROUPS=[
     {r:"finance/new",t:"New Expense",amber:true,ic:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'},
     {r:"grd/income",t:"Income / Revenue",ent:"income",ic:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
     {r:"grd/payroll",t:"Payroll",ent:"payroll",ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v6M18 9v6"/>'},
-    {r:"grd/funds",t:"Petty Cash Fund",ent:"funds",ic:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>'}
+    {r:"grd/funds",t:"Company Wallet",ent:"funds",ic:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>'}
   ]}
 ];
 var NAVOPEN=(function(){try{var s=JSON.parse(localStorage.getItem("smou-navopen")||"{}");return s&&typeof s==="object"?s:{};}catch(e){return {};}})();
@@ -3344,8 +3344,8 @@ function pageFinance(pg){
     stat({l:"Net Profit",v:money(netProfit)+" KD",c:(netProfit>=0?"var(--good)":"var(--crit)"),s:(netProfit>=0?"profit":"loss")+" · "+periodLabel(finPeriod)})+
   '</div>';
   var acct='<div class="grid g4" style="margin-bottom:16px">'+
-    stat({l:"Petty Cash Balance",v:money(pettyBal)+" KD",c:(pettyBal<20?"var(--crit)":"var(--good)"),s:(pettyBal<20?"low — top up soon":"available now")})+
-    stat({l:"Fund In",v:money(fundInP)+" KD",c:"var(--teal)",s:"received · "+periodLabel(finPeriod)})+
+    stat({l:"Wallet Balance",v:money(pettyBal)+" KD",c:(pettyBal<20?"var(--crit)":"var(--good)"),s:(pettyBal<20?"low — top up soon":"available now")})+
+    stat({l:"Money In",v:money(fundInP)+" KD",c:"var(--teal)",s:"received · "+periodLabel(finPeriod)})+
     stat({l:"Recoverable",v:money(recovOut)+" KD",c:"var(--indigo)",s:"to collect from drivers"})+
     stat({l:"Fixed / Variable",v:money(fixedTotal)+" / "+money(varTotal),c:"var(--amber)",s:"company cost · "+periodLabel(finPeriod)})+
   '</div>';
@@ -3360,7 +3360,7 @@ function pageFinance(pg){
     '<div class="card"><div class="card-h"><h3>Fuel Efficiency</h3><span class="hint">km per KD</span></div><div class="card-b">'+(effItems.length?hbars(effItems,{}):'<div class="empty" style="padding:18px">'+svg('<path d="M3 13l2-5h14l2 5v5"/>')+'<h4>Not enough data</h4><p>Add KM logs (Vehicle Service) + Fuel expenses per vehicle.</p></div>')+'</div></div>'+
     budCard+
   '</div>';
-  var cta='<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn amber" data-route="finance/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>New Expense</button><button class="btn" data-route="grd/income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Income</button><button class="btn" data-route="grd/funds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Add Fund</button><button class="btn" data-route="finance/log">Expense Log</button>'+(hasDemo?'<button class="btn ghost" data-act="clearsample">Clear sample data</button>':'')+'</div>';
+  var cta='<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn amber" data-route="finance/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>New Expense</button><button class="btn" data-route="grd/income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Income</button><button class="btn" data-route="grd/funds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Add to Wallet</button><button class="btn" data-route="finance/log">Expense Log</button>'+(hasDemo?'<button class="btn ghost" data-act="clearsample">Clear sample data</button>':'')+'</div>';
 
   pg.innerHTML=chips+sampleBar+pnl+acct+kpis+insHtml+deep+trend+breakdown+cta;
 }
@@ -3804,7 +3804,7 @@ function openRowMenu(btn,ent,id){
 function openDetail(ent,id){go(ent==="expenses"?"finance/log/"+id:"grd/"+ent+"/"+id);}
 
 /* ============ DETAIL PAGE ============ */
-function crumbFor(ent){return ent==="expenses"?"Finance · Expense Log":ent==="payroll"?"Finance · Payroll":ent==="income"?"Finance · Income":ent==="funds"?"Finance · Petty Cash Fund":"GRD Operations · "+ENT[ent].title;}
+function crumbFor(ent){return ent==="expenses"?"Finance · Expense Log":ent==="payroll"?"Finance · Payroll":ent==="income"?"Finance · Income":ent==="funds"?"Finance · Company Wallet":"GRD Operations · "+ENT[ent].title;}
 function detailSubtitle(ent,r){
   if(ent==="drivers")return [r.nat,r.veh,r.site,cap(r.status)].filter(Boolean).join(" · ");
   if(ent==="vehicles")return [r.brand,r.model,r.plate].filter(Boolean).join(" · ");
