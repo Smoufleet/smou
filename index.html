@@ -902,7 +902,7 @@ function statusClass(s){s=(s||"").toUpperCase();
   return "neutral";}
 function pill(txt,cls){return '<span class="pill '+cls+'"><span class="pd"></span>'+esc(txt)+'</span>';}
 function avatarHTML(r,sz){var s=sz||30;
-  if(r.photo)return '<img class="mini-ava" style="width:'+s+'px;height:'+s+'px" src="'+r.photo+'" alt="">';
+  if(r.photo)return '<img class="mini-ava" style="width:'+s+'px;height:'+s+'px" src="'+esc(r.photo)+'" alt="">';
   var ini=((r.name||"?").trim().charAt(0)||"?").toUpperCase();
   return '<span class="mini-ava ini" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.42)+'px">'+esc(ini)+'</span>';}
 function expClass(days){if(days<0)return "crit";if(days<=30)return "crit";if(days<=90)return "warn";return "good";}
@@ -1088,16 +1088,9 @@ function persistSB(){
   if(ups.length){var _seen={},_uniq=[];for(var _i=ups.length-1;_i>=0;_i--){var _k=ups[_i].collection+"/"+ups[_i].id;if(_seen[_k])continue;_seen[_k]=1;_uniq.push(ups[_i]);}ups=_uniq.reverse();}
   if(!ups.length&&!delOps.length){setSave("","Saved & synced");return;}
 
-  // Instant broadcast over WebSocket (sub-50ms peer update)
-  ups.forEach(function(u){ broadcastChange(u.collection,u.id,u.data,"UPDATE"); });
-  delOps.forEach(function(d){ broadcastChange(d[0],d[1],null,"DELETE"); });
-
-  // Direct fast-path: for small standard edits, directly upsert in one single roundtrip
-  var doPersist = (ups.length > 0 && ups.length <= 5) ? 
-    Promise.resolve(ups.map(function(u){return {collection:u.collection,id:u.id,data:u.data,merged:false};})) : 
-    mergeUps(ups);
-
-  doPersist.then(function(mups){
+  // ALWAYS run the conflict-safe field-level merge — never blind-overwrite another device's edit.
+  // (Previously small edits skipped this, which could silently lose a concurrent change.)
+  mergeUps(ups).then(function(mups){
     var tasks=[];
     if(mups.length)tasks.push(SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}));
     delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
@@ -1115,6 +1108,9 @@ function persistSB(){
       if(ups.length)clearPending(ups);
       if(delOps.length)clearPendingDel(delOps);
       cacheSave();
+      // Broadcast ONLY after a confirmed DB write, and send the MERGED data (mups) — not the raw pre-merge copy.
+      mups.forEach(function(m){ broadcastChange(m.collection,m.id,m.data,"UPDATE"); });
+      delOps.forEach(function(d){ broadcastChange(d[0],d[1],null,"DELETE"); });
       if(mups.some(function(m){return m.merged;})){if(!_rtBusy())renderApp();toast("Merged with changes from another device — nothing lost.","good");}
       setSave("","Saved & synced");
     });
@@ -2044,11 +2040,11 @@ function pvAva(ent,rec,primary,mode,id){
     if(mode==="detail"&&ent==="drivers"){
       var cam='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5"/></svg>';
       return '<div class="detail-ava photo" data-act="photopick" data-id="'+id+'" title="Upload / change photo">'+
-        (rec.photo?'<span class="ava-clip"><img src="'+rec.photo+'" alt=""></span>':esc(initial))+
+        (rec.photo?'<span class="ava-clip"><img src="'+esc(rec.photo)+'" alt=""></span>':esc(initial))+
         '<span class="cam">'+cam+'</span>'+
         (rec.photo?'<button class="ava-del" data-act="photodel" data-id="'+id+'" title="Remove photo">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button>':'')+'</div>';
     }
-    return '<div class="pvc-ava">'+(rec.photo?'<span class="ava-clip"><img src="'+rec.photo+'" alt=""></span>':esc(initial))+'</div>';
+    return '<div class="pvc-ava">'+(rec.photo?'<span class="ava-clip"><img src="'+esc(rec.photo)+'" alt=""></span>':esc(initial))+'</div>';
   }
   var vt=(rec.veh||rec.vehType||"")+"";
   if(/bike|motor|scoot/i.test(vt))return '<div class="pvc-ava">'+vIcon("bike")+'</div>';
