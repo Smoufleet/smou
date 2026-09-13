@@ -760,7 +760,7 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 <body>
 <div id="root"></div>
 <script id="seed">
-window.__SEEDSTATE__={"grd":{"drivers":[],"vehicles":[],"fuel":[],"sims":[],"housing":[]},"finance":{"expenses":[]},"lookups":{"nationalities":["India","Bangladesh","Nigeria","Sudan","Uganda","Nepal","Sierra Leone","Sri Lanka"],"vehicleTypes":["CAR","BIKE","REPORTER"],"sites":["TALABAT","KEETA","OTHERS"],"zones":["HAWALLI","AVENUES","MAHBOULA","JAHRA","CO.","DRIVER"],"statuses":["ACTIVE","IN PROCESS","Office","TERMINATED","OUTSIDE"],"accommodations":["SMOU FR - ROOM-1","SMOU HW - ROOM-8","SMOU HW - ROOM-9","OWN ROOM"],"brands":["CHERY","NISSAN","MITSUBISHI","CHANGAN","TOYOTA","HONDA","BAJAJ"],"companies":["Other","Talabat","Keeta","SMOU"],"fleetStatuses":["Working","Service center","Garage","Police station","Spare","Others","Vacation","Accident","Sold","Showroom"],"categories":["Vehicle/Bike Maintenance","Fuel","Vehicle/Bike Acquisition","Insurance","Government/Legal Fees","Employee Documents & Compliance","Salaries & Wages","Communication","Rent","Miscellaneous/Admin"],"subcategories":{"Vehicle/Bike Maintenance":["Oil Change","Battery Change","Tire Change","Paint Job","Brake Service","Engine Repair","Chain/Belt Service","General Servicing","Car Wash","Other Maintenance","Radiator Fix","Ac Fix","Accidental Damage"],"Fuel":["Petrol","Diesel"],"Vehicle/Bike Acquisition":["Monthly Installment","Full Purchase","Lease Payment"],"Insurance":["Vehicle Insurance","Bike Insurance","Staff Health Insurance"],"Government/Legal Fees":["Traffic Fine","Residency Fine","Platform Fine"],"Employee Documents & Compliance":["Civil ID Renewal","Residency Renewal","Driving License Fee","Work Permit","Medical Certificate","Passport Renewal","Other Document"],"Salaries & Wages":["Driver Salary","Staff Salary","Incentive","Advance Payment","Food allowance"],"Communication":["Mobile/Data Plan","App Subscription","GPS"],"Rent":["Office","Accomodation"],"Miscellaneous/Admin":["Office Supplies","Bank Charges","Other Admin"]},"months":["January","February","March","April","May","June","July","August","September","October","November","December"],"platforms":["Talabat","Keeta","Snoonu","Deliveroo","Both","Others"],"payments":["Cash","Link","Both"],"finVehTypes":["Car","Bike","Car (Driver)","Bike (Rider)"]},"meta":{"updatedAt":"","updatedBy":""}};
+window.__SEEDSTATE__={"grd":{"drivers":[],"vehicles":[],"fuel":[],"sims":[],"housing":[]},"finance":{"expenses":[]},"lookups":{"nationalities":["India","Bangladesh","Nigeria","Sudan","Uganda","Nepal","Sierra Leone","Sri Lanka"],"vehicleTypes":["CAR","BIKE","REPORTER"],"sites":["TALABAT","KEETA","OTHERS"],"zones":["HAWALLI","AVENUES","MAHBOULA","JAHRA","CO.","DRIVER"],"statuses":["ACTIVE","IN PROCESS","Office","TERMINATED","OUTSIDE"],"accommodations":["SMOU FR - ROOM-1","SMOU HW - ROOM-8","SMOU HW - ROOM-9","OWN ROOM"],"brands":["CHERY","NISSAN","MITSUBISHI","CHANGAN","TOYOTA","HONDA","BAJAJ"],"companies":["Other","Talabat","Keeta","SMOU"],"fleetStatuses":["Working","Service center","Garage","Police station","Spare","Others","Vacation","Accident","Sold","Showroom"],"categories":["Vehicle/Bike Maintenance","Fuel","Vehicle/Bike Acquisition","Insurance","Government/Legal Fees","Employee Documents & Compliance","Salaries & Wages","Communication","Rent","Miscellaneous/Admin"],"subcategories":{"Vehicle/Bike Maintenance":["Oil Change","Battery Change","Tire Change","Paint Job","Brake Service","Engine Repair","Chain/Belt Service","General Servicing","Car Wash","Other Maintenance","Radiator Fix","Ac Fix","Accidental Damage"],"Fuel":["Petrol","Diesel"],"Vehicle/Bike Acquisition":["Monthly Installment","Full Purchase","Lease Payment"],"Insurance":["Vehicle Insurance","Bike Insurance","Staff Health Insurance"],"Government/Legal Fees":["Traffic Fine","Residency Fine","Platform Fine"],"Employee Documents & Compliance":["Civil ID Renewal","Residency Renewal","Driving License Fee","Work Permit","Medical Certificate","Passport Renewal","Other Document"],"Salaries & Wages":["Salary","Incentive","Advance Payment","Food allowance"],"Communication":["Mobile/Data Plan","App Subscription","GPS"],"Rent":["Office","Accomodation"],"Miscellaneous/Admin":["Office Supplies","Bank Charges","Other Admin"]},"months":["January","February","March","April","May","June","July","August","September","October","November","December"],"platforms":["Talabat","Keeta","Snoonu","Deliveroo","Both","Others"],"payments":["Cash","Link","Both"],"finVehTypes":["Car","Bike","Car (Driver)","Bike (Rider)"]},"meta":{"updatedAt":"","updatedBy":""}};
 </script>
 <script>
 window.__SB__ = {
@@ -1683,11 +1683,14 @@ var ENT={
     fields:[
       {g:"Entry"},
       {k:"date",l:"Date",t:"date",req:true},{k:"category",l:"Expense Type",t:"select",opts:"categories",req:true,dep:"sub"},
-      {k:"sub",l:"Sub-Category",t:"select",optsFn:function(f){return (STATE.lookups.subcategories[f.category]||[]);}},{k:"amount",l:"Amount (KWD)",t:"number",req:true},
+      {k:"sub",l:"Sub-Category",t:"select",optsFn:function(f){if(/salar|wage/i.test(f.category||""))return ["Salary","Incentive","Advance Payment","Food allowance"];return (STATE.lookups.subcategories[f.category]||[]);}},{k:"amount",l:"Amount (KWD)",t:"number",req:true},
       {g:"Tags"},
       {k:"platform",l:"Platform",t:"select",opts:"platforms"},{k:"payment",l:"Payment Method",t:"select",opts:"payments"},
       {k:"vehType",l:"Vehicle / Rider Type",t:"datalist",opts:"finVehTypes"},{k:"plate",l:"Vehicle / Plate",t:"text"},
       {k:"driver",l:"Employee / Rider",t:"emp"},
+      {g:"Salary / Wage — which month?"},
+      {k:"wmonth",l:"For Month",t:"select",opts:"months",hint:"Salaries & Wages ke liye — kis mahine ka salary/allowance hai. Payroll usi mahine me count karega."},
+      {k:"wyear",l:"For Year",t:"number",hint:"Khaali chhodo = date ka year."},
       {g:"Accounting"},
       {k:"costType",l:"Cost Type",t:"select",optsFn:function(){return ["Variable","Fixed"];},hint:"Variable = badhta with work (fuel, salary). Fixed = har mahine same (rent, SIM)."},
       {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega (fine/advance). P&L me company cost nahi ginega."},
@@ -2039,7 +2042,7 @@ function renderPage(){
   else if(route.indexOf("finance/log/")===0){newBtn.hidden=true;pageDetail(pg,"expenses",P[2]);}
   else if(route==="finance/log"){setTitle("Expense Log","Finance · all entries");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageRegister(pg,"expenses");}
   else if(route.indexOf("grd/")===0){var ent=P[1];if(!ENT[ent]){go("overview");return;}
-    if(ent==="payroll"){setTitle("Payroll","Finance · "+payEmployees().length+" employees · auto");newBtn.hidden=true;pagePayroll(pg);}
+    if(ent==="payroll"){newBtn.hidden=true;if(P[2]){setTitle("Payslip","Finance · Payroll · details");pagePayrollDetail(pg,P[2]);}else{setTitle("Payroll","Finance · "+payEmployees().length+" employees · auto");pagePayroll(pg);}}
     else if(P[2]){newBtn.hidden=true;pageDetail(pg,ent,P[2]);}
     else{setTitle(ENT[ent].title,((ent==="income"||ent==="funds")?"Finance":"GRD Operations")+" · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;if(ent==="hiring")pageHiring(pg);else pageRegister(pg,ent);}}
   else {go("overview");}
@@ -2366,7 +2369,7 @@ function openForm(ent,id){
   // dependent selects (expense subcategory)
   cfg.fields.forEach(function(f){if(f.dep){var sel=$('[name="'+f.k+'"]',ov);if(sel)sel.addEventListener("change",function(){refreshDep(ov,cfg,f.dep,{ } );});}});
   // auto month from date
-  if(ent==="expenses"||ent==="income"){var ds=$('[name="date"]',ov);if(ds)ds.addEventListener("change",function(){var d=parseD(this.value);var ms=$('[name="month"]',ov);if(d&&ms)ms.value=MON[d.getMonth()];});}
+  if(ent==="expenses"||ent==="income"){var ds=$('[name="date"]',ov);if(ds)ds.addEventListener("change",function(){var d=parseD(this.value);if(!d)return;var ms=$('[name="month"]',ov);if(ms)ms.value=MON[d.getMonth()];var ws=$('[name="wmonth"]',ov);if(ws&&!ws.value)ws.value=MON[d.getMonth()];});}
   // payroll: auto-fill basic salary + year from chosen employee
   if(ent==="payroll"){var ye=$('[name="year"]',ov);if(ye&&!ye.value)ye.value=TODAY.getFullYear();var pe=$('[name="employee"]',ov);if(pe)pe.addEventListener("change",function(){var dr=STATE.grd.drivers.filter(function(x){return x.name===pe.value;})[0];var bs=$('[name="basic"]',ov);if(dr&&bs&&!bs.value)bs.value=dr.salary||"";});}
   setTimeout(function(){var fi=$('.ff-fields input,.ff-fields select,.ff-fields textarea',ov);if(fi)fi.focus();},50);
@@ -3378,7 +3381,7 @@ function pageFinance(pg){
   pg.innerHTML=chips+sampleBar+pnl+acct+kpis+insHtml+deep+trend+breakdown+cta;
 }
 
-/* ============ PAYROLL (auto-computed roster) ============ */
+/* ============ PAYROLL (auto-computed) ============ */
 var PAYROLL_STATUSES=["ACTIVE","OFFICE"];
 var payMK_sel="";
 function payEmployees(){
@@ -3386,80 +3389,128 @@ function payEmployees(){
     return d.name && PAYROLL_STATUSES.indexOf((d.status||"").trim().toUpperCase())>=0;
   });
 }
-// unrecovered recoverable items charged to an employee (recoverable=Yes, recovered=No) for a month
-function recovItemsFor(name,mk){
-  var items=[];
-  function add(list,amtKey,src){(list||[]).forEach(function(r){
+function payMonthOpts(){var o=[];for(var i=0;i<12;i++){o.push(mKeyOf(new Date(TODAY.getFullYear(),TODAY.getMonth()-i,1)));}return o;}
+// which payroll month a salary/wage expense counts in (explicit For-Month wins, else the date)
+function wageMK(e){
+  if(e.wmonth){var mi=MON.indexOf(e.wmonth);if(mi>=0){var d=parseD(e.date);var y=num(e.wyear)||(d?d.getFullYear():TODAY.getFullYear());return y+"-"+String(mi+1).padStart(2,"0");}}
+  return mKey(e);
+}
+// full payslip for one employee in a month-key
+function payslipFor(d,mk){
+  var name=(d.name||"").trim();
+  var basic=num(d.salary)||0;
+  var sal=[],adv=[],inc=[],food=[];
+  (STATE.finance.expenses||[]).forEach(function(e){
+    if((e.driver||"").trim()!==name)return;
+    if(!/salar|wage/i.test(e.category||""))return;            // only Salaries & Wages
+    if(mk&&wageMK(e)!==mk)return;
+    var sub=(e.sub||""),amt=eAmt(e);if(amt<=0)return;
+    if(/advance/i.test(sub))adv.push({label:"Advance Payment",amount:amt,date:e.date});
+    else if(/incentive/i.test(sub))inc.push({label:"Incentive",amount:amt,date:e.date});
+    else if(/food/i.test(sub))food.push({label:"Food Allowance",amount:amt,date:e.date});
+    else sal.push({label:(sub||"Salary"),amount:amt,date:e.date});   // base Salary
+  });
+  // recoverable-unrecovered deductions: fleet-ops + non-salary expenses
+  var recov=[];
+  function addR(list,amtKey,src){(list||[]).forEach(function(r){
     if(!isRecov(r)||isRecovered(r))return;
     if((r.recoverFrom||"").trim()!==name)return;
     if(mk&&mKey(r)!==mk)return;
-    var amt=num(r[amtKey])||0; if(amt<=0)return;
-    items.push({src:src,amount:amt,date:r.date,label:(r.reason||r.type||r.category||src)});
+    var amt=num(r[amtKey])||0;if(amt<=0)return;
+    recov.push({src:src,amount:amt,date:r.date,label:(r.reason||r.type||r.category||src)});
   });}
-  add(STATE.finance.expenses,"amount","Expense");
-  add(STATE.grd.fines,"amount","Fine");
-  add(STATE.grd.incidents,"cost","Incident");
-  add(STATE.grd.maintenance,"cost","Maintenance");
-  return items;
-}
-// salary already paid this month via an Expense (category Salaries & Wages) for this employee
-function salaryPaidFor(name,mk){
-  var paid=0,dates=[];
   (STATE.finance.expenses||[]).forEach(function(e){
-    if((e.driver||"").trim()!==name)return;
-    if(!(/salar/i.test(e.category||"")||/salar/i.test(e.sub||"")))return;
-    if(/advance/i.test(e.sub||""))return; // advance != full salary
+    if(/salar|wage/i.test(e.category||""))return;             // salary handled above
+    if(!isRecov(e)||isRecovered(e))return;
+    if((e.recoverFrom||"").trim()!==name)return;
     if(mk&&mKey(e)!==mk)return;
-    paid+=eAmt(e); if(e.date)dates.push(e.date);
+    var amt=eAmt(e);if(amt<=0)return;
+    recov.push({src:"Expense",amount:amt,date:e.date,label:(e.category||"Expense")});
   });
-  return {amount:paid,dates:dates};
+  addR(STATE.grd.fines,"amount","Fine");
+  addR(STATE.grd.incidents,"cost","Incident");
+  addR(STATE.grd.maintenance,"cost","Maintenance");
+  var salaryPaid=sal.reduce(function(a,x){return a+x.amount;},0);
+  var incentive=inc.reduce(function(a,x){return a+x.amount;},0);
+  var foodT=food.reduce(function(a,x){return a+x.amount;},0);
+  var advance=adv.reduce(function(a,x){return a+x.amount;},0);
+  var recovT=recov.reduce(function(a,x){return a+x.amount;},0);
+  var additions=incentive+foodT, deductions=advance+recovT, gross=basic+additions;
+  return {d:d,basic:basic,sal:sal,inc:inc,food:food,adv:adv,recov:recov,
+    salaryPaid:salaryPaid,incentive:incentive,foodT:foodT,advance:advance,recovT:recovT,
+    additions:additions,deductions:deductions,gross:gross,net:gross-deductions,paid:salaryPaid>0};
 }
+function payMonthSelHTML(){
+  return '<select id="payMonthSel" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px">'+payMonthOpts().map(function(k){return '<option value="'+k+'"'+(k===payMK_sel?' selected':'')+'>'+prettyMonth(k)+'</option>';}).join("")+'</select>';
+}
+function payStat(o){return '<div class="stat card"><span class="strip" style="background:'+o.c+'"></span><div class="s-lab">'+o.l+'</div><div class="s-val" style="font-size:26px">'+o.v+'</div><div class="s-sub">'+o.s+'</div></div>';}
+
 function pagePayroll(pg){
   if(!payMK_sel)payMK_sel=mKeyOf(TODAY);
-  var opts=[];for(var i=0;i<12;i++){opts.push(mKeyOf(new Date(TODAY.getFullYear(),TODAY.getMonth()-i,1)));}
   var emps=payEmployees().slice().sort(function(a,b){return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1;});
-  var rows=emps.map(function(d){
-    var basic=num(d.salary)||0;
-    var items=recovItemsFor(d.name,payMK_sel);
-    var ded=items.reduce(function(a,x){return a+x.amount;},0);
-    var paid=salaryPaidFor(d.name,payMK_sel);
-    return {d:d,basic:basic,items:items,ded:ded,net:basic-ded,paid:paid};
-  });
+  var rows=emps.map(function(d){return payslipFor(d,payMK_sel);});
   var totBasic=rows.reduce(function(a,r){return a+r.basic;},0);
-  var totDed=rows.reduce(function(a,r){return a+r.ded;},0);
+  var totAdd=rows.reduce(function(a,r){return a+r.additions;},0);
+  var totDed=rows.reduce(function(a,r){return a+r.deductions;},0);
   var totNet=rows.reduce(function(a,r){return a+r.net;},0);
-  var paidCount=rows.filter(function(r){return r.paid.amount>0;}).length;
-  function stat(o){return '<div class="stat card"><span class="strip" style="background:'+o.c+'"></span><div class="s-lab">'+o.l+'</div><div class="s-val" style="font-size:26px">'+o.v+'</div><div class="s-sub">'+o.s+'</div></div>';}
-  var monthSel='<select id="payMonthSel" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font-family:inherit;font-size:13px">'+opts.map(function(k){return '<option value="'+k+'"'+(k===payMK_sel?' selected':'')+'>'+prettyMonth(k)+'</option>';}).join("")+'</select>';
+  var paidCount=rows.filter(function(r){return r.paid;}).length;
   var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+
-    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+monthSel+'</div>'+
-    '<div class="hint">Auto-listed: <b>Active / Office</b> employees · salary paid via <b>Expenses</b> (Salaries &amp; Wages)</div></div>';
+    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+payMonthSelHTML()+'</div>'+
+    '<div class="hint">Auto-listed <b>Active / Office</b> employees · click a row for the full payslip</div></div>';
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+
-    stat({l:"Employees",v:rows.length,c:"var(--indigo)",s:"on payroll"})+
-    stat({l:"Basic Salary",v:money(totBasic)+" KD",c:"var(--teal)",s:"total gross"})+
-    stat({l:"Deductions",v:money(totDed)+" KD",c:"var(--crit)",s:"unrecovered from drivers"})+
-    stat({l:"Net Payable",v:money(totNet)+" KD",c:"var(--good)",s:paidCount+" of "+rows.length+" paid"})+
+    payStat({l:"Employees",v:rows.length,c:"var(--indigo)",s:"on payroll"})+
+    payStat({l:"Earnings",v:money(totBasic+totAdd)+" KD",c:"var(--teal)",s:"basic + allowances"})+
+    payStat({l:"Deductions",v:money(totDed)+" KD",c:"var(--crit)",s:"advance + recoverable"})+
+    payStat({l:"Net Payable",v:money(totNet)+" KD",c:"var(--good)",s:paidCount+" of "+rows.length+" salary paid"})+
   '</div>';
-  var cards=rows.length?rows.map(function(r){
-    var d=r.d;
-    var paidPill=r.paid.amount>0?'<span class="pill good">Paid'+(r.paid.amount+0.0005<r.net?" · partial":"")+'</span>':'<span class="pill warn">Unpaid</span>';
-    var dedList=r.items.length?'<div style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">'+r.items.map(function(x){
-        return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0"><span style="color:var(--ink-2);min-width:0"><span class="pill '+(x.src==="Fine"?"crit":x.src==="Incident"?"warn":x.src==="Maintenance"?"neutral":"indigo")+'" style="margin-right:6px">'+x.src+'</span>'+esc(x.label)+(x.date?' <span style="color:var(--muted)">· '+fmtD(x.date)+'</span>':'')+'</span><span class="mono" style="color:var(--crit);white-space:nowrap">−'+money(x.amount)+'</span></div>';
-      }).join("")+'</div>':'';
-    var note=(r.ded>0&&r.paid.amount<=0)?'<div class="banner amber" style="margin-top:10px;padding:8px 10px;font-size:12px">'+svg('<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')+'<div>'+prettyMonth(payMK_sel)+': '+money(r.ded)+' KWD unrecovered — cut from salary, pay net <b>'+money(r.net)+' KWD</b>.</div></div>':'';
-    var paidNote=r.paid.amount>0?'<div class="banner info" style="margin-top:10px;padding:8px 10px;font-size:12px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<div>Salary paid: <b>'+money(r.paid.amount)+' KWD</b>'+(r.paid.dates.length?" on "+fmtD(r.paid.dates[r.paid.dates.length-1]):"")+' (logged in Expenses).</div></div>':'';
-    return '<div class="card" style="padding:14px 16px">'+
-      '<div style="display:flex;align-items:center;gap:12px">'+avatarHTML(d,40)+
-        '<div style="flex:1;min-width:0"><div class="nm" style="font-size:15px">'+esc(d.name)+'</div><div class="sub">'+esc(cap(d.status||""))+(d.veh?" · "+esc(d.veh):"")+(d.site?" · "+esc(d.site):"")+'</div></div>'+paidPill+'</div>'+
-      '<div class="grid g3" style="margin-top:12px;gap:10px">'+
-        '<div><div class="s-lab">Basic</div><div class="mono" style="font-size:17px;font-weight:700">'+money(r.basic)+'</div></div>'+
-        '<div><div class="s-lab">Deductions</div><div class="mono" style="font-size:17px;font-weight:700;color:'+(r.ded>0?"var(--crit)":"var(--ink-2)")+'">'+(r.ded>0?"−"+money(r.ded):"—")+'</div></div>'+
-        '<div><div class="s-lab">Net Payable</div><div class="mono" style="font-size:17px;font-weight:700;color:var(--good)">'+money(r.net)+'</div></div>'+
-      '</div>'+dedList+note+paidNote+'</div>';
-  }).join(""):'<div class="empty" style="padding:40px;grid-column:1/-1">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>No active employees</h4><p>Employees with status Active or Office will appear here automatically.</p></div>';
-  pg.innerHTML=head+kpis+'<div class="grid g2" style="align-items:start">'+cards+'</div>';
-  var sel=$("#payMonthSel",pg);
-  if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayroll($("#page"));});
+  var list=rows.length?'<div class="card"><div class="card-b" style="padding:6px 6px;overflow-x:auto"><table class="dt" style="min-width:640px"><thead><tr><th>Employee</th><th style="text-align:right">Basic</th><th style="text-align:right">Additions</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net Payable</th><th>Salary</th><th></th></tr></thead><tbody>'+
+    rows.map(function(r){var d=r.d;
+      return '<tr data-route="grd/payroll/'+esc(d.id)+'" style="cursor:pointer">'+
+        '<td><div style="display:flex;align-items:center;gap:10px">'+avatarHTML(d,30)+'<div><span class="nm">'+esc(d.name)+'</span><div class="sub">'+esc(cap(d.status||""))+'</div></div></div></td>'+
+        '<td class="mono" style="text-align:right">'+money(r.basic)+'</td>'+
+        '<td class="mono" style="text-align:right;color:'+(r.additions>0?"var(--good)":"var(--muted)")+'">'+(r.additions>0?"+"+money(r.additions):"—")+'</td>'+
+        '<td class="mono" style="text-align:right;color:'+(r.deductions>0?"var(--crit)":"var(--muted)")+'">'+(r.deductions>0?"−"+money(r.deductions):"—")+'</td>'+
+        '<td class="mono nm" style="text-align:right;color:var(--good)">'+money(r.net)+'</td>'+
+        '<td>'+(r.paid?'<span class="pill good">Paid</span>':'<span class="pill warn">Unpaid</span>')+'</td>'+
+        '<td style="text-align:right;color:var(--muted)">'+svg('<path d="M9 6l6 6-6 6"/>')+'</td>'+
+      '</tr>';
+    }).join("")+'</tbody></table></div></div>':'<div class="empty" style="padding:40px">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>No active employees</h4><p>Employees with status Active or Office will appear here automatically.</p></div>';
+  pg.innerHTML=head+kpis+list;
+  var sel=$("#payMonthSel",pg);if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayroll($("#page"));});
+}
+
+function pagePayrollDetail(pg,id){
+  if(!payMK_sel)payMK_sel=mKeyOf(TODAY);
+  var d=(STATE.grd.drivers||[]).filter(function(x){return String(x.id)===String(id);})[0];
+  if(!d){go("grd/payroll");return;}
+  var r=payslipFor(d,payMK_sel);
+  var back='<a class="btn ghost sm" data-route="grd/payroll" style="margin-bottom:14px;display:inline-flex">'+svg('<path d="M15 18l-6-6 6-6"/>')+'Back to payroll</a>';
+  var hdr='<div class="card" style="padding:16px 18px;margin-bottom:16px"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'+
+    avatarHTML(d,52)+
+    '<div style="flex:1;min-width:180px"><div class="nm" style="font-size:19px">'+esc(d.name)+'</div><div class="sub">'+esc(cap(d.status||""))+(d.no?" · #"+esc(d.no):"")+(d.veh?" · "+esc(d.veh):"")+(d.site?" · "+esc(d.site):"")+'</div></div>'+
+    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Month</span>'+payMonthSelHTML()+'</div>'+
+    (r.paid?'<span class="pill good">Salary Paid</span>':'<span class="pill warn">Unpaid</span>')+
+  '</div></div>';
+  function line(label,amount,sign,color,sub){
+    return '<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)"><span style="color:var(--ink-2)">'+esc(label)+(sub?' <span style="color:var(--muted)">· '+esc(sub)+'</span>':'')+'</span><span class="mono" style="font-weight:600;color:'+(color||"var(--ink)")+'">'+sign+money(amount)+'</span></div>';
+  }
+  var earnRows=line("Basic Salary",r.basic,"","var(--ink)");
+  r.inc.forEach(function(x){earnRows+=line("Incentive",x.amount,"+ ","var(--good)",fmtD(x.date));});
+  r.food.forEach(function(x){earnRows+=line("Food Allowance",x.amount,"+ ","var(--good)",fmtD(x.date));});
+  var earn='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Earnings</h3><span class="mono" style="color:var(--good);font-weight:700">'+money(r.gross)+' KD</span></div><div class="card-b" style="padding-top:0">'+earnRows+'</div></div>';
+  var dedRows="";
+  r.adv.forEach(function(x){dedRows+=line("Advance Payment",x.amount,"− ","var(--crit)",fmtD(x.date));});
+  r.recov.forEach(function(x){dedRows+=line(x.src+" — "+x.label,x.amount,"− ","var(--crit)",x.date?fmtD(x.date):"");});
+  var ded='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Deductions</h3><span class="mono" style="color:var(--crit);font-weight:700">'+(r.deductions>0?"−"+money(r.deductions):money(0))+' KD</span></div><div class="card-b" style="padding-top:0">'+(dedRows||'<div class="empty" style="padding:16px">No deductions this month.</div>')+'</div></div>';
+  var netCard='<div class="card" style="margin-bottom:16px;padding:16px 18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap"><div><div class="s-lab">Net Payable · '+prettyMonth(payMK_sel)+'</div><div class="mono" style="font-size:30px;font-weight:800;color:var(--good)">'+money(r.net)+' <span style="font-size:15px;color:var(--muted)">KD</span></div></div>'+
+    (r.paid?'<div class="banner info" style="margin:0;max-width:320px"><div>Base salary paid: <b>'+money(r.salaryPaid)+' KWD</b>'+(r.sal.length&&r.sal[r.sal.length-1].date?" on "+fmtD(r.sal[r.sal.length-1].date):"")+' (logged in Expenses).</div></div>':'<div class="banner amber" style="margin:0;max-width:320px"><div>Base salary <b>not yet paid</b> for '+prettyMonth(payMK_sel)+'. Log it in Expenses → Salaries &amp; Wages → Salary.</div></div>')+
+  '</div></div>';
+  var hist=payMonthOpts().slice(0,6).map(function(k){var s=payslipFor(d,k);return {mk:k,net:s.net,paid:s.paid,add:s.additions,ded:s.deductions};});
+  var histCard='<div class="card"><div class="card-h"><h3>Recent months</h3><span class="hint">net payable</span></div><div class="card-b" style="padding-top:6px;overflow-x:auto"><table class="dt" style="min-width:0"><thead><tr><th>Month</th><th style="text-align:right">Additions</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th><th>Salary</th></tr></thead><tbody>'+
+    hist.map(function(h){return '<tr'+(h.mk===payMK_sel?' style="background:var(--teal-bg)"':'')+'><td class="nm">'+prettyMonth(h.mk)+'</td><td class="mono" style="text-align:right;color:'+(h.add>0?"var(--good)":"var(--muted)")+'">'+(h.add>0?"+"+money(h.add):"—")+'</td><td class="mono" style="text-align:right;color:'+(h.ded>0?"var(--crit)":"var(--muted)")+'">'+(h.ded>0?"−"+money(h.ded):"—")+'</td><td class="mono nm" style="text-align:right">'+money(h.net)+'</td><td>'+(h.paid?'<span class="pill good">Paid</span>':'<span class="pill warn">Unpaid</span>')+'</td></tr>';}).join("")+
+  '</tbody></table></div></div>';
+  pg.innerHTML=back+hdr+earn+ded+netCard+histCard;
+  var sel=$("#payMonthSel",pg);if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayrollDetail($("#page"),id);});
 }
 
 /* ============ SAMPLE EXPENSES (demo) ============ */
