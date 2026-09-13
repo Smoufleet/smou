@@ -3463,7 +3463,7 @@ function pagePayroll(pg){
   var totDed=rows.reduce(function(a,r){return a+r.deductions;},0);
   var totNet=rows.reduce(function(a,r){return a+r.net;},0);
   var paidCount=rows.filter(function(r){return r.paid;}).length;
-  var search='<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 12px;min-width:220px;flex:1;max-width:340px">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'<input id="paySearch" placeholder="Search employee by name or status…" autocomplete="off" style="border:0;background:transparent;outline:none;color:var(--ink);font:inherit;width:100%">'+'</div>';
+  var search='<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:280px;max-width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="paySearch" placeholder="Search employee…" autocomplete="off" style="border:0;background:transparent;outline:none;color:var(--ink);font:inherit;width:100%;min-width:0"></div>';
   var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+
     search+
     '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+payMonthSelHTML()+'</div></div>';
