@@ -1424,7 +1424,7 @@ var ENT={
       {g:"Assignment"},
       {k:"driver",l:"Employee (Driver)",t:"emp"},{k:"status",l:"Status",t:"datalist",opts:"fleetStatuses"},
       {k:"company",l:"Company / Platform",t:"datalist",opts:"companies"},{k:"issue",l:"Issue Date",t:"date"},
-      {k:"returned",l:"Return Date",t:"date",hint:"Leave blank if still assigned"}
+      {k:"returned",l:"Return Date",t:"date"}
     ]},
   fuel:{title:"Fuel Cards",singular:"Fuel Card",path:"grd.fuel",idp:"f",defsort:0,defdir:1,
     searchKeys:["name","card","civil","site","company","plate"],
@@ -1512,7 +1512,7 @@ var ENT={
       {k:"plate",l:"Vehicle / Plate",t:"plate",req:true},{k:"user",l:"Current User (Employee)",t:"emp"},
       {g:"Odometer & Service"},
       {k:"odo",l:"Current Odometer (km)",t:"number"},{k:"lastService",l:"Odometer at Last Service (km)",t:"number"},
-      {k:"interval",l:"Service Interval (km)",t:"number",hint:"Default 5000"},{k:"lastServiceDate",l:"Last Service Date",t:"date"},
+      {k:"interval",l:"Service Interval (km)",t:"number"},{k:"lastServiceDate",l:"Last Service Date",t:"date"},
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
@@ -1549,9 +1549,9 @@ var ENT={
       {g:"Payment"},
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Unpaid","Paid","Disputed"];}},{k:"payby",l:"Paid By",t:"select",optsFn:function(){return ["Company","Driver"];}},
       {g:"Recovery"},
-      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega. Payroll me dikhega."},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
-      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = paisa mil gaya (settle). Payroll se hat jayega."},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
   incidents:{title:"Accident / Incident",singular:"Incident",path:"grd.incidents",idp:"in",defsort:0,defdir:-1,
@@ -1575,9 +1575,9 @@ var ENT={
       {g:"Repair & Status"},
       {k:"cost",l:"Repair Cost (KWD)",t:"number"},{k:"status",l:"Status",t:"select",optsFn:function(){return ["Reported","Under Repair","Resolved","Closed"];}},
       {g:"Recovery"},
-      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega. Payroll me dikhega."},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
-      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = paisa mil gaya (settle). Payroll se hat jayega."},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Description"},{k:"description",l:"What happened",t:"textarea",wide:true}
     ]},
   maintenance:{title:"Maintenance",singular:"Maintenance Record",path:"grd.maintenance",idp:"mt",defsort:0,defdir:-1,
@@ -1601,9 +1601,9 @@ var ENT={
       {g:"Status"},
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Done","Scheduled","Pending"];}},{k:"nextDue",l:"Next Service Date",t:"date"},
       {g:"Recovery"},
-      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega. Payroll me dikhega."},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
-      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = paisa mil gaya (settle). Payroll se hat jayega."},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
   attendance:{title:"Attendance / Leave",singular:"Leave / Attendance",path:"grd.attendance",idp:"at",defsort:2,defdir:-1,
@@ -1626,7 +1626,7 @@ var ENT={
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Pending","Approved","Rejected"];}},
       {g:"Reason"},{k:"reason",l:"Reason",t:"textarea",wide:true},
       {g:"Document"},
-      {k:"docName",l:"Document Name",t:"text",hint:"e.g. Leave form, Medical note, Ticket"},
+      {k:"docName",l:"Document Name",t:"text"},
       {k:"doc",l:"Attach Document",t:"file",wide:true}
     ]},
   income:{title:"Income / Revenue",singular:"Income",path:"finance.income",idp:"inc",defsort:0,defdir:-1,
@@ -1689,13 +1689,13 @@ var ENT={
       {k:"vehType",l:"Vehicle / Rider Type",t:"datalist",opts:"finVehTypes"},{k:"plate",l:"Vehicle / Plate",t:"text"},
       {k:"driver",l:"Employee / Rider",t:"emp"},
       {g:"Salary / Wage — which month?"},
-      {k:"wmonth",l:"For Month",t:"select",opts:"months",hint:"Salaries & Wages ke liye — kis mahine ka salary/allowance hai. Payroll usi mahine me count karega."},
-      {k:"wyear",l:"For Year",t:"number",hint:"Khaali chhodo = date ka year."},
+      {k:"wmonth",l:"For Month",t:"select",opts:"months"},
+      {k:"wyear",l:"For Year",t:"number"},
       {g:"Accounting"},
-      {k:"costType",l:"Cost Type",t:"select",optsFn:function(){return ["Variable","Fixed"];},hint:"Variable = badhta with work (fuel, salary). Fixed = har mahine same (rent, SIM)."},
-      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega (fine/advance). P&L me company cost nahi ginega."},
+      {k:"costType",l:"Cost Type",t:"select",optsFn:function(){return ["Variable","Fixed"];}},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
-      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver se paisa mil gaya (settle)."},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
@@ -1726,13 +1726,13 @@ var ENT={
     var e=ENT[k];if(!e||!e.fields)return;
     if(e.fields.some(function(f){return f.k==="doc"&&f.t==="file";}))return; // already has one
     e.fields.push({g:"Attachment"});
-    e.fields.push({k:"docName",l:"Attachment Name",t:"text",hint:"e.g. Receipt, Contract, Photo — what is this file?"});
+    e.fields.push({k:"docName",l:"Attachment Name",t:"text"});
     e.fields.push({k:"doc",l:"Attach File",t:"file",wide:true});
   });
   // Company Documents already uses "doc" for the document TYPE, so give it a file field under a different key.
   if(ENT.compdocs&&ENT.compdocs.fields&&!ENT.compdocs.fields.some(function(f){return f.k==="attach"&&f.t==="file";})){
     ENT.compdocs.fields.push({g:"Attachment"});
-    ENT.compdocs.fields.push({k:"attachName",l:"Attachment Name",t:"text",hint:"e.g. Scan, Copy, Photo"});
+    ENT.compdocs.fields.push({k:"attachName",l:"Attachment Name",t:"text"});
     ENT.compdocs.fields.push({k:"attach",l:"Attach File",t:"file",wide:true});
   }
 })();
@@ -3455,8 +3455,7 @@ function pagePayroll(pg){
   var totNet=rows.reduce(function(a,r){return a+r.net;},0);
   var paidCount=rows.filter(function(r){return r.paid;}).length;
   var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+
-    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+payMonthSelHTML()+'</div>'+
-    '<div class="hint">Auto-listed <b>Active / Office</b> employees · click a row for the full payslip</div></div>';
+    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+payMonthSelHTML()+'</div></div>';
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+
     payStat({l:"Employees",v:rows.length,c:"var(--indigo)",s:"on payroll"})+
     payStat({l:"Earnings",v:money(totBasic+totAdd)+" KD",c:"var(--teal)",s:"basic + allowances"})+
@@ -3503,7 +3502,7 @@ function pagePayrollDetail(pg,id){
   r.recov.forEach(function(x){dedRows+=line(x.src+" — "+x.label,x.amount,"− ","var(--crit)",x.date?fmtD(x.date):"");});
   var ded='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Deductions</h3><span class="mono" style="color:var(--crit);font-weight:700">'+(r.deductions>0?"−"+money(r.deductions):money(0))+' KD</span></div><div class="card-b" style="padding-top:0">'+(dedRows||'<div class="empty" style="padding:16px">No deductions this month.</div>')+'</div></div>';
   var netCard='<div class="card" style="margin-bottom:16px;padding:16px 18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap"><div><div class="s-lab">Net Payable · '+prettyMonth(payMK_sel)+'</div><div class="mono" style="font-size:30px;font-weight:800;color:var(--good)">'+money(r.net)+' <span style="font-size:15px;color:var(--muted)">KD</span></div></div>'+
-    (r.paid?'<div class="banner info" style="margin:0;max-width:320px"><div>Base salary paid: <b>'+money(r.salaryPaid)+' KWD</b>'+(r.sal.length&&r.sal[r.sal.length-1].date?" on "+fmtD(r.sal[r.sal.length-1].date):"")+' (logged in Expenses).</div></div>':'<div class="banner amber" style="margin:0;max-width:320px"><div>Base salary <b>not yet paid</b> for '+prettyMonth(payMK_sel)+'. Log it in Expenses → Salaries &amp; Wages → Salary.</div></div>')+
+    (r.paid?'<div class="banner info" style="margin:0;max-width:320px"><div>Base salary paid: <b>'+money(r.salaryPaid)+' KWD</b>'+(r.sal.length&&r.sal[r.sal.length-1].date?" on "+fmtD(r.sal[r.sal.length-1].date):"")+'.</div></div>':'<div class="banner amber" style="margin:0;max-width:320px"><div>Base salary <b>not yet paid</b> for '+prettyMonth(payMK_sel)+'.</div></div>')+
   '</div></div>';
   var hist=payMonthOpts().slice(0,6).map(function(k){var s=payslipFor(d,k);return {mk:k,net:s.net,paid:s.paid,add:s.additions,ded:s.deductions};});
   var histCard='<div class="card"><div class="card-h"><h3>Recent months</h3><span class="hint">net payable</span></div><div class="card-b" style="padding-top:6px;overflow-x:auto"><table class="dt" style="min-width:0"><thead><tr><th>Month</th><th style="text-align:right">Additions</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th><th>Salary</th></tr></thead><tbody>'+
