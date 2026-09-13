@@ -3379,7 +3379,7 @@ function pageFinance(pg){
 }
 
 /* ============ PAYROLL (auto-computed roster) ============ */
-var PAYROLL_STATUSES=["ACTIVE","OFFICE","OUTSIDE"];
+var PAYROLL_STATUSES=["ACTIVE","OFFICE"];
 var payMK_sel="";
 function payEmployees(){
   return (STATE.grd.drivers||[]).filter(function(d){
@@ -3433,7 +3433,7 @@ function pagePayroll(pg){
   var monthSel='<select id="payMonthSel" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font-family:inherit;font-size:13px">'+opts.map(function(k){return '<option value="'+k+'"'+(k===payMK_sel?' selected':'')+'>'+prettyMonth(k)+'</option>';}).join("")+'</select>';
   var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+
     '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+monthSel+'</div>'+
-    '<div class="hint">Auto-listed: <b>Active / Office / Outside</b> employees · salary paid via <b>Expenses</b> (Salaries &amp; Wages)</div></div>';
+    '<div class="hint">Auto-listed: <b>Active / Office</b> employees · salary paid via <b>Expenses</b> (Salaries &amp; Wages)</div></div>';
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+
     stat({l:"Employees",v:rows.length,c:"var(--indigo)",s:"on payroll"})+
     stat({l:"Basic Salary",v:money(totBasic)+" KD",c:"var(--teal)",s:"total gross"})+
@@ -3456,7 +3456,7 @@ function pagePayroll(pg){
         '<div><div class="s-lab">Deductions</div><div class="mono" style="font-size:17px;font-weight:700;color:'+(r.ded>0?"var(--crit)":"var(--ink-2)")+'">'+(r.ded>0?"−"+money(r.ded):"—")+'</div></div>'+
         '<div><div class="s-lab">Net Payable</div><div class="mono" style="font-size:17px;font-weight:700;color:var(--good)">'+money(r.net)+'</div></div>'+
       '</div>'+dedList+note+paidNote+'</div>';
-  }).join(""):'<div class="empty" style="padding:40px;grid-column:1/-1">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>No active employees</h4><p>Employees with status Active, Office or Outside will appear here automatically.</p></div>';
+  }).join(""):'<div class="empty" style="padding:40px;grid-column:1/-1">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>No active employees</h4><p>Employees with status Active or Office will appear here automatically.</p></div>';
   pg.innerHTML=head+kpis+'<div class="grid g2" style="align-items:start">'+cards+'</div>';
   var sel=$("#payMonthSel",pg);
   if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayroll($("#page"));});
