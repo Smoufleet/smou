@@ -1551,6 +1551,7 @@ var ENT={
       {g:"Recovery"},
       {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"installments",l:"Recover in installments (months)",t:"number"},
       {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
@@ -1577,6 +1578,7 @@ var ENT={
       {g:"Recovery"},
       {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"installments",l:"Recover in installments (months)",t:"number"},
       {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Description"},{k:"description",l:"What happened",t:"textarea",wide:true}
     ]},
@@ -1603,6 +1605,7 @@ var ENT={
       {g:"Recovery"},
       {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"installments",l:"Recover in installments (months)",t:"number"},
       {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
@@ -1695,6 +1698,7 @@ var ENT={
       {k:"costType",l:"Cost Type",t:"select",optsFn:function(){return ["Variable","Fixed"];}},
       {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"installments",l:"Recover in installments (months)",t:"number"},
       {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];}},
       {g:"Notes"},
       {k:"notes",l:"Notes",t:"textarea",wide:true}
@@ -3403,6 +3407,19 @@ function wageMK(e){
   if(e.wmonth){var mi=MON.indexOf(e.wmonth);if(mi>=0){var d=parseD(e.date);var y=num(e.wyear)||(d?d.getFullYear():TODAY.getFullYear());return y+"-"+String(mi+1).padStart(2,"0");}}
   return mKey(e);
 }
+function mkIndex(mk){var p=(mk||"").split("-");return (+p[0])*12+((+p[1])-1);}
+// installment share of a recoverable item for a given payroll month (start = entry month)
+function recovPart(r,amtKey,mk){
+  var total=num(r[amtKey])||0;if(total<=0)return null;
+  var start=mKey(r);if(!start)return null;
+  var n=Math.max(1,Math.round(num(r.installments)||1));
+  if(!mk)return {amount:total,inst:(n>1?"1/"+n:"")};
+  var idx=mkIndex(mk)-mkIndex(start);
+  if(idx<0||idx>=n)return null;                 // this month is outside the installment window
+  var per=Math.round(total/n*1000)/1000;
+  var amt=(idx===n-1)?Math.round((total-per*(n-1))*1000)/1000:per;  // last one absorbs rounding
+  return {amount:amt,inst:(n>1?(idx+1)+"/"+n:"")};
+}
 // full payslip for one employee in a month-key
 function payslipFor(d,mk){
   var name=(d.name||"").trim();
@@ -3418,22 +3435,20 @@ function payslipFor(d,mk){
     else if(/food/i.test(sub))food.push({label:"Food Allowance",amount:amt,date:e.date});
     else sal.push({label:(sub||"Salary"),amount:amt,date:e.date});   // base Salary
   });
-  // recoverable-unrecovered deductions: fleet-ops + non-salary expenses
+  // recoverable-unrecovered deductions: fleet-ops + non-salary expenses (with installments)
   var recov=[];
   function addR(list,amtKey,src){(list||[]).forEach(function(r){
     if(!isRecov(r)||isRecovered(r))return;
     if((r.recoverFrom||"").trim()!==name)return;
-    if(mk&&mKey(r)!==mk)return;
-    var amt=num(r[amtKey])||0;if(amt<=0)return;
-    recov.push({src:src,amount:amt,date:r.date,label:(r.reason||r.type||r.category||src)});
+    var p=recovPart(r,amtKey,mk);if(!p||p.amount<=0)return;
+    recov.push({src:src,amount:p.amount,date:r.date,label:(r.reason||r.type||r.category||src),inst:p.inst});
   });}
   (STATE.finance.expenses||[]).forEach(function(e){
     if(/salar|wage/i.test(e.category||""))return;             // salary handled above
     if(!isRecov(e)||isRecovered(e))return;
     if((e.recoverFrom||"").trim()!==name)return;
-    if(mk&&mKey(e)!==mk)return;
-    var amt=eAmt(e);if(amt<=0)return;
-    recov.push({src:"Expense",amount:amt,date:e.date,label:(e.category||"Expense")});
+    var p=recovPart(e,"amount",mk);if(!p||p.amount<=0)return;
+    recov.push({src:"Expense",amount:p.amount,date:e.date,label:(e.category||"Expense"),inst:p.inst});
   });
   addR(STATE.grd.fines,"amount","Fine");
   addR(STATE.grd.incidents,"cost","Incident");
@@ -3519,7 +3534,7 @@ function pagePayrollDetail(pg,id){
   var earn='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Earnings</h3><span class="mono" style="color:var(--good);font-weight:700">'+money(r.gross)+' KD</span></div><div class="card-b" style="padding-top:0">'+earnRows+'</div></div>';
   var dedRows="";
   r.adv.forEach(function(x){dedRows+=line("Advance Payment",x.amount,"− ","var(--crit)",fmtD(x.date));});
-  r.recov.forEach(function(x){dedRows+=line(x.src+" — "+x.label,x.amount,"− ","var(--crit)",x.date?fmtD(x.date):"");});
+  r.recov.forEach(function(x){dedRows+=line(x.src+" — "+x.label+(x.inst?" · installment "+x.inst:""),x.amount,"− ","var(--crit)",x.date?fmtD(x.date):"");});
   var ded='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Deductions</h3><span class="mono" style="color:var(--crit);font-weight:700">'+(r.deductions>0?"−"+money(r.deductions):money(0))+' KD</span></div><div class="card-b" style="padding-top:0">'+(dedRows||'<div class="empty" style="padding:16px">No deductions this month.</div>')+'</div></div>';
   var netCard='<div class="card" style="margin-bottom:16px;padding:16px 18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap"><div><div class="s-lab">Net Payable · '+prettyMonth(payMK_sel)+'</div><div class="mono" style="font-size:30px;font-weight:800;color:var(--good)">'+money(r.net)+' <span style="font-size:15px;color:var(--muted)">KD</span></div></div>'+
     (r.paid?'<div class="banner info" style="margin:0;max-width:320px"><div>Base salary paid: <b>'+money(r.salaryPaid)+' KWD</b>'+(r.sal.length&&r.sal[r.sal.length-1].date?" on "+fmtD(r.sal[r.sal.length-1].date):"")+'.</div></div>':'<div class="banner amber" style="margin:0;max-width:320px"><div>Base salary <b>not yet paid</b> for '+prettyMonth(payMK_sel)+'.</div></div>')+
