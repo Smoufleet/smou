@@ -3390,7 +3390,14 @@ function payEmployees(){
     return d.name && PAYROLL_STATUSES.indexOf((d.status||"").trim().toUpperCase())>=0;
   });
 }
-function payMonthOpts(){var o=[];for(var i=0;i<12;i++){o.push(mKeyOf(new Date(TODAY.getFullYear(),TODAY.getMonth()-i,1)));}return o;}
+var PAYROLL_START_MK="2026-09"; // fleet payroll begins Sep 2026 — no months before this
+function payMonthList(){ // Sep 2026 forward, up to current month (chronological)
+  var out=[],sp=PAYROLL_START_MK.split("-"),d=new Date(+sp[0],+sp[1]-1,1),end=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);
+  while(d<=end){out.push(mKeyOf(d));d=new Date(d.getFullYear(),d.getMonth()+1,1);}
+  if(!out.length)out.push(PAYROLL_START_MK);
+  return out;
+}
+function payClampMonth(){var l=payMonthList();if(l.indexOf(payMK_sel)<0)payMK_sel=l[l.length-1];}
 // which payroll month a salary/wage expense counts in (explicit For-Month wins, else the date)
 function wageMK(e){
   if(e.wmonth){var mi=MON.indexOf(e.wmonth);if(mi>=0){var d=parseD(e.date);var y=num(e.wyear)||(d?d.getFullYear():TODAY.getFullYear());return y+"-"+String(mi+1).padStart(2,"0");}}
@@ -3442,12 +3449,13 @@ function payslipFor(d,mk){
     additions:additions,deductions:deductions,gross:gross,net:gross-deductions,paid:salaryPaid>0};
 }
 function payMonthSelHTML(){
-  return '<select id="payMonthSel" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px">'+payMonthOpts().map(function(k){return '<option value="'+k+'"'+(k===payMK_sel?' selected':'')+'>'+prettyMonth(k)+'</option>';}).join("")+'</select>';
+  return '<select id="payMonthSel" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px">'+payMonthList().slice().reverse().map(function(k){return '<option value="'+k+'"'+(k===payMK_sel?' selected':'')+'>'+prettyMonth(k)+'</option>';}).join("")+'</select>';
 }
 function payStat(o){return '<div class="stat card"><span class="strip" style="background:'+o.c+'"></span><div class="s-lab">'+o.l+'</div><div class="s-val" style="font-size:26px">'+o.v+'</div><div class="s-sub">'+o.s+'</div></div>';}
 
 function pagePayroll(pg){
   if(!payMK_sel)payMK_sel=mKeyOf(TODAY);
+  payClampMonth();
   var emps=payEmployees().slice().sort(function(a,b){return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1;});
   var rows=emps.map(function(d){return payslipFor(d,payMK_sel);});
   var totBasic=rows.reduce(function(a,r){return a+r.basic;},0);
@@ -3455,7 +3463,9 @@ function pagePayroll(pg){
   var totDed=rows.reduce(function(a,r){return a+r.deductions;},0);
   var totNet=rows.reduce(function(a,r){return a+r.net;},0);
   var paidCount=rows.filter(function(r){return r.paid;}).length;
+  var search='<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 12px;min-width:220px;flex:1;max-width:340px">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')+'<input id="paySearch" placeholder="Search employee by name or status…" autocomplete="off" style="border:0;background:transparent;outline:none;color:var(--ink);font:inherit;width:100%">'+'</div>';
   var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+
+    search+
     '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+payMonthSelHTML()+'</div></div>';
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+
     payStat({l:"Employees",v:rows.length,c:"var(--indigo)",s:"on payroll"})+
@@ -3465,7 +3475,7 @@ function pagePayroll(pg){
   '</div>';
   var list=rows.length?'<div class="card"><div class="card-b" style="padding:6px 6px;overflow-x:auto"><table class="dt" style="min-width:640px"><thead><tr><th>Employee</th><th style="text-align:right">Basic</th><th style="text-align:right">Additions</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net Payable</th><th>Salary</th><th></th></tr></thead><tbody>'+
     rows.map(function(r){var d=r.d;
-      return '<tr data-route="grd/payroll/'+esc(d.id)+'" style="cursor:pointer">'+
+      return '<tr data-route="grd/payroll/'+esc(d.id)+'" data-search="'+esc(((d.name||"")+" "+(d.status||"")+" "+(d.veh||"")+" "+(d.no||"")).toLowerCase())+'" style="cursor:pointer">'+
         '<td><div style="display:flex;align-items:center;gap:10px">'+avatarHTML(d,30)+'<div><span class="nm">'+esc(d.name)+'</span><div class="sub">'+esc(cap(d.status||""))+'</div></div></div></td>'+
         '<td class="mono" style="text-align:right">'+money(r.basic)+'</td>'+
         '<td class="mono" style="text-align:right;color:'+(r.additions>0?"var(--good)":"var(--muted)")+'">'+(r.additions>0?"+"+money(r.additions):"—")+'</td>'+
@@ -3477,10 +3487,19 @@ function pagePayroll(pg){
     }).join("")+'</tbody></table></div></div>':'<div class="empty" style="padding:40px">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>No active employees</h4><p>Employees with status Active or Office will appear here automatically.</p></div>';
   pg.innerHTML=head+kpis+list;
   var sel=$("#payMonthSel",pg);if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayroll($("#page"));});
+  var srch=$("#paySearch",pg);
+  if(srch)srch.addEventListener("input",function(){
+    var q=this.value.trim().toLowerCase(),trs=$$("#page table.dt tbody tr"),shown=0;
+    trs.forEach(function(tr){var m=!q||(tr.getAttribute("data-search")||"").indexOf(q)>=0;tr.style.display=m?"":"none";if(m)shown++;});
+    var body=$("#page table.dt tbody");var er=$("#payNoRes",pg);
+    if(body&&shown===0&&q){if(!er){er=document.createElement("tr");er.id="payNoRes";er.innerHTML='<td colspan="7" style="text-align:center;color:var(--muted);padding:22px">No employee matches "'+esc(q)+'"</td>';body.appendChild(er);}}
+    else if(er)er.remove();
+  });
 }
 
 function pagePayrollDetail(pg,id){
   if(!payMK_sel)payMK_sel=mKeyOf(TODAY);
+  payClampMonth();
   var d=(STATE.grd.drivers||[]).filter(function(x){return String(x.id)===String(id);})[0];
   if(!d){go("grd/payroll");return;}
   var r=payslipFor(d,payMK_sel);
@@ -3505,7 +3524,7 @@ function pagePayrollDetail(pg,id){
   var netCard='<div class="card" style="margin-bottom:16px;padding:16px 18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap"><div><div class="s-lab">Net Payable · '+prettyMonth(payMK_sel)+'</div><div class="mono" style="font-size:30px;font-weight:800;color:var(--good)">'+money(r.net)+' <span style="font-size:15px;color:var(--muted)">KD</span></div></div>'+
     (r.paid?'<div class="banner info" style="margin:0;max-width:320px"><div>Base salary paid: <b>'+money(r.salaryPaid)+' KWD</b>'+(r.sal.length&&r.sal[r.sal.length-1].date?" on "+fmtD(r.sal[r.sal.length-1].date):"")+'.</div></div>':'<div class="banner amber" style="margin:0;max-width:320px"><div>Base salary <b>not yet paid</b> for '+prettyMonth(payMK_sel)+'.</div></div>')+
   '</div></div>';
-  var hist=payMonthOpts().slice(0,6).map(function(k){var s=payslipFor(d,k);return {mk:k,net:s.net,paid:s.paid,add:s.additions,ded:s.deductions};});
+  var hist=payMonthList().map(function(k){var s=payslipFor(d,k);return {mk:k,net:s.net,paid:s.paid,add:s.additions,ded:s.deductions};});
   var histCard='<div class="card"><div class="card-h"><h3>Recent months</h3><span class="hint">net payable</span></div><div class="card-b" style="padding-top:6px;overflow-x:auto"><table class="dt" style="min-width:0"><thead><tr><th>Month</th><th style="text-align:right">Additions</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th><th>Salary</th></tr></thead><tbody>'+
     hist.map(function(h){return '<tr'+(h.mk===payMK_sel?' style="background:var(--teal-bg)"':'')+'><td class="nm">'+prettyMonth(h.mk)+'</td><td class="mono" style="text-align:right;color:'+(h.add>0?"var(--good)":"var(--muted)")+'">'+(h.add>0?"+"+money(h.add):"—")+'</td><td class="mono" style="text-align:right;color:'+(h.ded>0?"var(--crit)":"var(--muted)")+'">'+(h.ded>0?"−"+money(h.ded):"—")+'</td><td class="mono nm" style="text-align:right">'+money(h.net)+'</td><td>'+(h.paid?'<span class="pill good">Paid</span>':'<span class="pill warn">Unpaid</span>')+'</td></tr>';}).join("")+
   '</tbody></table></div></div>';
