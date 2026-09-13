@@ -1548,6 +1548,10 @@ var ENT={
       {k:"plate",l:"Vehicle / Plate",t:"plate"},{k:"driver",l:"Driver (Employee)",t:"emp"},
       {g:"Payment"},
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Unpaid","Paid","Disputed"];}},{k:"payby",l:"Paid By",t:"select",optsFn:function(){return ["Company","Driver"];}},
+      {g:"Recovery"},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega. Payroll me dikhega."},
+      {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = paisa mil gaya (settle). Payroll se hat jayega."},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
   incidents:{title:"Accident / Incident",singular:"Incident",path:"grd.incidents",idp:"in",defsort:0,defdir:-1,
@@ -1570,6 +1574,10 @@ var ENT={
       {k:"plate",l:"Vehicle / Plate",t:"plate"},{k:"driver",l:"Driver (Employee)",t:"emp"},
       {g:"Repair & Status"},
       {k:"cost",l:"Repair Cost (KWD)",t:"number"},{k:"status",l:"Status",t:"select",optsFn:function(){return ["Reported","Under Repair","Resolved","Closed"];}},
+      {g:"Recovery"},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega. Payroll me dikhega."},
+      {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = paisa mil gaya (settle). Payroll se hat jayega."},
       {g:"Description"},{k:"description",l:"What happened",t:"textarea",wide:true}
     ]},
   maintenance:{title:"Maintenance",singular:"Maintenance Record",path:"grd.maintenance",idp:"mt",defsort:0,defdir:-1,
@@ -1592,6 +1600,10 @@ var ENT={
       {k:"plate",l:"Vehicle / Plate",t:"plate"},{k:"vendor",l:"Garage / Vendor",t:"text"},
       {g:"Status"},
       {k:"status",l:"Status",t:"select",optsFn:function(){return ["Done","Scheduled","Pending"];}},{k:"nextDue",l:"Next Service Date",t:"date"},
+      {g:"Recovery"},
+      {k:"recoverable",l:"Recoverable from driver?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = driver ki salary se katega. Payroll me dikhega."},
+      {k:"recoverFrom",l:"Recover From (Employee)",t:"emp"},
+      {k:"recovered",l:"Recovered?",t:"select",optsFn:function(){return ["No","Yes"];},hint:"Yes = paisa mil gaya (settle). Payroll se hat jayega."},
       {g:"Notes"},{k:"notes",l:"Notes",t:"textarea",wide:true}
     ]},
   attendance:{title:"Attendance / Leave",singular:"Leave / Attendance",path:"grd.attendance",idp:"at",defsort:2,defdir:-1,
@@ -1803,7 +1815,7 @@ function renderApp(){
   var sb='<aside class="sidebar" id="sidebar"><div class="sb-brand"><span class="lg">'+LOGO_SVG+'</span><span class="nm">SMOU<small>Fleet · Kuwait</small></span></div><nav class="sb-nav">';
   var chev='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
   function navLink(it){
-    var cnt=it.ent?store(it.ent).length:(it.cnt?it.cnt():null);
+    var cnt=it.ent==="payroll"?payEmployees().length:(it.ent?store(it.ent).length:(it.cnt?it.cnt():null));
     return '<a class="sb-link'+(route===it.r?" active":"")+'" data-route="'+it.r+'">'+svg(it.ic)+'<span>'+it.t+'</span>'+(cnt!=null?'<span class="cnt">'+cnt+'</span>':"")+'</a>';
   }
   NAVGROUPS.forEach(function(g){
@@ -2027,8 +2039,9 @@ function renderPage(){
   else if(route.indexOf("finance/log/")===0){newBtn.hidden=true;pageDetail(pg,"expenses",P[2]);}
   else if(route==="finance/log"){setTitle("Expense Log","Finance · all entries");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageRegister(pg,"expenses");}
   else if(route.indexOf("grd/")===0){var ent=P[1];if(!ENT[ent]){go("overview");return;}
-    if(P[2]){newBtn.hidden=true;pageDetail(pg,ent,P[2]);}
-    else{setTitle(ENT[ent].title,((ent==="payroll"||ent==="income"||ent==="funds")?"Finance":"GRD Operations")+" · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;if(ent==="hiring")pageHiring(pg);else pageRegister(pg,ent);}}
+    if(ent==="payroll"){setTitle("Payroll","Finance · "+payEmployees().length+" employees · auto");newBtn.hidden=true;pagePayroll(pg);}
+    else if(P[2]){newBtn.hidden=true;pageDetail(pg,ent,P[2]);}
+    else{setTitle(ENT[ent].title,((ent==="income"||ent==="funds")?"Finance":"GRD Operations")+" · "+store(ent).length+" records");$("#newLbl").textContent="Add "+ENT[ent].singular;newBtn.hidden=false;if(ent==="hiring")pageHiring(pg);else pageRegister(pg,ent);}}
   else {go("overview");}
   if(!can("edit")&&newBtn)newBtn.hidden=true;
 }
@@ -3363,6 +3376,90 @@ function pageFinance(pg){
   var cta='<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn amber" data-route="finance/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>New Expense</button><button class="btn" data-route="grd/income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Income</button><button class="btn" data-route="grd/funds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Add to Wallet</button><button class="btn" data-route="finance/log">Expense Log</button>'+(hasDemo?'<button class="btn ghost" data-act="clearsample">Clear sample data</button>':'')+'</div>';
 
   pg.innerHTML=chips+sampleBar+pnl+acct+kpis+insHtml+deep+trend+breakdown+cta;
+}
+
+/* ============ PAYROLL (auto-computed roster) ============ */
+var PAYROLL_STATUSES=["ACTIVE","OFFICE","OUTSIDE"];
+var payMK_sel="";
+function payEmployees(){
+  return (STATE.grd.drivers||[]).filter(function(d){
+    return d.name && PAYROLL_STATUSES.indexOf((d.status||"").trim().toUpperCase())>=0;
+  });
+}
+// unrecovered recoverable items charged to an employee (recoverable=Yes, recovered=No) for a month
+function recovItemsFor(name,mk){
+  var items=[];
+  function add(list,amtKey,src){(list||[]).forEach(function(r){
+    if(!isRecov(r)||isRecovered(r))return;
+    if((r.recoverFrom||"").trim()!==name)return;
+    if(mk&&mKey(r)!==mk)return;
+    var amt=num(r[amtKey])||0; if(amt<=0)return;
+    items.push({src:src,amount:amt,date:r.date,label:(r.reason||r.type||r.category||src)});
+  });}
+  add(STATE.finance.expenses,"amount","Expense");
+  add(STATE.grd.fines,"amount","Fine");
+  add(STATE.grd.incidents,"cost","Incident");
+  add(STATE.grd.maintenance,"cost","Maintenance");
+  return items;
+}
+// salary already paid this month via an Expense (category Salaries & Wages) for this employee
+function salaryPaidFor(name,mk){
+  var paid=0,dates=[];
+  (STATE.finance.expenses||[]).forEach(function(e){
+    if((e.driver||"").trim()!==name)return;
+    if(!(/salar/i.test(e.category||"")||/salar/i.test(e.sub||"")))return;
+    if(/advance/i.test(e.sub||""))return; // advance != full salary
+    if(mk&&mKey(e)!==mk)return;
+    paid+=eAmt(e); if(e.date)dates.push(e.date);
+  });
+  return {amount:paid,dates:dates};
+}
+function pagePayroll(pg){
+  if(!payMK_sel)payMK_sel=mKeyOf(TODAY);
+  var opts=[];for(var i=0;i<12;i++){opts.push(mKeyOf(new Date(TODAY.getFullYear(),TODAY.getMonth()-i,1)));}
+  var emps=payEmployees().slice().sort(function(a,b){return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1;});
+  var rows=emps.map(function(d){
+    var basic=num(d.salary)||0;
+    var items=recovItemsFor(d.name,payMK_sel);
+    var ded=items.reduce(function(a,x){return a+x.amount;},0);
+    var paid=salaryPaidFor(d.name,payMK_sel);
+    return {d:d,basic:basic,items:items,ded:ded,net:basic-ded,paid:paid};
+  });
+  var totBasic=rows.reduce(function(a,r){return a+r.basic;},0);
+  var totDed=rows.reduce(function(a,r){return a+r.ded;},0);
+  var totNet=rows.reduce(function(a,r){return a+r.net;},0);
+  var paidCount=rows.filter(function(r){return r.paid.amount>0;}).length;
+  function stat(o){return '<div class="stat card"><span class="strip" style="background:'+o.c+'"></span><div class="s-lab">'+o.l+'</div><div class="s-val" style="font-size:26px">'+o.v+'</div><div class="s-sub">'+o.s+'</div></div>';}
+  var monthSel='<select id="payMonthSel" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font-family:inherit;font-size:13px">'+opts.map(function(k){return '<option value="'+k+'"'+(k===payMK_sel?' selected':'')+'>'+prettyMonth(k)+'</option>';}).join("")+'</select>';
+  var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+
+    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+monthSel+'</div>'+
+    '<div class="hint">Auto-listed: <b>Active / Office / Outside</b> employees · salary paid via <b>Expenses</b> (Salaries &amp; Wages)</div></div>';
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+
+    stat({l:"Employees",v:rows.length,c:"var(--indigo)",s:"on payroll"})+
+    stat({l:"Basic Salary",v:money(totBasic)+" KD",c:"var(--teal)",s:"total gross"})+
+    stat({l:"Deductions",v:money(totDed)+" KD",c:"var(--crit)",s:"unrecovered from drivers"})+
+    stat({l:"Net Payable",v:money(totNet)+" KD",c:"var(--good)",s:paidCount+" of "+rows.length+" paid"})+
+  '</div>';
+  var cards=rows.length?rows.map(function(r){
+    var d=r.d;
+    var paidPill=r.paid.amount>0?'<span class="pill good">Paid'+(r.paid.amount+0.0005<r.net?" · partial":"")+'</span>':'<span class="pill warn">Unpaid</span>';
+    var dedList=r.items.length?'<div style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">'+r.items.map(function(x){
+        return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0"><span style="color:var(--ink-2);min-width:0"><span class="pill '+(x.src==="Fine"?"crit":x.src==="Incident"?"warn":x.src==="Maintenance"?"neutral":"indigo")+'" style="margin-right:6px">'+x.src+'</span>'+esc(x.label)+(x.date?' <span style="color:var(--muted)">· '+fmtD(x.date)+'</span>':'')+'</span><span class="mono" style="color:var(--crit);white-space:nowrap">−'+money(x.amount)+'</span></div>';
+      }).join("")+'</div>':'';
+    var note=(r.ded>0&&r.paid.amount<=0)?'<div class="banner amber" style="margin-top:10px;padding:8px 10px;font-size:12px">'+svg('<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')+'<div>'+prettyMonth(payMK_sel)+': '+money(r.ded)+' KWD unrecovered — cut from salary, pay net <b>'+money(r.net)+' KWD</b>.</div></div>':'';
+    var paidNote=r.paid.amount>0?'<div class="banner info" style="margin-top:10px;padding:8px 10px;font-size:12px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<div>Salary paid: <b>'+money(r.paid.amount)+' KWD</b>'+(r.paid.dates.length?" on "+fmtD(r.paid.dates[r.paid.dates.length-1]):"")+' (logged in Expenses).</div></div>':'';
+    return '<div class="card" style="padding:14px 16px">'+
+      '<div style="display:flex;align-items:center;gap:12px">'+avatarHTML(d,40)+
+        '<div style="flex:1;min-width:0"><div class="nm" style="font-size:15px">'+esc(d.name)+'</div><div class="sub">'+esc(cap(d.status||""))+(d.veh?" · "+esc(d.veh):"")+(d.site?" · "+esc(d.site):"")+'</div></div>'+paidPill+'</div>'+
+      '<div class="grid g3" style="margin-top:12px;gap:10px">'+
+        '<div><div class="s-lab">Basic</div><div class="mono" style="font-size:17px;font-weight:700">'+money(r.basic)+'</div></div>'+
+        '<div><div class="s-lab">Deductions</div><div class="mono" style="font-size:17px;font-weight:700;color:'+(r.ded>0?"var(--crit)":"var(--ink-2)")+'">'+(r.ded>0?"−"+money(r.ded):"—")+'</div></div>'+
+        '<div><div class="s-lab">Net Payable</div><div class="mono" style="font-size:17px;font-weight:700;color:var(--good)">'+money(r.net)+'</div></div>'+
+      '</div>'+dedList+note+paidNote+'</div>';
+  }).join(""):'<div class="empty" style="padding:40px;grid-column:1/-1">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>No active employees</h4><p>Employees with status Active, Office or Outside will appear here automatically.</p></div>';
+  pg.innerHTML=head+kpis+'<div class="grid g2" style="align-items:start">'+cards+'</div>';
+  var sel=$("#payMonthSel",pg);
+  if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayroll($("#page"));});
 }
 
 /* ============ SAMPLE EXPENSES (demo) ============ */
