@@ -1744,8 +1744,7 @@ function netPay(r){return (num(r.basic)||0)+(num(r.allowance)||0)-dedTotal(r);}
 var NAVGROUPS=[
   {lab:"Overview",items:[
     {r:"alerts",t:"Alerts & Expiries",ic:'<path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',cnt:function(){return computeAlerts().length;}},
-    {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'},
-    {r:"activity",t:"Activity Log",ic:'<path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/>'}
+    {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'}
   ]},
   {lab:"Performance",items:[{r:"orders",t:"Order Overview",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="14" r="1"/><circle cx="17" cy="9" r="1"/>'}]},
   {lab:"GRD Operations",key:"grd",collapsible:true,items:[
@@ -1863,7 +1862,9 @@ function renderApp(){
       (SB_ON?'<button class="icon-btn userbtn" data-act="usermenu" title="Account"><span class="uav">'+esc((((USER&&USER.email)||"?").charAt(0)||"?").toUpperCase())+'</span></button>':'')+
     '</div></div><div class="page" id="page"></div></div>';
 
+  var _oldSb=document.getElementById("sidebar");var _sbScroll=_oldSb?_oldSb.scrollTop:0;
   $("#root").innerHTML='<div class="app">'+sb+main+'</div><div class="scrim" id="scrim"></div>';
+  var _newSb=document.getElementById("sidebar");if(_newSb)_newSb.scrollTop=_sbScroll;
   try{if(window.innerWidth>860&&localStorage.getItem("smou-nav")==="1")$(".app").classList.add("nav-collapsed");}catch(e){}
   themeIcon();renderPage();ensureFabDock();
   if(LANG==="ar")transEl(document.getElementById("root"));
