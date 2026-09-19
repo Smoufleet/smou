@@ -4836,7 +4836,7 @@ if(SB_ON){
       }
     });
     html+='</nav>';
-    html+='<div class="tn-right"><button class="tn-report" data-tn-go="alerts">Generate Report</button><span class="tn-ava">S</span></div>';
+    html+='<div class="tn-right"></div>';   // real app controls get moved in here
     var el=document.createElement("header");
     el.className="topnav";
     el.innerHTML=html;
@@ -4847,6 +4847,11 @@ if(SB_ON){
     if(app.querySelector(":scope > .topnav"))return;   // already present — do nothing (avoids observer loop)
     var el=build();
     app.insertBefore(el, app.firstChild);
+    // move the app's REAL top-right controls (save indicator, New, register, language, theme, account)
+    // up into the top nav, so they live in the top-right corner
+    var tbr=app.querySelector(".main > .topbar > .tb-right")||app.querySelector(".tb-right");
+    var slot=el.querySelector(".tn-right");
+    if(tbr&&slot)slot.appendChild(tbr);
     updateActive(el);
   }
   function updateActive(tn){
