@@ -4902,4 +4902,83 @@ if(SB_ON){
 })();
 
 </script>
+<script id="flags-mod">
+/* DEMO: Nationality bars — flag emoji + bar filled with the country's flag colours */
+(function(){
+  var FLAG={
+    "India":"🇮🇳","Bangladesh":"🇧🇩","Nigeria":"🇳🇬","Sudan":"🇸🇩","Uganda":"🇺🇬","Nepal":"🇳🇵",
+    "Sierra Leone":"🇸🇱","Sri Lanka":"🇱🇰","Pakistan":"🇵🇰","Egypt":"🇪🇬","Kenya":"🇰🇪","Ghana":"🇬🇭",
+    "Philippines":"🇵🇭","Ethiopia":"🇪🇹","Kuwait":"🇰🇼","Syria":"🇸🇾","Yemen":"🇾🇪","Jordan":"🇯🇴",
+    "Tanzania":"🇹🇿","Cameroon":"🇨🇲","Indonesia":"🇮🇩","Bhutan":"🇧🇹","Myanmar":"🇲🇲","Afghanistan":"🇦🇫",
+    "Iran":"🇮🇷","Iraq":"🇮🇶","Somalia":"🇸🇴","Eritrea":"🇪🇷","Senegal":"🇸🇳","Mali":"🇲🇱","Niger":"🇳🇪","Ivory Coast":"🇨🇮"
+  };
+  // horizontal flag-colour gradients (read across the bar length)
+  var g=function(){return "linear-gradient(90deg,"+Array.prototype.join.call(arguments,",")+")";};
+  var GRAD={
+    "India":g("#FF9933 0 33%","#FFFFFF 33% 66%","#138808 66% 100%"),
+    "Bangladesh":g("#006A4E 0 38%","#F42A41 38% 62%","#006A4E 62% 100%"),
+    "Nigeria":g("#008751 0 33%","#FFFFFF 33% 66%","#008751 66% 100%"),
+    "Sudan":g("#007229 0 14%","#D21034 14% 43%","#FFFFFF 43% 71%","#000000 71% 100%"),
+    "Uganda":g("#000000 0 17%","#FCDC04 17% 34%","#D90000 34% 50%","#000000 50% 67%","#FCDC04 67% 84%","#D90000 84% 100%"),
+    "Nepal":g("#DC143C 0 78%","#003893 78% 100%"),
+    "Sierra Leone":g("#1EB53A 0 33%","#FFFFFF 33% 66%","#0072C6 66% 100%"),
+    "Sri Lanka":g("#00534E 0 12%","#EB7400 12% 24%","#FFB700 24% 34%","#8D2029 34% 100%"),
+    "Pakistan":g("#FFFFFF 0 25%","#01411C 25% 100%"),
+    "Egypt":g("#CE1126 0 33%","#FFFFFF 33% 66%","#000000 66% 100%"),
+    "Kenya":g("#000000 0 33%","#BB0000 33% 66%","#006600 66% 100%"),
+    "Ghana":g("#CE1126 0 33%","#FCD116 33% 66%","#006B3F 66% 100%"),
+    "Philippines":g("#FFFFFF 0 22%","#0038A8 22% 61%","#CE1126 61% 100%"),
+    "Ethiopia":g("#078930 0 33%","#FCDD09 33% 66%","#DA121A 66% 100%"),
+    "Kuwait":g("#000000 0 12%","#007A3D 12% 41%","#FFFFFF 41% 70%","#CE1126 70% 100%"),
+    "Syria":g("#CE1126 0 33%","#FFFFFF 33% 66%","#000000 66% 100%"),
+    "Yemen":g("#CE1126 0 33%","#FFFFFF 33% 66%","#000000 66% 100%"),
+    "Jordan":g("#CE1126 0 15%","#000000 15% 43%","#FFFFFF 43% 71%","#007A3D 71% 100%"),
+    "Tanzania":g("#1EB53A 0 40%","#FCD116 40% 48%","#000000 48% 58%","#00A3DD 58% 100%"),
+    "Cameroon":g("#007A5E 0 33%","#CE1126 33% 66%","#FCD116 66% 100%"),
+    "Indonesia":g("#CE1126 0 50%","#FFFFFF 50% 100%"),
+    "Bhutan":g("#FFD520 0 50%","#FF4E12 50% 100%"),
+    "Myanmar":g("#FECB00 0 33%","#34B233 33% 66%","#EA2839 66% 100%"),
+    "Afghanistan":g("#000000 0 33%","#D32011 33% 66%","#007A36 66% 100%"),
+    "Iran":g("#239F40 0 33%","#FFFFFF 33% 66%","#DA0000 66% 100%"),
+    "Iraq":g("#CE1126 0 33%","#FFFFFF 33% 66%","#000000 66% 100%"),
+    "Somalia":g("#4189DD 0 100%"),
+    "Eritrea":g("#12AD2B 0 40%","#EA0437 40% 60%","#4189DD 60% 100%"),
+    "Senegal":g("#00853F 0 33%","#FDEF42 33% 66%","#E31B23 66% 100%"),
+    "Mali":g("#14B53A 0 33%","#FCD116 33% 66%","#CE1126 66% 100%"),
+    "Niger":g("#0DB02B 0 33%","#FFFFFF 33% 66%","#E05206 66% 100%"),
+    "Ivory Coast":g("#F77F00 0 33%","#FFFFFF 33% 66%","#009E60 66% 100%")
+  };
+  var css=document.createElement("style");
+  css.textContent=[
+    ".bl .natflag{display:inline-block;font-size:15px;line-height:1;margin-right:8px;vertical-align:-1px}",
+    ".natbar{height:13px !important;border:1px solid rgba(0,0,0,.06)}",
+    ".natbar .bf{border-radius:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}"
+  ].join("");
+  (document.head||document.documentElement).appendChild(css);
+  function norm(s){return (s||"").trim();}
+  function enhance(){
+    var page=document.getElementById("page"); if(!page)return;
+    var cards=page.querySelectorAll(".card");
+    for(var i=0;i<cards.length;i++){
+      var h=cards[i].querySelector("h3");
+      if(!h)continue;
+      var t=norm(h.textContent);
+      if(t!=="Nationality" && t!=="الجنسية")continue;
+      var rows=cards[i].querySelectorAll(".barrow");
+      for(var j=0;j<rows.length;j++){
+        var bl=rows[j].querySelector(".bl"); if(!bl)continue;
+        var name=norm(bl.textContent);
+        if(!bl.querySelector(".natflag")&&FLAG[name])bl.insertAdjacentHTML("afterbegin",'<span class="natflag">'+FLAG[name]+'</span>');
+        var bt=rows[j].querySelector(".bt"), bf=rows[j].querySelector(".bf");
+        if(bf&&GRAD[name]){bf.style.background=GRAD[name];if(bt)bt.classList.add("natbar");}
+      }
+    }
+  }
+  var root=document.getElementById("root");
+  if(root)new MutationObserver(function(){setTimeout(enhance,0);}).observe(root,{childList:true,subtree:false});
+  window.addEventListener("hashchange",function(){setTimeout(enhance,60);});
+  setTimeout(enhance,500);setTimeout(enhance,1400);setInterval(enhance,2000);
+})();
+
+</script>
 </html>
