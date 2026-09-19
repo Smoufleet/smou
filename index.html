@@ -850,6 +850,30 @@ h1,h2,h3{font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto
 .tn-report:hover{background:var(--surface-2)}
 .tn-ava{width:31px;height:31px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
 @media(max-width:760px){.tn-brand small{display:none}.tn-report{display:none}}
+
+/* ---- Mobile: stack the top nav (brand+controls on row 1, tabs scroll on row 2) ---- */
+@media(max-width:860px){
+  .topnav{position:sticky;top:0;height:auto;min-height:52px;flex-wrap:wrap;padding:7px 12px;gap:8px;row-gap:6px}
+  .tn-brand{flex:0 0 auto;min-width:0;font-size:15px}
+  .tn-brand small{display:none}
+  .tn-brand .box{width:26px;height:26px}
+  .tn-right{flex:1 1 auto;justify-content:flex-end;padding-left:0;gap:7px}
+  .tn-nav{order:3;flex:1 1 100%;justify-content:flex-start;height:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 1px;gap:2px;border-top:1px solid var(--line);margin-top:2px}
+  .tn-nav::-webkit-scrollbar{display:none}
+  .tn-item{height:auto}
+  .tn-btn{padding:7px 11px;font-size:13px}
+  .tn-item.active>.tn-btn::after{bottom:-1px}
+  .tn-pop{position:absolute;left:0;right:auto;min-width:190px;max-width:calc(100vw - 24px);top:calc(100% - 2px)}
+  /* the page-title bar sits normally below the (now taller) nav */
+  .topbar{position:static !important;top:auto !important}
+  /* keep the moved controls compact */
+  .tn-right .save-ind{padding:5px 8px;font-size:11px}
+  .tn-right .btn.primary span{font-size:13px}
+}
+@media(max-width:520px){
+  .tn-right .save-ind .save-txt{display:none}   /* just the dot on very small screens */
+  .tn-brand{font-size:14px}
+}
 [dir="rtl"] .tn-brand{margin-right:0;margin-left:16px}
 [dir="rtl"] .tn-pop{left:auto;right:0}
 [dir="rtl"] .tn-right{margin-left:0;margin-right:auto}
