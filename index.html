@@ -752,6 +752,116 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 @media(min-width:861px){[dir="rtl"] .app.nav-collapsed .sidebar{transform:translateX(100%)}}
 @media(max-width:860px){[dir="rtl"] .sidebar{transform:translateX(100%)}[dir="rtl"] .sidebar.open{transform:none}}
 </style>
+<style id="reskin">
+/* ============================================================
+   DEMO RE-SKIN — Trixys/Sypher-inspired clean analytics look
+   (cool near-white surfaces · emerald/green data accents · sans headings)
+   Overrides the app's original warm/beige theme. Logic untouched.
+   ============================================================ */
+:root{
+  --acc:#12B76A;
+  --bg:#F2F4F6; --panel:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4F6F8; --surface-3:#EBEEF1;
+  --ink:#111418; --ink-2:#59626C; --muted:#98A2AD; --line:#E7EBEF; --line-2:#DBE0E5;
+  --teal:var(--acc); --teal-2:color-mix(in srgb,var(--acc) 84%,#000); --teal-ink:color-mix(in srgb,var(--acc) 78%,#000);
+  --amber:#F59E0B; --amber-2:#D97706; --indigo:#6366F1;
+  --good:#12B76A; --good-ink:#0E9A5A; --warn:#F59E0B; --crit:#EF4444; --neutral:#8A929B;
+  --good-bg:#E6F6EE; --warn-bg:#FEF3E2; --crit-bg:#FDE8E7; --neutral-bg:#EEF1F4; --indigo-bg:#ECEDFB;
+  --teal-bg:color-mix(in srgb,var(--acc) 13%,transparent);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px -14px rgba(16,24,40,.12);
+  --shadow-lg:0 18px 46px -18px rgba(16,24,40,.20);
+  --sidebar:#FFFFFF; --sidebar-ink:#59626C; --sidebar-mut:#98A2AD; --sidebar-line:#EDF0F3;
+  --sidebar-active:color-mix(in srgb,var(--acc) 13%,transparent);
+  --rad:14px; --rad-sm:10px;
+}
+:root[data-theme="dark"]{
+  --acc:#2DD48A;
+  --bg:#0F1214; --panel:#171B1E; --surface:#171B1E; --surface-2:#1E2429; --surface-3:#262D33;
+  --ink:#EDF1F3; --ink-2:#A6B0B8; --muted:#7C868E; --line:#242B31; --line-2:#313A41;
+  --teal:var(--acc); --teal-2:color-mix(in srgb,var(--acc) 85%,#fff); --teal-ink:color-mix(in srgb,var(--acc) 72%,#fff);
+  --amber:#F5B454; --amber-2:#f0b45e; --indigo:#8B8DF7;
+  --good:#2DD48A; --good-ink:#57E0A3; --warn:#F5B454; --crit:#F87171; --neutral:#8A929B;
+  --good-bg:#12291F; --warn-bg:#2C2413; --crit-bg:#31211F; --neutral-bg:#1E252A; --indigo-bg:#20233E;
+  --teal-bg:color-mix(in srgb,var(--acc) 26%,transparent);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -16px rgba(0,0,0,.7);
+  --shadow-lg:0 18px 48px -18px rgba(0,0,0,.75);
+  --sidebar:#12161A; --sidebar-ink:#C3CBD2; --sidebar-mut:#7C868E; --sidebar-line:#212830;
+  --sidebar-active:color-mix(in srgb,var(--acc) 30%,transparent);
+  --rad:14px; --rad-sm:10px;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --acc:#2DD48A;
+  --bg:#0F1214; --panel:#171B1E; --surface:#171B1E; --surface-2:#1E2429; --surface-3:#262D33;
+  --ink:#EDF1F3; --ink-2:#A6B0B8; --muted:#7C868E; --line:#242B31; --line-2:#313A41;
+  --teal:var(--acc); --teal-2:color-mix(in srgb,var(--acc) 85%,#fff); --teal-ink:color-mix(in srgb,var(--acc) 72%,#fff);
+  --amber:#F5B454; --amber-2:#f0b45e; --indigo:#8B8DF7;
+  --good:#2DD48A; --good-ink:#57E0A3; --warn:#F5B454; --crit:#F87171; --neutral:#8A929B;
+  --good-bg:#12291F; --warn-bg:#2C2413; --crit-bg:#31211F; --neutral-bg:#1E252A; --indigo-bg:#20233E;
+  --teal-bg:color-mix(in srgb,var(--acc) 26%,transparent);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -16px rgba(0,0,0,.7);
+  --shadow-lg:0 18px 48px -18px rgba(0,0,0,.75);
+  --sidebar:#12161A; --sidebar-ink:#C3CBD2; --sidebar-mut:#7C868E; --sidebar-line:#212830;
+  --sidebar-active:color-mix(in srgb,var(--acc) 30%,transparent);
+  --rad:14px; --rad-sm:10px;
+}}
+
+/* Modern grotesque headings instead of the serif — matches the reference UI */
+h1,h2,h3{font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif !important;
+  font-weight:700 !important;letter-spacing:-.02em !important;}
+.sb-brand .nm,.dc-time{font-family:"Plus Jakarta Sans",system-ui,sans-serif !important;}
+
+/* Flatter, cleaner cards + crisp hairline borders */
+.card{border:1px solid var(--line);box-shadow:var(--shadow);}
+.stat.card .strip{opacity:.9}
+
+/* Primary button: solid emerald, subtle depth (echoes the reference CTA) */
+.btn.primary{box-shadow:0 1px 2px rgba(16,24,40,.10);}
+
+/* ============ TOP HORIZONTAL NAV (replaces the left sidebar) ============ */
+.app{display:flex !important;flex-direction:column;min-height:100vh}
+.app > .main{flex:1 1 auto;min-height:0}
+.sidebar{display:none !important}
+.menu-btn{display:none !important}
+.topbar{top:56px !important;z-index:29}
+.topnav{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:6px;
+  padding:0 clamp(16px,3vw,28px);height:56px;
+  background:color-mix(in srgb,var(--panel) 92%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.tn-brand{display:flex;align-items:center;gap:9px;flex:1 1 0;min-width:0;font-weight:800;font-size:15.5px;letter-spacing:-.02em;color:var(--ink);white-space:nowrap}
+.tn-brand .box{width:27px;height:27px;border-radius:8px;background:var(--acc);display:grid;place-items:center;color:#fff;flex:none}
+.tn-brand .box svg{width:18px;height:18px}
+.tn-brand small{display:block;font-family:"IBM Plex Mono";font-weight:400;font-size:8px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-top:1px}
+.tn-nav{display:flex;align-items:center;justify-content:center;gap:1px;flex:0 1 auto;min-width:0;flex-wrap:nowrap;overflow:visible;height:100%}
+.tn-item{position:relative;height:100%;display:flex;align-items:center}
+.tn-btn{display:flex;align-items:center;gap:5px;white-space:nowrap;border:0;background:transparent;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-2);padding:8px 12px;border-radius:9px;line-height:1}
+.tn-btn:hover{background:var(--surface-2);color:var(--ink)}
+.tn-btn .chev{width:12px;height:12px;opacity:.55;transition:transform .18s ease}
+.tn-item.open .tn-btn .chev{transform:rotate(180deg)}
+.tn-item.active>.tn-btn{color:var(--ink)}
+.tn-item.active>.tn-btn::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--acc)}
+.tn-pop{position:absolute;top:calc(100% - 4px);left:0;min-width:214px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;z-index:60;display:none}
+.tn-item.open .tn-pop{display:block}
+.tn-link{display:block;white-space:nowrap;padding:8px 11px;border-radius:8px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.tn-link:hover{background:var(--surface-2);color:var(--ink)}
+.tn-link.active{background:var(--sidebar-active);color:var(--teal-ink);font-weight:600}
+.tn-right{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 0;min-width:0;padding-left:12px}
+.tn-report{border:1px solid var(--line-2);background:var(--panel);border-radius:9px;padding:7px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap}
+.tn-report:hover{background:var(--surface-2)}
+.tn-ava{width:31px;height:31px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+@media(max-width:760px){.tn-brand small{display:none}.tn-report{display:none}}
+[dir="rtl"] .tn-brand{margin-right:0;margin-left:16px}
+[dir="rtl"] .tn-pop{left:auto;right:0}
+[dir="rtl"] .tn-right{margin-left:0;margin-right:auto}
+
+/* ---- Slim page-title bar (thin header line) ---- */
+.topbar{min-height:0 !important;padding-top:7px !important;padding-bottom:7px !important;gap:10px}
+.tb-title h1{font-size:15px !important;line-height:1.1}
+.tb-title .crumb{font-size:10px !important;margin-top:1px !important}
+.topbar .btn.primary{padding-top:7px;padding-bottom:7px}
+.topbar .save-ind{padding-top:5px;padding-bottom:5px}
+
+</style>
 <!-- External Libraries via CDN (High-speed & Cached) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -4685,4 +4795,86 @@ if(SB_ON){
 
 </script>
 </body>
+<script id="topnav-mod">
+/* ===== DEMO: horizontal top navigation (replaces the sidebar) ===== */
+(function(){
+  var LOGO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l1.8-4.5A2 2 0 0 1 6.7 7h8.6a2 2 0 0 1 1.9 1.3L19 13l1.2.4A1.5 1.5 0 0 1 21 15v2h-2.5"/><path d="M2 17h3.5M9 17h6"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg>';
+  var NAV=[
+    {t:"Dashboard",r:"overview"},
+    {t:"Alerts",r:"alerts"},
+    {t:"Orders",r:"orders"},
+    {t:"Operations",items:[
+      {t:"Employees",r:"grd/drivers"},{t:"SIM / Mobile",r:"grd/sims"},{t:"Fuel Cards",r:"grd/fuel"},
+      {t:"Accommodation",r:"grd/housing"},{t:"Company Documents",r:"grd/compdocs"},
+      {t:"Attendance / Leave",r:"grd/attendance"},{t:"Hiring / Onboarding",r:"grd/hiring"}]},
+    {t:"Fleet",items:[
+      {t:"Vehicles",r:"grd/vehicles"},{t:"Vehicle Service",r:"grd/service"},{t:"Fuel Tracker",r:"fueltracker"},
+      {t:"Maintenance",r:"grd/maintenance"},{t:"Traffic Fines",r:"grd/fines"},{t:"Accident / Incident",r:"grd/incidents"}]},
+    {t:"Finance",items:[
+      {t:"Dashboard",r:"finance"},{t:"Expense Log",r:"finance/log"},{t:"New Expense",r:"finance/new"},
+      {t:"Income / Revenue",r:"grd/income"},{t:"Payroll",r:"grd/payroll"},{t:"Company Wallet",r:"grd/funds"}]}
+  ];
+  var CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  function curRoute(){var h=(location.hash||"").replace(/^#\/?/,"");return h||"overview";}
+  function isActive(g){
+    var r=curRoute();
+    if(g.r)return g.r===r;
+    return (g.items||[]).some(function(it){return it.r===r||r.indexOf(it.r+"/")===0;});
+  }
+  function build(){
+    var esc=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");};
+    var html='<div class="tn-brand"><span class="box">'+LOGO+'</span><span>SMOU<small>Fleet · Kuwait</small></span></div>';
+    html+='<nav class="tn-nav">';
+    NAV.forEach(function(g,i){
+      var act=isActive(g)?" active":"";
+      if(g.items){
+        html+='<div class="tn-item'+act+'" data-gi="'+i+'"><button class="tn-btn" data-tn-toggle="'+i+'">'+esc(g.t)+CHEV+'</button><div class="tn-pop">'+
+          g.items.map(function(it){var a=(it.r===curRoute()||curRoute().indexOf(it.r+"/")===0)?" active":"";return '<a class="tn-link'+a+'" data-tn-go="'+it.r+'">'+esc(it.t)+'</a>';}).join("")+
+        '</div></div>';
+      }else{
+        html+='<div class="tn-item'+act+'"><button class="tn-btn" data-tn-go="'+g.r+'">'+esc(g.t)+'</button></div>';
+      }
+    });
+    html+='</nav>';
+    html+='<div class="tn-right"><button class="tn-report" data-tn-go="alerts">Generate Report</button><span class="tn-ava">S</span></div>';
+    var el=document.createElement("header");
+    el.className="topnav";
+    el.innerHTML=html;
+    return el;
+  }
+  function ensure(){
+    var app=document.querySelector(".app");if(!app)return;
+    if(app.querySelector(":scope > .topnav"))return;   // already present — do nothing (avoids observer loop)
+    var el=build();
+    app.insertBefore(el, app.firstChild);
+    updateActive(el);
+  }
+  function updateActive(tn){
+    tn.querySelectorAll(".tn-item").forEach(function(item,idx){
+      item.classList.toggle("active", isActive(NAV[idx]));
+      item.classList.remove("open");
+    });
+    tn.querySelectorAll(".tn-link").forEach(function(a){
+      var r=a.getAttribute("data-tn-go");
+      a.classList.toggle("active", r===curRoute()||curRoute().indexOf(r+"/")===0);
+    });
+  }
+  function closePops(){document.querySelectorAll(".topnav .tn-item.open").forEach(function(x){x.classList.remove("open");});}
+  document.addEventListener("click",function(e){
+    var go=e.target.closest("[data-tn-go]");
+    if(go){e.preventDefault();closePops();location.hash="#/"+go.getAttribute("data-tn-go");return;}
+    var tg=e.target.closest("[data-tn-toggle]");
+    if(tg){e.preventDefault();e.stopPropagation();var item=tg.parentNode;var wasOpen=item.classList.contains("open");closePops();if(!wasOpen)item.classList.add("open");return;}
+    if(!e.target.closest(".tn-pop"))closePops();
+  },true);
+  window.addEventListener("hashchange",function(){var tn=document.querySelector(".topnav");if(tn)updateActive(tn);});
+  var root=document.getElementById("root");
+  if(root){new MutationObserver(function(){ensure();}).observe(root,{childList:true,subtree:false});}
+  // initial (in case first render already happened)
+  if(document.readyState!=="loading")ensure();
+  document.addEventListener("DOMContentLoaded",ensure);
+  setTimeout(ensure,300);setTimeout(ensure,1200);
+})();
+
+</script>
 </html>
