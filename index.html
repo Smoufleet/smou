@@ -880,6 +880,8 @@ h1,h2,h3{font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto
   --indigo:#A78BFA !important;
 }}
 .btn.primary{color:#fff}
+/* dropdown active sub-tab: readable text on the dark highlight */
+.tn-link.active{background:var(--acc) !important;color:var(--panel) !important}
 
 </style>
 <!-- External Libraries via CDN (High-speed & Cached) -->
@@ -3087,7 +3089,7 @@ function pageOrders(pg){
   curEnt=null;
   var P=effectivePerf();
   var subtabs='<div class="sub-tabs" style="margin:0">'+[["dash","Dashboard"],["records","Records"],["driver","By Driver"],["daily","Daily Log"]].map(function(t){return '<button class="sub-tab'+(ordersView===t[0]?" active":"")+'" data-act="ordview" data-v="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
-  var pcol={all:"var(--muted)",Talabat:cvar("--amber"),Keeta:cvar("--teal")};
+  var pcol={all:"var(--muted)",Talabat:cvar("--amber"),Keeta:cvar("--good")};
   var plfilter='<div class="pl-filter">'+[["all","All"],["Talabat","Talabat"],["Keeta","Keeta"]].map(function(t){return '<button class="pl-chip'+(ordersPlat===t[0]?" active":"")+'" data-act="ordplat" data-v="'+t[0]+'"><span class="pd" style="background:'+pcol[t[0]]+'"></span>'+t[1]+'</button>';}).join("")+'</div>';
   var mkeys={};P.forEach(function(r){var k=perfMKey(r);if(k)mkeys[k]=1;});(STATE.grd.orderlog||[]).forEach(function(e){var d=parseD(e.date);if(d)mkeys[d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")]=1;});var mopts=Object.keys(mkeys).sort().reverse();
   if(ordersMonth!=="all"&&!mkeys[ordersMonth])ordersMonth="all";
@@ -3170,7 +3172,7 @@ function ordersDash(P){
     (mks.length?'<div style="display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:10px">'+mks.map(function(k){var h=Math.max(3,mt[k]/maxM*140);var p=k.split("-");var lbl=MONS[(+p[1])-1]+" '"+p[0].slice(2);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px" data-tt="'+lbl+': '+fmtN(mt[k])+' orders"><div class="mono" style="font-size:10px;color:var(--ink-2)">'+fmtN(mt[k])+'</div><div style="width:100%;max-width:48px;height:'+h+'px;border-radius:7px 7px 0 0;background:linear-gradient(180deg,var(--teal),var(--teal-2))"></div><div style="font-size:10px;color:var(--muted);font-family:\'IBM Plex Mono\'">'+lbl+'</div></div>';}).join("")+'</div>':'<div class="empty">No monthly data.</div>')+
   '</div></div>';
   // platform donut
-  var vc=[{label:"Talabat",value:tal,color:cvar("--amber")},{label:"Keeta",value:kee,color:cvar("--teal")}];
+  var vc=[{label:"Talabat",value:tal,color:cvar("--amber")},{label:"Keeta",value:kee,color:cvar("--good")}];
   // top performers by UTR (min 10 days)
   var top=P.filter(function(r){return (num(r.days)||0)>=10;}).slice().sort(function(a,b){return perfUTR(b)-perfUTR(a);}).slice(0,10);
   var topCard='<div class="card"><div class="card-h"><h3>Top Performers (UTR)</h3><span class="hint">min 10 active days</span></div><div class="card-b">'+
@@ -4948,6 +4950,10 @@ if(SB_ON){
     "Niger":g("#0DB02B 0 33%","#FFFFFF 33% 66%","#E05206 66% 100%"),
     "Ivory Coast":g("#F77F00 0 33%","#FFFFFF 33% 66%","#009E60 66% 100%")
   };
+  // case-insensitive lookups (real data may be UPPERCASE, e.g. "SUDAN")
+  var FLAGL={},GRADL={},kk;
+  for(kk in FLAG)FLAGL[kk.toLowerCase()]=FLAG[kk];
+  for(kk in GRAD)GRADL[kk.toLowerCase()]=GRAD[kk];
   var css=document.createElement("style");
   css.textContent=[
     ".bl .natflag{display:inline-block;font-size:15px;line-height:1;margin-right:8px;vertical-align:-1px}",
@@ -4967,10 +4973,10 @@ if(SB_ON){
       var rows=cards[i].querySelectorAll(".barrow");
       for(var j=0;j<rows.length;j++){
         var bl=rows[j].querySelector(".bl"); if(!bl)continue;
-        var name=norm(bl.textContent);
-        if(!bl.querySelector(".natflag")&&FLAG[name])bl.insertAdjacentHTML("afterbegin",'<span class="natflag">'+FLAG[name]+'</span>');
+        var name=norm(bl.textContent).toLowerCase();
+        if(!bl.querySelector(".natflag")&&FLAGL[name])bl.insertAdjacentHTML("afterbegin",'<span class="natflag">'+FLAGL[name]+'</span>');
         var bt=rows[j].querySelector(".bt"), bf=rows[j].querySelector(".bf");
-        if(bf&&GRAD[name]){bf.style.background=GRAD[name];if(bt)bt.classList.add("natbar");}
+        if(bf&&GRADL[name]){bf.style.background=GRADL[name];if(bt)bt.classList.add("natbar");}
       }
     }
   }
