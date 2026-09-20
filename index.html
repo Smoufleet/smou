@@ -907,6 +907,30 @@ h1,h2,h3{font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto
 /* dropdown active sub-tab: readable text on the dark highlight */
 .tn-link.active{background:var(--acc) !important;color:var(--panel) !important}
 
+/* DEMO: dense, clean desktop tables (Axanta/Odoo-style) — more rows per screen */
+@media(min-width:861px){
+  #page table.dt tbody td{padding:6px 12px !important;}
+  #page table.dt thead th{padding:7px 12px !important;font-size:10px;}
+  #page table.dt tbody td .mini-ava,#page table.dt tbody td .cava,#page table.dt tbody td .ini{width:26px !important;height:26px !important;font-size:10px !important;}
+  #page table.dt td .nm{font-size:13px !important;}
+  #page table.dt td .sub{font-size:10px !important;margin-top:0 !important;line-height:1.25;}
+  #page table.dt tbody tr:hover td{background:var(--surface-2);}
+  #page table.dt tbody td{border-bottom:1px solid var(--line);}
+  /* tighter pills */
+  #page table.dt .pill{padding:2px 8px;font-size:11px;}
+}
+
+/* DEMO: Axanta-style clean toolbar */
+@media(min-width:861px){
+  #page .toolbar{gap:8px;margin-bottom:13px;align-items:center}
+  #page .search{flex:0 1 300px;min-width:180px}
+  #page .search input{padding:8px 12px 8px 34px;font-size:13px;border-radius:9px;height:38px}
+  #page .filter{padding:8px 11px;font-size:12.5px;border-radius:9px;height:38px}
+  #page .toolbar .btn.sm{padding:8px 13px;font-size:12.5px;height:38px}
+  #page .reg-count{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);white-space:nowrap;padding:0 6px;letter-spacing:.02em}
+  #page .reg-count b{color:var(--ink);font-weight:700}
+}
+
 </style>
 <!-- External Libraries via CDN (High-speed & Cached) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -5143,6 +5167,26 @@ if(SB_ON){
   if(root)new MutationObserver(function(){setTimeout(tick,0);}).observe(root,{childList:true,subtree:false});
   window.addEventListener("hashchange",function(){setTimeout(tick,60);});
   setInterval(tick,1200); setTimeout(tick,500); setTimeout(tick,1400);
+})();
+
+</script>
+<script id="tb-mod">
+/* DEMO: add a compact record-count on the right of the register toolbar (Axanta-style) */
+(function(){
+  function enhance(){
+    var page=document.getElementById("page"); if(!page)return;
+    var tb=page.querySelector(".toolbar"); if(!tb)return;
+    var c=tb.querySelector(".reg-count");
+    if(!c){ c=document.createElement("span"); c.className="reg-count";
+      var add=tb.querySelector('[data-act="new"]'); tb.insertBefore(c, add||null); }
+    var rows=page.querySelectorAll(".dt tbody tr");
+    var n=[].filter.call(rows,function(r){return !r.querySelector("td[colspan]");}).length;
+    c.innerHTML='<b>'+n+'</b> records';
+  }
+  var root=document.getElementById("root");
+  if(root)new MutationObserver(function(){setTimeout(enhance,0);}).observe(root,{childList:true,subtree:false});
+  window.addEventListener("hashchange",function(){setTimeout(enhance,60);});
+  setInterval(enhance,900);setTimeout(enhance,500);setTimeout(enhance,1400);
 })();
 
 </script>
