@@ -3846,10 +3846,11 @@ var tt;document.addEventListener("mousemove",function(e){var b=e.target.closest(
 function ask(){/* keep simple; USER captured lazily */}
 
 /* ============ MULTISELECT FILTERS ============ */
+function shortLab(s){var t=String(s||"");if(t.slice(0,4).toLowerCase()==="all ")t=t.slice(4);if(/ies$/.test(t))t=t.slice(0,-3)+"y";else if(/ses$/.test(t))t=t.slice(0,-2);else if(/s$/.test(t))t=t.slice(0,-1);return t.charAt(0).toUpperCase()+t.slice(1);}
 function msFilter(ent,f){
   var opts=f.opts?L(f.opts):distinct(store(ent),f.k);
   var sel=view.filters[f.k]||[];
-  var valTxt=sel.length?(sel.length===1?sel[0]:sel.length+" selected"):f.lab;
+  var valTxt=sel.length?(sel.length===1?sel[0]:sel.length+" selected"):shortLab(f.lab);
   return '<div class="ms" data-mskey="'+f.k+'">'+
     '<button class="ms-btn" data-msbtn type="button"><span class="ms-val'+(sel.length?" has":"")+'">'+esc(valTxt)+'</span>'+(sel.length>1?'<span class="ms-cnt">'+sel.length+'</span>':"")+'<svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'+
     '<div class="ms-pop" hidden><div class="ms-search"><input placeholder="Search…" data-mssearch autocomplete="off"></div>'+
@@ -4679,7 +4680,7 @@ document.addEventListener("click",function(e){
 /* ============ EXPORT / IMPORT / TEMPLATE ============ */
 function actionsMenu(ent){
   return '<div class="ms" data-actions>'+
-    '<button class="btn sm" data-actbtn type="button">Actions <svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--muted)"><path d="M6 9l6 6 6-6"/></svg></button>'+
+    '<button class="btn sm" data-actbtn type="button">Import / Export <svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--muted)"><path d="M6 9l6 6 6-6"/></svg></button>'+
     '<div class="ms-pop" hidden style="right:0;left:auto;min-width:210px"><div class="ms-list">'+
       '<div class="menu-item" data-actexport>'+svg('<path d="M12 3v11M8 10l4 4 4-4"/><path d="M4 21h16"/>')+'Export to Excel</div>'+
       '<div class="menu-item" data-acttemplate>'+svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 15h8"/>')+'Download blank template</div>'+
