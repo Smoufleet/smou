@@ -5019,4 +5019,131 @@ if(SB_ON){
 })();
 
 </script>
+<script id="mob-mod">
+/* DEMO: proper mobile UX — bottom tab bar, group bottom-sheet, tables -> cards.
+   Only active <= 860px; desktop untouched. */
+(function(){
+  function I(p){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';}
+  var NAV=[
+    {t:"Home",r:"overview",ic:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/>'},
+    {t:"Orders",r:"orders",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>'},
+    {t:"Ops",group:1,ic:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',items:[
+      {t:"Employees",r:"grd/drivers"},{t:"SIM / Mobile",r:"grd/sims"},{t:"Fuel Cards",r:"grd/fuel"},
+      {t:"Accommodation",r:"grd/housing"},{t:"Company Documents",r:"grd/compdocs"},
+      {t:"Attendance",r:"grd/attendance"},{t:"Hiring / Onboarding",r:"grd/hiring"},{t:"Alerts & Expiries",r:"alerts"}]},
+    {t:"Fleet",group:1,ic:'<path d="M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/>',items:[
+      {t:"Vehicles",r:"grd/vehicles"},{t:"Vehicle Service",r:"grd/service"},{t:"Fuel Tracker",r:"fueltracker"},
+      {t:"Maintenance",r:"grd/maintenance"},{t:"Traffic Fines",r:"grd/fines"},{t:"Accident / Incident",r:"grd/incidents"}]},
+    {t:"Finance",group:1,ic:'<path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/>',items:[
+      {t:"Dashboard",r:"finance"},{t:"Expense Log",r:"finance/log"},{t:"New Expense",r:"finance/new"},
+      {t:"Income / Revenue",r:"grd/income"},{t:"Payroll",r:"grd/payroll"},{t:"Company Wallet",r:"grd/funds"}]}
+  ];
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+  function curRoute(){return (location.hash||"").replace(/^#\/?/,"")||"overview";}
+  function itemActive(it){var r=curRoute();return it.r===r||r.indexOf(it.r+"/")===0;}
+  function navItemActive(n){if(n.r)return itemActive(n);return (n.items||[]).some(itemActive);}
+
+  var css=document.createElement("style");
+  css.textContent=[
+  ".mbar,.msheet,.msheet-bg{display:none}",   /* hidden on desktop; shown only in the mobile media query */
+  "@media(max-width:860px){",
+    ".msheet{display:block}.msheet-bg{display:block}",
+    ".tn-nav{display:none!important}",                              /* top tab strip hidden — bottom bar handles nav */
+    "body{padding-bottom:70px!important}",
+    ".mbar{position:fixed;left:0;right:0;bottom:0;z-index:200;display:flex;background:color-mix(in srgb,var(--panel) 96%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);box-shadow:0 -4px 18px rgba(0,0,0,.07);padding:6px 2px;transition:transform .28s cubic-bezier(.2,.8,.2,1)}",
+    ".mbar.mb-hide{transform:translateY(135%)}",
+    ".mbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 2px;color:var(--muted);font-size:10.5px;font-weight:700;border:0;background:none;cursor:pointer;font-family:inherit}",
+    ".mbar button svg{width:22px;height:22px;opacity:.9}",
+    ".mbar button.active{color:var(--acc)}",
+    ".mbar button.active svg{opacity:1}",
+    ".msheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:210;opacity:0;pointer-events:none;transition:opacity .2s}",
+    ".msheet-bg.on{opacity:1;pointer-events:auto}",
+    ".msheet{position:fixed;left:0;right:0;bottom:0;z-index:211;background:var(--panel);border-radius:20px 20px 0 0;padding:6px 10px 20px;transform:translateY(110%);transition:transform .26s cubic-bezier(.2,.8,.2,1);box-shadow:0 -8px 34px rgba(0,0,0,.22);max-height:75vh;overflow:auto}",
+    ".msheet.on{transform:none}",
+    ".msheet .grip{width:38px;height:4px;border-radius:3px;background:var(--line-2);margin:8px auto 6px}",
+    ".msheet h5{margin:4px 12px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-family:'IBM Plex Mono',monospace}",
+    ".msheet button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 14px;border:0;border-radius:13px;font-size:15px;font-weight:600;color:var(--ink);background:none;text-align:left;font-family:inherit;cursor:pointer}",
+    ".msheet button:active{background:var(--surface-2)}",
+    ".msheet button.active{background:var(--acc);color:var(--panel)}",
+    /* tables -> compact cards (~3 per screen) */
+    ".dt{min-width:0!important}",
+    ".dt thead{display:none}",
+    ".dt,.dt tbody,.dt tbody tr,.dt tbody td{display:block;width:auto}",
+    ".dt tbody tr{background:var(--panel);border:1px solid var(--line);border-radius:13px;margin:0 0 9px;padding:7px 12px;box-shadow:var(--shadow)}",
+    ".dt tbody td{border:none!important;padding:3.5px 0!important;display:flex;justify-content:space-between;gap:12px;align-items:center;white-space:normal!important;text-align:right;min-height:0;line-height:1.3;font-size:13px}",
+    ".dt tbody td::before{content:attr(data-label);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;flex:none;text-align:left;white-space:nowrap}",
+    ".dt tbody td[data-label='']::before{display:none}",
+    /* primary field = header of the card */
+    ".dt tbody td:first-child{padding-bottom:5px!important;margin-bottom:2px;border-bottom:1px solid var(--line)!important}",
+    ".dt tbody td:first-child,.dt tbody td:first-child .nm{font-size:14.5px;font-weight:700}",
+    ".dt tbody td .sub{font-size:11px}",
+    ".dt tbody td.selcol,.dt th.selcol{display:none!important}",
+    ".dt .mini-ava,.dt .cava{width:22px!important;height:22px!important;font-size:10px!important;flex:none}",
+    "#page .tbl-wrap{overflow:visible!important}",
+  "}"
+  ].join("");
+  (document.head||document.documentElement).appendChild(css);
+
+  // ---- build bottom bar + sheet (once, on body so they survive re-renders) ----
+  var bar=document.createElement("nav"); bar.className="mbar";
+  bar.innerHTML=NAV.map(function(n,i){return '<button data-mi="'+i+'">'+I(n.ic)+'<span>'+esc(n.t)+'</span></button>';}).join("");
+  var sheetBg=document.createElement("div"); sheetBg.className="msheet-bg";
+  var sheet=document.createElement("div"); sheet.className="msheet";
+  document.addEventListener("DOMContentLoaded",function(){document.body.appendChild(bar);document.body.appendChild(sheetBg);document.body.appendChild(sheet);});
+  if(document.body){document.body.appendChild(bar);document.body.appendChild(sheetBg);document.body.appendChild(sheet);}
+
+  function openSheet(n){
+    sheet.innerHTML='<div class="grip"></div><h5>'+esc(n.t)+'</h5>'+
+      n.items.map(function(it){return '<button data-go="'+it.r+'" class="'+(itemActive(it)?"active":"")+'">'+esc(it.t)+'</button>';}).join("");
+    sheetBg.classList.add("on");sheet.classList.add("on");
+  }
+  function closeSheet(){sheetBg.classList.remove("on");sheet.classList.remove("on");}
+  sheetBg.addEventListener("click",closeSheet);
+  bar.addEventListener("click",function(e){
+    var btn=e.target.closest("[data-mi]"); if(!btn)return;
+    var n=NAV[+btn.getAttribute("data-mi")];
+    if(n.items)openSheet(n); else {closeSheet();location.hash="#/"+n.r;}
+  });
+  sheet.addEventListener("click",function(e){
+    var b=e.target.closest("[data-go]"); if(!b)return;
+    closeSheet();location.hash="#/"+b.getAttribute("data-go");
+  });
+  function updateBar(){
+    bar.querySelectorAll("button").forEach(function(btn,i){btn.classList.toggle("active",navItemActive(NAV[i]));});
+  }
+
+  // ---- auto-hide: bar shows on tap/scroll, then hides after a short idle ----
+  var hideT, HIDE_MS=2800;
+  function isMobile(){try{return window.matchMedia("(max-width:860px)").matches;}catch(e){return window.innerWidth<=860;}}
+  function showBar(){
+    if(!isMobile())return;
+    bar.classList.remove("mb-hide");
+    clearTimeout(hideT);
+    hideT=setTimeout(function(){ if(!sheet.classList.contains("on")) bar.classList.add("mb-hide"); }, HIDE_MS);
+  }
+  bar.classList.add("mb-hide");   // start hidden
+  ["touchstart","pointerdown","click","scroll","keydown"].forEach(function(ev){
+    document.addEventListener(ev, showBar, {passive:true});
+  });
+  window.addEventListener("hashchange",showBar);
+
+  // ---- responsive tables: give each cell a data-label from its header ----
+  function labelize(){
+    var page=document.getElementById("page"); if(!page)return;
+    page.querySelectorAll("table.dt").forEach(function(t){
+      var ths=t.querySelectorAll("thead th");
+      var labs=[].map.call(ths,function(th){var c=th.cloneNode(true);var s=c.querySelector(".sar");if(s)s.remove();return (c.textContent||"").trim();});
+      t.querySelectorAll("tbody tr").forEach(function(tr){
+        [].forEach.call(tr.children,function(td,i){ if(!td.hasAttribute("data-label")) td.setAttribute("data-label", labs[i]||""); });
+      });
+    });
+  }
+  function tick(){updateBar();labelize();}
+  var root=document.getElementById("root");
+  if(root)new MutationObserver(function(){setTimeout(tick,0);}).observe(root,{childList:true,subtree:false});
+  window.addEventListener("hashchange",function(){setTimeout(tick,60);});
+  setInterval(tick,1200); setTimeout(tick,500); setTimeout(tick,1400);
+})();
+
+</script>
 </html>
