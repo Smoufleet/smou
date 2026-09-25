@@ -6087,6 +6087,30 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     }
     ccRefreshLive();
   },TICK_MS);
+
+  /* ---- clean map: no route lines, the rider's photo is the moving live pin ---- */
+  ccLoadTrails=function(){
+    if(!CC.map)return;Object.keys(CC.trails||{}).forEach(function(k){try{CC.map.removeLayer(CC.trails[k]);}catch(e){}});CC.trails={};
+  };
+  ccTrailPoint=function(){};
+  function facePhoto(name){
+    var d=(CC.drivers||[]).filter(function(x){return x.name===name;})[0],e=d?ccEmp(d):null,u=null;
+    try{u=(e&&(e.photo||empPhotoByName(e.name)))||empPhotoByName(name)||null;}catch(_){u=null;}
+    if(u&&typeof u==="object")u=u.url||null;
+    return u;
+  }
+  function initials(n){return String(n||"D").trim().split(/\s+/).slice(0,2).map(function(w){return w.charAt(0);}).join("").toUpperCase();}
+  ccLiveIcon=function(name,stale){
+    var u=facePhoto(name),first=esc(String(name||"Driver").split(" ")[0]);
+    var inner=u?'<img src="'+esc(u)+'" alt="" onerror="this.remove()">':'<b>'+esc(initials(name))+'</b>';
+    return window.L.divIcon({className:"",html:'<div class="cc-dot cc-face'+(stale?" stale":"")+'">'+inner+'</div><div class="cc-label">'+first+'</div>',iconSize:[22,22],iconAnchor:[11,11]});
+  };
+  var fst=document.createElement("style");
+  fst.textContent=".cc-dot.cc-face{position:relative;overflow:hidden;padding:0;border:2px solid #E3A64A;background:#E3A64A;display:grid;place-items:center;box-sizing:border-box}"+
+    ".cc-dot.cc-face img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center top;border-radius:50%;display:block}"+
+    ".cc-dot.cc-face b{font:800 8px/1 'Plus Jakarta Sans',sans-serif;color:#fff;letter-spacing:.02em}"+
+    ".cc-dot.cc-face.stale{border-color:#9a8f7f;background:#9a8f7f}.cc-dot.cc-face.stale img{filter:grayscale(1);opacity:.75}";
+  document.head.appendChild(fst);
 })();
 
 /* ===== v3 login gate: animated scene + friendly sign-in card (same sign-in logic as before) ===== */
