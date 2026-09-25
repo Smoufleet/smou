@@ -751,6 +751,38 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 [dir="rtl"] .bt{transform:scaleX(-1)}
 @media(min-width:861px){[dir="rtl"] .app.nav-collapsed .sidebar{transform:translateX(100%)}}
 @media(max-width:860px){[dir="rtl"] .sidebar{transform:translateX(100%)}[dir="rtl"] .sidebar.open{transform:none}}
+
+/* ===== Command Center ===== */
+.cc-banner{display:flex;align-items:center;gap:14px;padding:14px 18px}
+.cc-banner:hover{box-shadow:var(--shadow-lg)}
+.cc-b-dot{width:14px;height:14px;border-radius:50%;background:var(--muted);flex:none}
+.cc-b-dot.on{background:var(--good);box-shadow:0 0 0 0 var(--good);animation:ccpulse 1.8s ease-out infinite}
+@keyframes ccpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 60%,transparent)}70%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.cc-b-t{font-weight:800;font-size:16px;color:var(--ink)}.cc-b-s{font-size:12.5px;color:var(--muted)}
+.cc-livebadge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--good);color:#fff;font-size:10.5px;font-weight:800;margin-left:4px}
+.cc-livegrid{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(300px,1fr);gap:16px;align-items:start}
+#ccmap{height:520px;border-radius:12px;overflow:hidden;border:1px solid var(--line);z-index:0}
+.cc-scroll{max-height:250px;overflow:auto}
+.cc-live{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cc-live:last-child{border-bottom:0}.cc-live-a{display:flex;gap:6px;flex-wrap:wrap}
+.cc-feed{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}.cc-feed:last-child{border-bottom:0}
+.cc-fdot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
+.cc-top{display:flex;gap:10px;align-items:flex-start;padding:7px 0}
+.cc-week{display:flex;align-items:flex-end;gap:8px;height:150px;border-bottom:1px solid var(--line)}
+.cc-wcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.cc-wbar{width:100%;max-width:34px;border-radius:4px 4px 0 0;background:var(--teal)}.cc-wv{font-size:10px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace}
+.cc-alert{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}.cc-alert:last-child{border-bottom:0}
+.cc-sel{height:38px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0 10px;font-family:inherit;font-size:13px}
+.cc-thumb{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.cc-pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;color:#fff;font-weight:800;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.cc-pin.in{background:#2f9e5b}.cc-pin.out{background:#d9463a}
+.cc-dot{width:22px;height:22px;border-radius:50%;background:#E3A64A;border:3px solid #fff;box-shadow:0 0 0 0 rgba(227,166,74,.7),0 2px 6px rgba(0,0,0,.35);animation:ccdot 1.8s ease-out infinite}
+.cc-dot.stale{background:#9a8f7f;animation:none}
+@keyframes ccdot{0%{box-shadow:0 0 0 0 rgba(227,166,74,.7),0 2px 6px rgba(0,0,0,.35)}70%{box-shadow:0 0 0 14px rgba(227,166,74,0),0 2px 6px rgba(0,0,0,.35)}100%{box-shadow:0 0 0 0 rgba(227,166,74,0),0 2px 6px rgba(0,0,0,.35)}}
+.cc-label{position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#292420;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px}
+@media(max-width:1100px){.cc-livegrid{grid-template-columns:1fr}#ccmap{height:380px}}
+.cc-live .sub,.cc-feed .sub,.cc-alert .sub,.cc-top .sub,.tbl-wrap td .sub{font-size:11.5px!important;color:var(--muted)!important;font-family:inherit}
+.cc-live .nm,.cc-feed b{font-size:13px}
 </style>
 <style id="reskin">
 /* ============================================================
@@ -936,6 +968,8 @@ h1,h2,h3{font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -1931,6 +1965,13 @@ var NAVGROUPS=[
     {r:"overview",t:"Dashboard",ic:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'}
   ]},
   {lab:"Performance",items:[{r:"orders",t:"Order Overview",ic:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/><circle cx="7" cy="14" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="14" r="1"/><circle cx="17" cy="9" r="1"/>'}]},
+  {lab:"Command Center",key:"cc",collapsible:true,adminOnly:true,items:[
+    {r:"cc/live",t:"Live Map",cnt:function(){return CC.loaded?ccActive().length:null;},ic:'<circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/>'},
+    {r:"cc/shifts",t:"Shift Logs",ic:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h5"/>'},
+    {r:"cc/km",t:"KM Records",ic:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'},
+    {r:"cc/fuel",t:"Fuel Audits",ic:'<path d="M3 22V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v18M2 22h14"/><path d="M14 9h3l3 3v6a1.5 1.5 0 0 1-3 0v-3h-3"/>'},
+    {r:"cc/drivers",t:"Driver Accounts",ic:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'}
+  ]},
   {lab:"GRD Operations",key:"grd",collapsible:true,items:[
     {r:"grd/drivers",t:"Employee",ent:"drivers",ic:'<circle cx="9" cy="8" r="3.2"/><path d="M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><path d="M16 4a3.2 3.2 0 0 1 0 6M21 20v-1.5a4 4 0 0 0-3-3.9"/>'},
     {sub:true,key:"assets",lab:"Assets",ic:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',items:[
@@ -2005,6 +2046,7 @@ function renderApp(){
     return '<a class="sb-link'+(route===it.r?" active":"")+'" data-route="'+it.r+'">'+svg(it.ic)+'<span>'+it.t+'</span>'+(cnt!=null?'<span class="cnt">'+cnt+'</span>':"")+'</a>';
   }
   NAVGROUPS.forEach(function(g){
+    if(g.adminOnly&&!(SB_ON&&ROLE==="admin"))return;
     if(g.collapsible){
       var open=(g.key in NAVOPEN)?!!NAVOPEN[g.key]:g.items.some(function(it){return navItemHasRoute(it,route);});
       sb+='<div class="sb-group">';
@@ -2215,13 +2257,15 @@ function renderPage(){
   var titles={overview:["Overview","Fleet & finance at a glance"],finance:["Finance Dashboard","Cost control · SMOU International"],"finance/log":["Expense Log","All logged expenses"],"finance/new":["New Expense","Log a daily cost entry"]};
   var newBtn=$("#newBtn");
   var P=route.split("/");
+  if(route.indexOf("cc/")!==0&&typeof ccTeardown==="function")ccTeardown();
+  if(route==="cc"||route.indexOf("cc/")===0){newBtn.hidden=true;pageCC(pg,P[1]);return;}
   if(route==="users"){setTitle("Users & Roles","Admin · manage staff access");newBtn.hidden=true;pageUsers(pg);return;}
   if(route==="reports"){newBtn.hidden=true;pageReports(pg);return;}
   if(route==="fueltracker"){setTitle("Fuel Tracker","Fleet Ops · fuel consumption & efficiency");newBtn.hidden=true;pageFuelTracker(pg);return;}
   if(route==="alerts"){setTitle("Alerts & Expiries","Expired + expiring within 30 days");newBtn.hidden=true;pageAlerts(pg);return;}
   if(route==="activity"){setTitle("Activity Log","Every change · who & when");newBtn.hidden=true;pageActivity(pg);return;}
   if(route==="orders"){setTitle("Order Overview","Driver performance · Talabat & Keeta");newBtn.hidden=true;pageOrders(pg);return;}
-  if(route==="overview"){setTitle("Overview","Fleet & finance at a glance");newBtn.hidden=true;pageOverview(pg);}
+  if(route==="overview"){setTitle("Overview","Fleet & finance at a glance");newBtn.hidden=true;pageOverview(pg);ccMountBanner(pg);}
   else if(route==="finance"){setTitle("Finance Dashboard","Cost control · SMOU International");$("#newLbl").textContent="New Expense";newBtn.hidden=false;pageFinance(pg);}
   else if(route==="finance/new"){setTitle("New Expense","Finance · daily entry");newBtn.hidden=true;pageNewExpense(pg);}
   else if(route.indexOf("finance/log/")===0){newBtn.hidden=true;pageDetail(pg,"expenses",P[2]);}
@@ -4828,6 +4872,417 @@ document.addEventListener("click",function(e){
   }
 });
 
+/* ============================================================
+   COMMAND CENTER — live data from the Sumou driver app
+   (tables: drivers, shifts, shift_points, fuel_records, driver_sessions — admin-only via RLS)
+   ============================================================ */
+var CC={loaded:false,loading:false,err:"",drivers:[],shifts:[],fuel:[],chan:null,
+  map:null,markers:{},trails:{},view:null,follow:null,
+  f:{driver:"all",platform:"all",status:"all",search:""}};
+var CC_KM_FLAG=400, CC_STALE=120000, CC_PLATFORMS=["Talabat","Keeta"];
+function ccIsAdmin(){return SB_ON&&!!SB&&ROLE==="admin";}
+function ccToday(){try{return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kuwait"});}catch(e){return isoToday();}}
+function ccDay(offset){try{return new Date(Date.now()-offset*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Kuwait"});}catch(e){return isoToday();}}
+function ccMs(s){return Date.parse(s.started_at||s.created_at)||0;}
+function ccLiveMs(s){return s.live_at?Date.parse(s.live_at):null;}
+function ccStale(s){var t=ccLiveMs(s);return !t||Date.now()-t>CC_STALE;}
+function ccAgo(ms){if(!ms)return "no GPS yet";var sec=Math.max(0,Math.round((Date.now()-ms)/1000));if(sec<60)return sec+"s ago";var m=Math.floor(sec/60);if(m<60)return m+"m ago";var h=Math.floor(m/60);if(h<24)return h+"h "+(m%60)+"m ago";return Math.floor(h/24)+"d ago";}
+function ccDrv(id){return CC.drivers.filter(function(d){return String(d.id)===String(id);})[0];}
+function ccEmp(d){if(!d||!d.employee_id)return null;return (STATE.grd.drivers||[]).filter(function(e){return e.id===d.employee_id;})[0]||null;}
+function ccActive(){return CC.shifts.filter(function(s){return s.status==="ACTIVE";});}
+function ccDone(){return CC.shifts.filter(function(s){return s.status==="COMPLETED";});}
+function ccActiveFor(id){return CC.shifts.filter(function(s){return String(s.driver_id)===String(id)&&s.status==="ACTIVE";})[0];}
+function ccFlag(s){return s.status==="COMPLETED"&&((s.distance||0)<0||(s.distance||0)>CC_KM_FLAG);}
+function ccKmDay(day){return ccDone().filter(function(s){return s.date===day;}).reduce(function(a,s){return a+(s.distance||0);},0);}
+function ccPass(s){var f=CC.f,d=ccDrv(s.driver_id);
+  if(f.driver!=="all"&&String(s.driver_id)!==f.driver)return false;
+  if(f.platform!=="all"&&s.platform!==f.platform)return false;
+  if(f.status!=="all"&&s.status!==f.status)return false;
+  if(f.search){var q=f.search.toLowerCase();if((((d&&d.name)||"")+" "+((d&&d.plate)||"")+" "+(s.login_place||"")+" "+(s.logout_place||"")).toLowerCase().indexOf(q)<0)return false;}
+  return true;}
+
+/* ---------- data ---------- */
+function ccLoad(force){
+  if(!ccIsAdmin())return Promise.resolve();
+  if(CC.loading||(CC.loaded&&!force))return Promise.resolve();
+  CC.loading=true;
+  return Promise.all([
+    SB.from("drivers").select("*").order("created_at"),
+    SB.from("shifts").select("*").order("created_at",{ascending:false}).limit(3000),
+    SB.from("fuel_records").select("*").order("created_at",{ascending:false}).limit(3000)
+  ]).then(function(r){
+    CC.loading=false;
+    var e=r[0].error||r[1].error||r[2].error;
+    if(e){CC.err=e.message||String(e);return;}
+    CC.err="";CC.loaded=true;
+    CC.drivers=r[0].data||[];CC.shifts=r[1].data||[];CC.fuel=r[2].data||[];
+    ccSubscribe();
+  }).catch(function(e){CC.loading=false;CC.err=(e&&e.message)||"Could not load driver data";});
+}
+function ccSubscribe(){
+  if(CC.chan||!SB)return;
+  try{
+    CC.chan=SB.channel("erp-command-center");
+    ["drivers","shifts","fuel_records","shift_points"].forEach(function(t){CC.chan.on("postgres_changes",{event:"*",schema:"public",table:t},ccOnRealtime);});
+    CC.chan.subscribe();
+  }catch(e){CC.chan=null;}
+}
+function ccApply(table,ev,nw,old){
+  var arr={drivers:CC.drivers,shifts:CC.shifts,fuel_records:CC.fuel}[table];if(!arr)return;
+  if(ev==="DELETE"){var id=old&&old.id;var i=arr.findIndex(function(x){return String(x.id)===String(id);});if(i>=0)arr.splice(i,1);return;}
+  if(!nw)return;var j=arr.findIndex(function(x){return String(x.id)===String(nw.id);});
+  if(j>=0)arr[j]=nw;else if(table==="drivers")arr.push(nw);else arr.unshift(nw);
+}
+var _ccT=null;
+function ccOnRealtime(p){
+  if(p.table==="shift_points"){if(p.eventType==="INSERT"&&p.new)ccTrailPoint(p.new.shift_id,p.new.lat,p.new.lng);return;}
+  if(p.table==="shifts"&&p.eventType==="UPDATE"&&p.new){
+    var prev=CC.shifts.filter(function(x){return String(x.id)===String(p.new.id);})[0];
+    if(prev&&prev.status==="ACTIVE"&&p.new.status==="ACTIVE"){ccApply("shifts","UPDATE",p.new,p.old);ccMove(p.new.id);return;}
+  }
+  ccApply(p.table,p.eventType,p.new,p.old);
+  clearTimeout(_ccT);_ccT=setTimeout(function(){
+    var r=getRoute();
+    if(r.indexOf("cc/")===0){if(!_rtBusy())renderPage();}
+    else if(r==="overview"){var b=document.getElementById("ccBanner");if(b)b.outerHTML=ccBannerHTML();}
+    var cnt=document.querySelector('[data-route="cc/live"] .cnt');if(cnt)cnt.textContent=ccActive().length;
+  },450);
+}
+
+/* ---------- dashboard banner (real "riders on the road") ---------- */
+function ccBannerHTML(){
+  if(!ccIsAdmin())return "";
+  if(!CC.loaded)return '<div id="ccBanner"></div>';
+  var on=ccActive().length,kmT=ccKmDay(ccToday());
+  var shT=CC.shifts.filter(function(s){return s.date===ccToday();}).length;
+  return '<div id="ccBanner" class="card cc-banner" data-route="cc/live" role="link" tabindex="0" style="cursor:pointer;margin-bottom:16px">'+
+    '<div class="cc-b-dot'+(on?" on":"")+'"></div>'+
+    '<div style="flex:1;min-width:0"><div class="cc-b-t">'+on+' driver'+(on===1?'':'s')+' on duty right now</div>'+
+    '<div class="cc-b-s">'+fmtKm(kmT)+' km driven today · '+shT+' shift'+(shT===1?'':'s')+' today · live from the driver app</div></div>'+
+    '<span class="btn sm primary">Open Live Map →</span></div>';
+}
+function ccMountBanner(pg){
+  if(!ccIsAdmin()||!pg)return;
+  pg.insertAdjacentHTML("afterbegin",ccBannerHTML());
+  if(!CC.loaded)ccLoad().then(function(){var b=document.getElementById("ccBanner");if(b)b.outerHTML=ccBannerHTML();});
+}
+
+/* ---------- page shell ---------- */
+var CC_TABS=[["live","Live Map"],["shifts","Shift Logs"],["km","KM Records"],["fuel","Fuel Audits"],["drivers","Driver Accounts"]];
+function pageCC(pg,tab){
+  tab=tab||"live";
+  var t=(CC_TABS.filter(function(x){return x[0]===tab;})[0]||CC_TABS[0]);
+  setTitle("Command Center · "+t[1],"Live from the Sumou driver app");
+  if(!ccIsAdmin()){ccTeardown();pg.innerHTML='<div class="card"><div class="empty">'+svg('<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/>')+'<h4>Admins only</h4><p>The Command Center shows live driver locations, so only admin accounts can open it.</p></div></div>';return;}
+  if(!CC.loaded){
+    pg.innerHTML='<div class="card"><div class="empty"><h4>'+(CC.err?"Couldn't load driver data":"Loading live driver data…")+'</h4><p>'+esc(CC.err||"")+'</p>'+(CC.err?'<button class="btn sm" data-act="ccreload">Try again</button>':'')+'</div></div>';
+    if(!CC.err)ccLoad().then(function(){if(getRoute().indexOf("cc/")===0)renderPage();});
+    return;
+  }
+  var tabs='<div class="sub-tabs" style="margin-bottom:16px">'+CC_TABS.map(function(x){return '<button class="sub-tab'+(x[0]===tab?" active":"")+'" data-route="cc/'+x[0]+'">'+x[1]+(x[0]==="live"?' <span class="cc-livebadge">'+ccActive().length+'</span>':'')+'</button>';}).join("")+'</div>';
+  if(tab!=="live")ccTeardown();
+  var body=tab==="shifts"?ccShiftsPage():tab==="km"?ccKmPage():tab==="fuel"?ccFuelPage():tab==="drivers"?ccDriversPage():ccLivePage();
+  pg.innerHTML=tabs+body;
+  if(tab==="live")ccMountMap();
+  if(LANG==="ar")transEl(pg);
+}
+function ccKpi(lab,val,sub,col){return '<div class="stat card"><span class="strip" style="background:'+(col||"var(--teal)")+'"></span><div class="s-lab">'+lab+'</div><div class="s-val">'+val+'</div><div class="s-sub">'+(sub||"&nbsp;")+'</div></div>';}
+function ccFilters(showStatus){
+  var f=CC.f;
+  return '<div class="toolbar" style="margin-bottom:14px"><div class="search">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>')+'<input id="ccSearch" placeholder="Search driver, plate or place…" value="'+esc(f.search)+'" autocomplete="off"></div>'+
+    '<select class="cc-sel" data-ccf="driver"><option value="all">All drivers ('+CC.drivers.length+')</option>'+CC.drivers.map(function(d){return '<option value="'+d.id+'"'+(f.driver===String(d.id)?" selected":"")+'>'+esc(d.name)+'</option>';}).join("")+'</select>'+
+    '<select class="cc-sel" data-ccf="platform"><option value="all">All platforms</option>'+CC_PLATFORMS.map(function(p){return '<option'+(f.platform===p?" selected":"")+'>'+p+'</option>';}).join("")+'</select>'+
+    (showStatus?'<select class="cc-sel" data-ccf="status"><option value="all">All statuses</option><option value="ACTIVE"'+(f.status==="ACTIVE"?" selected":"")+'>On duty</option><option value="COMPLETED"'+(f.status==="COMPLETED"?" selected":"")+'>Completed</option></select>':'')+
+  '</div>';
+}
+function ccPhoto(url,lab){return url?'<a class="chip" href="'+esc(url)+'" target="_blank" rel="noopener">'+lab+'</a>':'<span class="sub">no '+lab+'</span>';}
+function ccDrvCell(d){
+  if(!d)return '<span class="sub">—</span>';var e=ccEmp(d);
+  return '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+nameAvatar(e?e.name:d.name,26)+'<div style="min-width:0"><span class="nm">'+esc(d.name)+'</span>'+(d.plate?' <span class="chip">'+esc(d.plate)+'</span>':'')+'</div></div>';
+}
+
+/* ---------- LIVE MAP ---------- */
+function ccLivePage(){
+  var td=ccToday(),on=ccActive(),kmT=ccKmDay(td);
+  var shT=CC.shifts.filter(function(s){return s.date===td;});
+  var ordT=shT.reduce(function(a,s){return a+(s.orders_done||0);},0),cancT=shT.reduce(function(a,s){return a+(s.orders_cancelled||0);},0);
+  var fuelT=CC.fuel.filter(function(f){return f.date===td;}).reduce(function(a,f){return a+(f.cost||0);},0);
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+
+    ccKpi("On duty now",on.length,CC.drivers.length+" driver accounts","var(--good)")+
+    ccKpi("KM today",fmtKm(kmT)+" km",shT.length+" shifts today","var(--teal)")+
+    ccKpi("Orders today",ordT,cancT+" cancelled","var(--indigo)")+
+    ccKpi("Fuel today",money(fuelT)+" KWD",CC.fuel.filter(function(f){return f.date===td;}).length+" refills","var(--amber)")+
+  '</div>';
+  var map='<div class="card cc-mapcard"><div class="card-h"><h3>Live fleet map</h3><span class="hint">green ↓ login · red ↑ logout · amber = live route</span></div><div class="card-b" style="padding-top:10px"><div id="ccmap"></div></div></div>';
+  var side='<div class="card"><div class="card-h"><h3>On duty now</h3><span class="pill '+(on.length?"good":"neutral")+'"><span class="pd"></span>'+on.length+' live</span></div><div class="card-b cc-scroll" id="ccLive">'+ccLiveList()+'</div></div>'+
+    '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Activity</h3><span class="hint">latest</span></div><div class="card-b cc-scroll">'+ccFeed()+'</div></div>';
+  var bottom='<div class="grid g3" style="margin-top:16px">'+
+    '<div class="card"><div class="card-h"><h3>Top drivers today</h3><span class="hint">by km</span></div><div class="card-b">'+ccTop()+'</div></div>'+
+    '<div class="card"><div class="card-h"><h3>KM · last 7 days</h3><span class="hint">completed shifts</span></div><div class="card-b">'+ccWeek()+'</div></div>'+
+    '<div class="card"><div class="card-h"><h3>Needs review</h3><span class="hint">auto-flagged</span></div><div class="card-b">'+ccAlerts()+'</div></div>'+
+  '</div>';
+  return kpis+'<div class="cc-livegrid">'+map+'<div>'+side+'</div></div>'+bottom;
+}
+function ccLiveList(){
+  var on=ccActive().filter(ccPass);
+  if(!on.length)return '<div class="empty" style="padding:22px"><h4>Nobody on duty</h4><p>When a driver clocks in on the app, they appear here and on the map.</p></div>';
+  return on.map(function(s){
+    var d=ccDrv(s.driver_id),st=ccStale(s),fol=String(CC.follow)===String(s.id);
+    var canEnd=(st&&Date.now()-(ccLiveMs(s)||ccMs(s))>30*60000)||Date.now()-ccMs(s)>14*3600000;
+    return '<div class="cc-live">'+ccDrvCell(d)+
+      '<div class="cc-live-m">'+(st?'<span class="pill crit"><span class="pd"></span>GPS lost</span>':'<span class="pill good"><span class="pd"></span>Live</span>')+
+      ' <span class="sub">'+esc(s.platform||"")+(st?"":" · "+(s.speed||0)+" km/h")+' · '+ccAgo(ccLiveMs(s))+'</span></div>'+
+      '<div class="cc-live-a"><button class="btn sm'+(fol?" primary":"")+'" data-act="ccfollow" data-id="'+s.id+'">'+(fol?"Following":"Follow")+'</button>'+
+      (canEnd?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End shift</button>':'')+'</div></div>';
+  }).join("");
+}
+function ccFeed(){
+  var ev=[];
+  CC.shifts.slice(0,60).forEach(function(s){var d=ccDrv(s.driver_id),n=esc((d&&d.name)||"Driver");
+    if(s.status==="ACTIVE")ev.push({t:ccMs(s),c:"good",h:'<b>'+n+'</b> clocked in · '+esc(s.login_place||"—"),m:'ODO '+fmtKm(s.start_odo)+(s.login_src==="hub"?' · hub picked, not GPS':'')});
+    else ev.push({t:ccMs(s),c:"indigo",h:'<b>'+n+'</b> clocked out · +'+(s.distance||0)+' km',m:(s.orders_done||0)+' orders · '+(s.orders_cancelled||0)+' cancelled · '+esc(s.duration||"")});});
+  CC.fuel.slice(0,30).forEach(function(f){var d=ccDrv(f.driver_id);ev.push({t:Date.parse(f.created_at)||0,c:"warn",h:'<b>'+esc((d&&d.name)||"Driver")+'</b> logged fuel · '+money(f.cost)+' KWD',m:esc(f.station||"")+(f.receipt_photo?' · receipt attached':'')});});
+  ev.sort(function(a,b){return b.t-a.t;});ev=ev.slice(0,8);
+  if(!ev.length)return '<div class="empty" style="padding:18px"><p>No activity yet.</p></div>';
+  return ev.map(function(e){return '<div class="cc-feed"><span class="cc-fdot" style="background:var(--'+(e.c==="indigo"?"indigo":e.c)+')"></span><div style="flex:1;min-width:0"><div style="font-size:13px">'+e.h+'</div><div class="sub">'+e.m+'</div></div><span class="sub">'+ccAgo(e.t)+'</span></div>';}).join("");
+}
+function ccTop(){
+  var td=ccToday(),m={};
+  ccDone().filter(function(s){return s.date===td;}).forEach(function(s){var x=m[s.driver_id]=m[s.driver_id]||{km:0,ord:0};x.km+=s.distance||0;x.ord+=s.orders_done||0;});
+  var arr=Object.keys(m).map(function(id){return {d:ccDrv(id),km:m[id].km,ord:m[id].ord};}).sort(function(a,b){return b.km-a.km;}).slice(0,5);
+  if(!arr.length)return '<div class="empty" style="padding:18px"><p>No completed shifts today yet.</p></div>';
+  var mx=arr[0].km||1;
+  return arr.map(function(x,i){return '<div class="cc-top"><span class="ft-rank">'+(i+1)+'</span><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><span class="nm">'+esc(x.d?x.d.name:"—")+'</span><b class="mono">'+fmtKm(x.km)+' km</b></div><div class="ft-bar"><span style="width:'+Math.max(4,Math.round(x.km/mx*100))+'%;background:var(--teal)"></span></div><div class="sub">'+x.ord+' orders</div></div></div>';}).join("");
+}
+function ccWeek(){
+  var days=[];for(var i=6;i>=0;i--){var d=ccDay(i);days.push({d:d,km:ccKmDay(d)});}
+  var mx=Math.max.apply(null,days.map(function(x){return x.km;}).concat([1]));
+  return '<div class="cc-week">'+days.map(function(x){var dt=parseD(x.d);var lab=dt?["Su","Mo","Tu","We","Th","Fr","Sa"][dt.getDay()]:"";
+    return '<div class="cc-wcol" title="'+x.d+': '+x.km+' km"><span class="cc-wv">'+(x.km?fmtKm(x.km):"")+'</span><span class="cc-wbar" style="height:'+Math.max(3,Math.round(x.km/mx*110))+'px"></span><span class="sub">'+lab+'</span></div>';}).join("")+'</div>';
+}
+function ccAlerts(){
+  var out=[];
+  ccDone().filter(ccFlag).slice(0,4).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['crit','Odometer check · '+esc(d?d.name:"Driver"),fmtD(s.date)+' · shift shows '+(s.distance||0)+' km (limit '+CC_KM_FLAG+'). Check the end-ODO photo.']);});
+  ccActive().filter(function(s){return Date.now()-ccMs(s)>14*3600000;}).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['warn','Shift open 14h+ · '+esc(d?d.name:"Driver"),'Clocked in '+ccAgo(ccMs(s))+'. Probably forgot to clock out — use End shift.']);});
+  CC.shifts.filter(function(s){return s.date===ccToday()&&(s.login_src==="hub"||s.logout_src==="hub");}).slice(0,3).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['warn','Hub picked, not GPS · '+esc(d?d.name:"Driver"),'Check-in/out location was chosen from the hub list.']);});
+  CC.drivers.forEach(function(d){var n=ccDone().filter(function(s){return String(s.driver_id)===String(d.id);}).length;var f=CC.fuel.filter(function(x){return String(x.driver_id)===String(d.id);}).length;if(n>=3&&!f)out.push(['neutral','No fuel logged · '+esc(d.name),n+' shifts, zero fuel entries.']);});
+  CC.drivers.filter(function(d){return !d.employee_id;}).forEach(function(d){out.push(['neutral','Not linked to an employee · '+esc(d.name),'Phone '+esc(d.phone||"—")+' doesn’t match any employee mobile. Edit the driver to link.']);});
+  if(!out.length)return '<div class="empty" style="padding:18px"><p>All clear — nothing flagged.</p></div>';
+  return out.slice(0,8).map(function(a){return '<div class="cc-alert"><span class="pill '+a[0]+'"><span class="pd"></span>'+(a[0]==="crit"?"Check":a[0]==="warn"?"Review":"Info")+'</span><div><div style="font-size:13px;font-weight:700">'+a[1]+'</div><div class="sub">'+a[2]+'</div></div></div>';}).join("");
+}
+/* map */
+function ccPin(kind){return window.L.divIcon({className:"",html:'<div class="cc-pin '+kind+'">'+(kind==="in"?"↓":"↑")+'</div>',iconSize:[26,26],iconAnchor:[13,24]});}
+function ccLiveIcon(name,stale){return window.L.divIcon({className:"",html:'<div class="cc-dot'+(stale?" stale":"")+'"></div><div class="cc-label">'+esc(String(name||"Driver").split(" ")[0])+'</div>',iconSize:[22,22],iconAnchor:[11,11]});}
+function ccTeardown(){if(CC.map){try{CC.view={c:CC.map.getCenter(),z:CC.map.getZoom()};CC.map.remove();}catch(e){}}CC.map=null;CC.markers={};CC.trails={};}
+function ccMountMap(){
+  var el=document.getElementById("ccmap");if(!el)return;
+  if(typeof window.L==="undefined"||!window.L.map){el.innerHTML='<div class="empty"><p>Map library is loading… check the internet connection.</p></div>';return;}
+  if(CC.map){try{CC.view={c:CC.map.getCenter(),z:CC.map.getZoom()};CC.map.remove();}catch(e){}CC.map=null;CC.markers={};CC.trails={};}
+  var m=window.L.map(el,{scrollWheelZoom:true}).setView([29.32,47.98],11);CC.map=m;
+  window.L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Tiles &copy; Esri"}).addTo(m);
+  var b=[],td=ccToday();
+  CC.shifts.filter(ccPass).filter(function(s){return s.date===td;}).forEach(function(s){var d=ccDrv(s.driver_id),n=esc((d&&d.name)||"Driver");
+    if(s.login_lat!=null){window.L.marker([s.login_lat,s.login_lng],{icon:ccPin("in")}).addTo(m).bindPopup('<b>'+n+' · login</b><br>'+esc(s.login_place||"")+'<br>'+esc(s.login_time||""));b.push([s.login_lat,s.login_lng]);}
+    if(s.logout_lat!=null){window.L.marker([s.logout_lat,s.logout_lng],{icon:ccPin("out")}).addTo(m).bindPopup('<b>'+n+' · logout</b><br>'+esc(s.logout_place||"")+'<br>'+esc(s.logout_time||""));b.push([s.logout_lat,s.logout_lng]);}
+  });
+  ccActive().filter(ccPass).forEach(function(s){ccAddMarker(s);var la=s.live_lat!=null?s.live_lat:s.login_lat;if(la!=null)b.push([la,s.live_lng!=null?s.live_lng:s.login_lng]);});
+  if(CC.view)m.setView(CC.view.c,CC.view.z,{animate:false});else if(b.length)m.fitBounds(b,{padding:[40,40],maxZoom:15});
+  m.on("dragstart",function(){if(CC.follow){CC.follow=null;ccRefreshLive();}});
+  m.on("moveend",function(){if(CC.map)CC.view={c:CC.map.getCenter(),z:CC.map.getZoom()};});
+  ccLoadTrails();
+  setTimeout(function(){if(CC.map)CC.map.invalidateSize();},80);
+}
+function ccAddMarker(s){
+  if(!CC.map)return;var la=s.live_lat!=null?s.live_lat:s.login_lat,ln=s.live_lng!=null?s.live_lng:s.login_lng;if(la==null)return;
+  var d=ccDrv(s.driver_id),st=ccStale(s);
+  var mk=window.L.marker([la,ln],{icon:ccLiveIcon(d&&d.name,st),zIndexOffset:1000}).addTo(CC.map)
+    .bindPopup(function(){var x=CC.shifts.filter(function(y){return String(y.id)===String(s.id);})[0]||s;return '<b>'+esc((d&&d.name)||"Driver")+'</b><br>'+esc(x.platform||"")+' · '+(x.speed||0)+' km/h<br>updated '+ccAgo(ccLiveMs(x));});
+  mk._stale=st;CC.markers[s.id]=mk;
+}
+function ccLoadTrails(){
+  var ids=ccActive().map(function(s){return String(s.id);});if(!ids.length||!CC.map)return;
+  SB.from("shift_points").select("shift_id,lat,lng,recorded_at").in("shift_id",ids).order("recorded_at",{ascending:true}).limit(10000).then(function(r){
+    if(r.error||!r.data||!CC.map)return;var by={};
+    r.data.forEach(function(p){(by[p.shift_id]=by[p.shift_id]||[]).push([p.lat,p.lng]);});
+    Object.keys(by).forEach(function(sid){var ll=by[sid];var s=CC.shifts.filter(function(x){return String(x.id)===sid;})[0];if(s&&s.live_lat!=null)ll.push([s.live_lat,s.live_lng]);
+      if(CC.trails[sid])CC.trails[sid].setLatLngs(ll);else CC.trails[sid]=window.L.polyline(ll,{color:"#E3A64A",weight:4,opacity:.85,lineJoin:"round"}).addTo(CC.map);});
+  });
+}
+function ccTrailPoint(sid,lat,lng){sid=String(sid);if(!CC.map||lat==null)return;
+  if(CC.trails[sid])CC.trails[sid].addLatLng([lat,lng]);else CC.trails[sid]=window.L.polyline([[lat,lng]],{color:"#E3A64A",weight:4,opacity:.85,lineJoin:"round"}).addTo(CC.map);}
+function ccAnimate(mk,to){var from=mk.getLatLng();if(Math.abs(from.lat-to[0])<1e-7&&Math.abs(from.lng-to[1])<1e-7)return;
+  if(mk._anim)cancelAnimationFrame(mk._anim);var t0=performance.now();
+  var step=function(t){var k=Math.min(1,(t-t0)/900),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;mk.setLatLng([from.lat+(to[0]-from.lat)*e,from.lng+(to[1]-from.lng)*e]);mk._anim=k<1?requestAnimationFrame(step):null;};
+  mk._anim=requestAnimationFrame(step);}
+function ccMove(id){
+  var s=CC.shifts.filter(function(x){return String(x.id)===String(id);})[0];if(!s)return;
+  if(CC.map&&s.status==="ACTIVE"&&ccPass(s)){
+    var mk=CC.markers[s.id];
+    if(!mk)ccAddMarker(s);
+    else if(s.live_lat!=null){ccAnimate(mk,[s.live_lat,s.live_lng]);var st=ccStale(s);if(st!==mk._stale){mk.setIcon(ccLiveIcon((ccDrv(s.driver_id)||{}).name,st));mk._stale=st;}}
+    if(String(CC.follow)===String(s.id)&&s.live_lat!=null)CC.map.panTo([s.live_lat,s.live_lng],{animate:true,duration:.8});
+  }
+  ccRefreshLive();
+}
+var _ccLT=null;function ccRefreshLive(){if(_ccLT)return;_ccLT=setTimeout(function(){_ccLT=null;var el=document.getElementById("ccLive");if(el)el.innerHTML=ccLiveList();},400);}
+function ccFollow(id){
+  CC.follow=String(CC.follow)===String(id)?null:id;ccRefreshLive();
+  if(!CC.follow||!CC.map)return;var s=CC.shifts.filter(function(x){return String(x.id)===String(id);})[0];
+  if(s){var la=s.live_lat!=null?s.live_lat:s.login_lat;if(la!=null)CC.map.flyTo([la,s.live_lng!=null?s.live_lng:s.login_lng],16,{duration:.8});}
+}
+function ccForceEnd(id){
+  var s=CC.shifts.filter(function(x){return String(x.id)===String(id);})[0];if(!s)return;var d=ccDrv(s.driver_id);
+  if(!confirm("End "+((d&&d.name)||"this driver")+"'s shift now? Distance will be saved as 0 km — correct the odometer later if needed."))return;
+  var mins=Math.max(1,Math.round((Date.now()-ccMs(s))/60000));
+  var now=new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kuwait"});
+  SB.from("shifts").update({status:"COMPLETED",end_odo:s.start_odo,distance:0,logout_time:now,logout_place:"Force-closed by admin",duration:Math.floor(mins/60)+"h "+(mins%60)+"m",summary:"Force-closed by admin (driver did not clock out)"}).eq("id",s.id).select().then(function(r){
+    if(r.error){toast("Couldn't end shift: "+r.error.message,"err");return;}
+    if(r.data&&r.data[0])ccApply("shifts","UPDATE",r.data[0]);toast("Shift ended.","good");renderPage();
+  });
+}
+
+/* ---------- SHIFT LOGS ---------- */
+function ccShiftsPage(){
+  var rows=CC.shifts.filter(ccPass).slice().sort(function(a,b){return ccMs(b)-ccMs(a);});
+  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);
+    return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td>'+
+      '<td>'+(s.status==="ACTIVE"?'<span class="pill good"><span class="pd"></span>On duty</span>':'<span class="pill neutral"><span class="pd"></span>Completed</span>')+(ccFlag(s)?' <span class="pill crit">check km</span>':'')+'</td>'+
+      '<td><div class="mono">'+esc(s.login_time||"—")+'</div><div class="sub">'+esc(s.login_place||"")+(s.login_src==="hub"?" · hub":"")+'</div></td>'+
+      '<td><div class="mono">'+esc(s.logout_time||"—")+'</div><div class="sub">'+esc(s.logout_place||"")+'</div></td>'+
+      '<td class="mono">'+(s.status==="COMPLETED"?"+"+(s.distance||0)+" km":"—")+'</td><td class="mono">'+(s.orders_done||0)+' / '+(s.orders_cancelled||0)+'</td>'+
+      '<td class="mono">'+esc(s.duration||"—")+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+'</td>'+
+      '<td>'+(s.status==="ACTIVE"?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End</button>':'')+'</td></tr>';}).join("")
+    :'<tr><td colspan="11"><div class="empty" style="padding:24px"><h4>No shifts match</h4><p>Try clearing the filters.</p></div></td></tr>';
+  return ccFilters(true)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>ODO photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+    '<div class="tbl-foot"><span>'+rows.length+' shifts</span><button class="btn sm" data-act="ccexport" data-what="shifts">Export CSV</button></div>';
+}
+/* ---------- KM ---------- */
+function ccKmPage(){
+  var rows=ccDone().filter(ccPass).slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"")||ccMs(b)-ccMs(a);});
+  var tot=rows.reduce(function(a,s){return a+(s.distance||0);},0);
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Distance (filtered)",fmtKm(tot)+" km",rows.length+" completed shifts","var(--teal)")+ccKpi("Today",fmtKm(ccKmDay(ccToday()))+" km","all drivers","var(--good)")+ccKpi("Last 7 days",fmtKm([0,1,2,3,4,5,6].reduce(function(a,i){return a+ccKmDay(ccDay(i));},0))+" km","all drivers","var(--indigo)")+ccKpi("Flagged",rows.filter(ccFlag).length,"over "+CC_KM_FLAG+" km or negative","var(--crit)")+'</div>';
+  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+'</td></tr>';}).join("")
+    :'<tr><td colspan="8"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
+  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>ODO photos</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+    '<div class="tbl-foot"><span>Auto-recorded from each clock-in / clock-out odometer · photos verify the reading</span><button class="btn sm" data-act="ccexport" data-what="km">Export CSV</button></div>';
+}
+/* ---------- FUEL ---------- */
+function ccFuelPage(){
+  var f=CC.f;
+  var rows=CC.fuel.filter(function(r){var d=ccDrv(r.driver_id);if(f.driver!=="all"&&String(r.driver_id)!==f.driver)return false;if(f.search&&((((d&&d.name)||"")+" "+(r.plate||"")+" "+(r.station||"")+" "+(r.place||"")).toLowerCase().indexOf(f.search.toLowerCase())<0))return false;return true;})
+    .slice().sort(function(a,b){return (Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0);});
+  var tot=rows.reduce(function(a,r){return a+(r.cost||0);},0),rec=rows.filter(function(r){return r.receipt_photo;}).length;
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Fuel spend",money(tot)+" KWD",rows.length+" refills","var(--amber)")+ccKpi("With receipt",rows.length?Math.round(rec/rows.length*100)+"%":"—",rec+" of "+rows.length,"var(--good)")+ccKpi("Today",money(CC.fuel.filter(function(x){return x.date===ccToday();}).reduce(function(a,x){return a+(x.cost||0);},0))+" KWD","all drivers","var(--teal)")+ccKpi("Drivers refilling",Object.keys(rows.reduce(function(a,r){a[r.driver_id]=1;return a;},{})).length,"in this list","var(--indigo)")+'</div>';
+  var tb=rows.length?rows.map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(r.receipt_photo?'<a href="'+esc(r.receipt_photo)+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(r.receipt_photo)+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td></tr>';}).join("")
+    :'<tr><td colspan="5"><div class="empty" style="padding:24px"><h4>No fuel entries yet</h4><p>Drivers log fuel from the app with a receipt photo.</p></div></td></tr>';
+  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+    '<div class="tbl-foot"><span>Refills logged by drivers in the app</span><button class="btn sm" data-act="ccexport" data-what="fuel">Export CSV</button></div>';
+}
+/* ---------- DRIVER ACCOUNTS ---------- */
+function ccDriversPage(){
+  var q=CC.f.search.toLowerCase();
+  var rows=CC.drivers.filter(function(d){return !q||(d.name+" "+(d.plate||"")+" "+(d.phone||"")).toLowerCase().indexOf(q)>=0;});
+  var tb=rows.length?rows.map(function(d){var e=ccEmp(d),on=!!ccActiveFor(d.id);
+    var km=ccDone().filter(function(s){return String(s.driver_id)===String(d.id);}).reduce(function(a,s){return a+(s.distance||0);},0);
+    return '<tr><td>'+ccDrvCell(d)+'</td><td>'+(e?'<a class="chip" data-route="grd/drivers/'+esc(e.id)+'" href="#">↔ '+esc(e.name)+'</a>':'<span class="pill warn">Not linked</span>')+'</td>'+
+      '<td class="mono">'+esc(d.phone||"—")+'</td><td>'+esc((d.platforms||[]).join(", ")||"—")+'</td>'+
+      '<td>'+(on?'<span class="pill good"><span class="pd"></span>On duty</span>':'<span class="pill neutral"><span class="pd"></span>Off duty</span>')+'</td>'+
+      '<td>'+(d.active_device?'<span class="pill indigo">Phone linked</span>':'<span class="sub">no device</span>')+(d.locked_until&&Date.parse(d.locked_until)>Date.now()?' <span class="pill crit">Locked</span>':'')+'</td>'+
+      '<td class="mono"><button class="chip" data-act="ccpin" data-id="'+d.id+'" title="Show PIN">••••</button></td><td class="mono">'+fmtKm(km)+' km</td>'+
+      '<td style="white-space:nowrap"><button class="btn sm" data-act="ccedit" data-id="'+d.id+'">Edit</button> <button class="btn sm" data-act="ccreset" data-id="'+d.id+'" title="Reset phone login">Reset</button> <button class="btn sm danger" data-act="ccdel" data-id="'+d.id+'" aria-label="Delete driver">'+svg(IC_del)+'</button></td></tr>';}).join("")
+    :'<tr><td colspan="9"><div class="empty" style="padding:24px"><h4>No driver accounts yet</h4><p>Add a driver to give them app access.</p></div></td></tr>';
+  return '<div class="toolbar" style="margin-bottom:14px"><div class="search">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>')+'<input id="ccSearch" placeholder="Search name, plate or phone…" value="'+esc(CC.f.search)+'" autocomplete="off"></div><span style="flex:1"></span><button class="btn primary sm" data-act="ccadd">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add driver</button></div>'+
+    '<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>ERP employee</th><th>Phone (login)</th><th>Platforms</th><th>Status</th><th>Device</th><th>PIN</th><th>Lifetime</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+    '<div class="banner info" style="margin-top:14px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div style="font-size:12.5px">Drivers sign in on the app with their <b>phone number + 4-digit PIN</b>. A driver is linked to an ERP employee automatically when the phone matches the employee\'s mobile. <b>Reset phone</b> lets a driver sign in on a new device.</div></div>';
+}
+function ccDriverModal(id){
+  var d=id?ccDrv(id):null;
+  var emps=(STATE.grd.drivers||[]).filter(function(e){return e.name;}).slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  var pl=(d&&d.platforms)||["Talabat","Keeta"];
+  var pin=d?d.pin:String(Math.floor(1000+Math.random()*9000));
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>'+(d?"Edit driver":"Add driver")+'</h3><div class="sub">Driver app login · phone + PIN</div></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
+    '<div class="modal-b"><div class="form-grid">'+
+      '<div class="field wide"><label for="ccEmp">ERP employee</label><select id="ccEmp"><option value="">— pick an employee (fills the details) —</option>'+emps.map(function(e){return '<option value="'+esc(e.id)+'"'+(d&&d.employee_id===e.id?" selected":"")+'>'+esc(e.name)+(e.mobile?" · "+esc(e.mobile):"")+'</option>';}).join("")+'</select></div>'+
+      '<div class="field"><label for="ccName">Name <span class="req">*</span></label><input id="ccName" value="'+esc(d?d.name:"")+'"></div>'+
+      '<div class="field"><label for="ccPhone">Phone (login) <span class="req">*</span></label><input id="ccPhone" inputmode="tel" value="'+esc(d?d.phone||"":"")+'" placeholder="+965 5xxx xxxx"></div>'+
+      '<div class="field"><label for="ccPin">4-digit PIN <span class="req">*</span></label><input id="ccPin" inputmode="numeric" maxlength="4" value="'+esc(pin)+'"></div>'+
+      '<div class="field"><label for="ccPlate">Plate</label><input id="ccPlate" value="'+esc(d?d.plate||"":"")+'"></div>'+
+      '<div class="field wide"><label for="ccModel">Vehicle model</label><input id="ccModel" value="'+esc(d?d.model||"":"")+'" placeholder="e.g. Bajaj Pulsar"></div>'+
+      '<div class="field wide"><label>Platforms</label><div style="display:flex;gap:16px">'+CC_PLATFORMS.map(function(p){return '<label style="display:flex;gap:6px;align-items:center;font-weight:600"><input type="checkbox" class="ccPlat" value="'+p+'"'+(pl.indexOf(p)>=0?" checked":"")+'> '+p+'</label>';}).join("")+'</div></div>'+
+    '</div><div class="err-msg" id="ccErr" hidden></div></div>'+
+    '<div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="ccsave" data-id="'+(id||"")+'">'+(d?"Save changes":"Add driver")+'</button></div></div>';
+  document.body.appendChild(ov);
+  var sel=ov.querySelector("#ccEmp");
+  sel.addEventListener("change",function(){var e=(STATE.grd.drivers||[]).filter(function(x){return x.id===sel.value;})[0];if(!e)return;
+    ov.querySelector("#ccName").value=e.name||"";if(e.mobile)ov.querySelector("#ccPhone").value=e.mobile;
+    var v=(STATE.grd.vehicles||[]).filter(function(x){return String(x.driver||"").trim().toLowerCase()===String(e.name||"").trim().toLowerCase();})[0];
+    if(v){ov.querySelector("#ccPlate").value=v.plate||"";ov.querySelector("#ccModel").value=((v.brand||"")+" "+(v.model||"")).trim();}});
+  setTimeout(function(){sel.focus();},50);
+}
+function ccSaveDriver(id){
+  var ov=document.getElementById("overlay");if(!ov)return;
+  var v=function(s){return (ov.querySelector(s).value||"").trim();};
+  var row={name:v("#ccName"),phone:v("#ccPhone"),pin:v("#ccPin"),plate:v("#ccPlate")||null,model:v("#ccModel")||null,
+    platforms:Array.prototype.map.call(ov.querySelectorAll(".ccPlat:checked"),function(x){return x.value;}),employee_id:v("#ccEmp")||null};
+  var err=ov.querySelector("#ccErr");
+  var bad=!row.name?"Enter the driver's name.":(row.phone.replace(/\D/g,"").length<8)?"Enter a valid phone number (8+ digits).":!/^\d{4}$/.test(row.pin)?"PIN must be exactly 4 digits.":"";
+  var dup=CC.drivers.filter(function(x){return String(x.id)!==String(id)&&String(x.phone||"").replace(/\D/g,"").slice(-8)===row.phone.replace(/\D/g,"").slice(-8);})[0];
+  if(!bad&&dup)bad="Another driver ("+dup.name+") already uses this phone number.";
+  if(bad){err.textContent=bad;err.hidden=false;return;}
+  var btn=ov.querySelector('[data-act="ccsave"]');btn.disabled=true;
+  var q=id?SB.from("drivers").update(row).eq("id",id).select():SB.from("drivers").insert(row).select();
+  q.then(function(r){btn.disabled=false;
+    if(r.error){err.textContent=r.error.message;err.hidden=false;return;}
+    if(r.data&&r.data[0])ccApply("drivers",id?"UPDATE":"INSERT",r.data[0]);
+    closeForm();toast(id?"Driver updated.":"Driver added — they can sign in with phone + PIN.","good");renderPage();
+  });
+}
+function ccResetDevice(id){var d=ccDrv(id);if(!d)return;
+  if(!confirm("Reset "+d.name+"'s phone login? They can then sign in on a new phone."))return;
+  SB.from("drivers").update({active_device:null,failed_logins:0,locked_until:null}).eq("id",id).select().then(function(r){
+    if(r.error){toast("Couldn't reset: "+r.error.message,"err");return;}
+    SB.from("driver_sessions").delete().eq("driver_id",String(id)).then(function(){});
+    if(r.data&&r.data[0])ccApply("drivers","UPDATE",r.data[0]);toast("Phone reset — driver can sign in on a new device.","good");renderPage();
+  });}
+function ccDeleteDriver(id){var d=ccDrv(id);if(!d)return;
+  var has=CC.shifts.some(function(s){return String(s.driver_id)===String(id);})||CC.fuel.some(function(f){return String(f.driver_id)===String(id);});
+  if(has){toast(d.name+" has shift/fuel history, so the account can't be deleted. Use Reset phone and change the PIN to block access.","err");return;}
+  if(!confirm("Delete "+d.name+"'s app account? They will no longer be able to sign in."))return;
+  SB.from("driver_sessions").delete().eq("driver_id",String(id)).then(function(){
+    SB.from("drivers").delete().eq("id",id).then(function(r){
+      if(r.error){toast("Couldn't delete: "+r.error.message,"err");return;}
+      ccApply("drivers","DELETE",null,{id:id});toast("Driver removed.","good");renderPage();
+    });
+  });}
+function ccExport(what){
+  var q=function(v){v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  var lines=[];
+  if(what==="fuel"){lines.push(["Date","Time","Driver","Plate","Station","Place","Amount KWD","Receipt"].join(","));
+    CC.fuel.forEach(function(r){var d=ccDrv(r.driver_id);lines.push([r.date,r.time,d&&d.name,r.plate,r.station,r.place,r.cost,r.receipt_photo].map(q).join(","));});}
+  else{var rows=what==="km"?ccDone():CC.shifts;
+    lines.push(["Date","Driver","Plate","Platform","Status","Clock in","Login place","Clock out","Logout place","Start ODO","End ODO","Distance km","Orders","Cancelled","Duration"].join(","));
+    rows.filter(ccPass).forEach(function(s){var d=ccDrv(s.driver_id);lines.push([s.date,d&&d.name,d&&d.plate,s.platform,s.status,s.login_time,s.login_place,s.logout_time,s.logout_place,s.start_odo,s.end_odo,s.distance,s.orders_done,s.orders_cancelled,s.duration].map(q).join(","));});}
+  dlFile("﻿"+lines.join("\n"),"SMOU-"+what+"-"+ccToday()+".csv","text/csv");toast("Exported "+(lines.length-1)+" rows.","good");
+}
+/* events */
+document.addEventListener("click",function(e){
+  var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act"),id=a.getAttribute("data-id");
+  if(act==="ccfollow")ccFollow(id);
+  else if(act==="ccend")ccForceEnd(id);
+  else if(act==="ccadd")ccDriverModal(null);
+  else if(act==="ccedit")ccDriverModal(id);
+  else if(act==="ccsave")ccSaveDriver(id||null);
+  else if(act==="ccreset")ccResetDevice(id);
+  else if(act==="ccdel")ccDeleteDriver(id);
+  else if(act==="ccexport")ccExport(a.getAttribute("data-what"));
+  else if(act==="ccreload"){CC.err="";CC.loaded=false;renderPage();}
+  else if(act==="ccpin"){var d=ccDrv(id);if(d){a.textContent=a.textContent==="••••"?d.pin:"••••";}}
+});
+document.addEventListener("change",function(e){var s=e.target.closest("[data-ccf]");if(!s)return;CC.f[s.getAttribute("data-ccf")]=s.value;renderPage();});
+var _ccS=null;document.addEventListener("input",function(e){if(e.target&&e.target.id==="ccSearch"){var v=e.target.value;clearTimeout(_ccS);_ccS=setTimeout(function(){CC.f.search=v;var pos=v.length;renderPage();var i=document.getElementById("ccSearch");if(i){i.focus();i.setSelectionRange(pos,pos);}},350);}});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="ccBanner")go("cc/live");});
+
 /* ============ INIT ============ */
 if(!location.hash){var r0="overview";try{r0=localStorage.getItem("smou-route")||"overview";}catch(e){}history.replaceState(null,"","#/"+r0);}
 var _hadCache=false;
@@ -4874,6 +5329,8 @@ if(SB_ON){
     {t:"Dashboard",r:"overview"},
     {t:"Alerts",r:"alerts"},
     {t:"Orders",r:"orders"},
+    {t:"Command Center",items:[
+      {t:"Live Map",r:"cc/live"},{t:"Shift Logs",r:"cc/shifts"},{t:"KM Records",r:"cc/km"},{t:"Fuel Audits",r:"cc/fuel"},{t:"Driver Accounts",r:"cc/drivers"}]},
     {t:"Operations",items:[
       {t:"Employees",r:"grd/drivers"},{t:"SIM / Mobile",r:"grd/sims"},{t:"Fuel Cards",r:"grd/fuel"},
       {t:"Accommodation",r:"grd/housing"},{t:"Company Documents",r:"grd/compdocs"},
@@ -5057,6 +5514,7 @@ if(SB_ON){
       {t:"Accommodation",r:"grd/housing"},{t:"Company Documents",r:"grd/compdocs"},
       {t:"Attendance",r:"grd/attendance"},{t:"Hiring / Onboarding",r:"grd/hiring"},{t:"Alerts & Expiries",r:"alerts"}]},
     {t:"Fleet",group:1,ic:'<path d="M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/>',items:[
+      {t:"Live Map",r:"cc/live"},{t:"Shift Logs",r:"cc/shifts"},{t:"Driver Accounts",r:"cc/drivers"},
       {t:"Vehicles",r:"grd/vehicles"},{t:"Vehicle Service",r:"grd/service"},{t:"Fuel Tracker",r:"fueltracker"},
       {t:"Maintenance",r:"grd/maintenance"},{t:"Traffic Fines",r:"grd/fines"},{t:"Accident / Incident",r:"grd/incidents"}]},
     {t:"Finance",group:1,ic:'<path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/>',items:[
