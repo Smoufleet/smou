@@ -1263,6 +1263,182 @@ html[data-skin] #ccBanner.cc-banner:hover{transform:translateY(-3px)}
   .v3-ccb-n b{font-size:18px}
   html[data-skin] #ccBanner.cc-banner > .btn{order:4;width:100%;justify-content:center}
 }
+
+/* ===== v3 login gate (animated fleet scene + sign-in card) ===== */
+#authgate.lg{position:fixed;inset:0;z-index:9500;background:var(--bg);color:var(--ink);overflow-y:auto;overflow-x:hidden;container-type:inline-size;display:block;padding:0;place-items:normal;justify-items:normal;
+  font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  --lgSky1:#2A1D17;--lgSky2:#7A3A1E;--lgSky3:#E8894A;--lgSun:#FFC27A;--lgDune1:#B8743F;--lgDune2:#8C5230;--lgCity:#3A2A20;--lgRoad:#2B221B;--lgLane:#F3D9B5;
+  --lgBox1:#F08A4B;--lgBox2:#6D7BFF;--lgBox3:#18B2A3;--lgHeroInk:#FBF3E4;--lgHeroMuted:#CDBFA6;--lgHeroAcc:#F08A4B;--lgHero:#1F1A14;--lgAccInk:#fff;--lgWarn:#9A4A06}
+html[data-skin="night"] #authgate.lg{--lgSky1:#05070B;--lgSky2:#101A2B;--lgSky3:#1E3350;--lgSun:#E9F2FF;--lgDune1:#1B2433;--lgDune2:#131A26;--lgCity:#0F1622;--lgRoad:#0B0F16;--lgLane:#C6F432;
+  --lgBox1:#C6F432;--lgBox2:#7C8CFF;--lgBox3:#4ADE9A;--lgHeroInk:#EEF2F7;--lgHeroMuted:#8C97A8;--lgHeroAcc:#C6F432;--lgHero:#0A0D12;--lgAccInk:#0E1117;--lgWarn:#FBBF24}
+html[data-skin="gulf"] #authgate.lg{--lgSky1:#0F2A5C;--lgSky2:#2F5FA8;--lgSky3:#8FC3E8;--lgSun:#FFE3B8;--lgDune1:#E3C9A0;--lgDune2:#C9A77A;--lgCity:#1B3B70;--lgRoad:#20304A;--lgLane:#FDBA74;
+  --lgBox1:#FDBA74;--lgBox2:#FFFFFF;--lgBox3:#2DD4BF;--lgHeroInk:#FFFFFF;--lgHeroMuted:#B8C6DD;--lgHeroAcc:#FDBA74;--lgHero:#0F2A5C;--lgAccInk:#fff}
+#authgate.lg *{box-sizing:border-box}
+#authgate.lg :where(button,input){font:inherit;color:inherit}
+#authgate .lg-gate{display:grid;grid-template-columns:1.15fr 1fr;min-height:100vh;min-height:100dvh}
+@container (max-width:860px){#authgate .lg-gate{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+
+/* ---- left: fleet scene ---- */
+#authgate .lg-scene{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--lgSky1) 0%,var(--lgSky2) 55%,var(--lgSky3) 100%);color:var(--lgHeroInk);min-height:560px;display:flex;flex-direction:column;padding:36px 44px;isolation:isolate}
+@container (max-width:860px){#authgate .lg-scene{min-height:390px;padding:22px 20px 20px}}
+#authgate .lg-brand{display:flex;align-items:center;gap:12px;z-index:3;animation:lgFadeDown .7s .1s both}
+#authgate .lg-logo{width:46px;height:46px;border-radius:14px;background:var(--acc);color:var(--lgAccInk);display:grid;place-items:center;box-shadow:0 8px 22px color-mix(in srgb,var(--acc) 45%,transparent)}
+#authgate .lg-logo svg{width:28px;height:28px}
+#authgate .lg-brand b{font:800 20px/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.02em;display:block;color:var(--lgHeroInk)}
+#authgate .lg-brand small{font:600 10px/1 "JetBrains Mono",monospace;letter-spacing:.18em;color:var(--lgHeroMuted);text-transform:uppercase}
+#authgate .lg-pitch{z-index:3;max-width:540px;margin-top:auto;margin-bottom:max(300px,34vh)}
+@container (max-width:860px){#authgate .lg-pitch{margin-top:26px;margin-bottom:0}}
+#authgate .lg-eyebrow{font:700 11px/1 "JetBrains Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--lgHeroAcc);display:flex;align-items:center;gap:8px;animation:lgFadeUp .7s .25s both}
+#authgate .lg-eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--lgHeroAcc);animation:lgPing 1.8s infinite}
+#authgate .lg-h1{font:800 clamp(34px,5.2cqi,58px)/1.02 "Bricolage Grotesque",sans-serif !important;letter-spacing:-.035em !important;margin:14px 0 0;color:var(--lgHeroInk)}
+@container (max-width:860px){#authgate .lg-h1{font-size:30px}}
+#authgate .lg-h1 span{display:inline-block;opacity:0;transform:translateY(24px) rotate(2deg);animation:lgWord .7s cubic-bezier(.2,.8,.2,1.15) forwards}
+#authgate .lg-h1 em{font-style:normal;color:var(--lgHeroAcc);position:relative}
+#authgate .lg-h1 em::after{content:"";position:absolute;left:0;right:0;bottom:.02em;height:.12em;background:var(--lgHeroAcc);border-radius:9px;transform:scaleX(0);transform-origin:left;animation:lgUnderline .6s 1.3s cubic-bezier(.2,.8,.2,1) forwards;opacity:.5}
+#authgate .lg-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+#authgate .lg-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:color-mix(in srgb,var(--lgHeroInk) 12%,transparent);backdrop-filter:blur(8px);font-size:12.5px;font-weight:700;border:1px solid color-mix(in srgb,var(--lgHeroInk) 16%,transparent);opacity:0;animation:lgPop .5s cubic-bezier(.2,.8,.2,1.4) forwards}
+#authgate .lg-chip svg{width:15px;height:15px}
+@container (max-width:860px){#authgate .lg-chips{display:none}}
+#authgate .lg-clock{position:absolute;top:34px;right:40px;z-index:3;text-align:right;animation:lgFadeDown .7s .2s both}
+@container (max-width:860px){#authgate .lg-clock{top:26px;right:20px}#authgate .lg-clock .d{display:none}#authgate .lg-clock .t{font-size:17px}}
+#authgate .lg-clock .t{font:700 22px/1 "JetBrains Mono",monospace;letter-spacing:-.02em}
+#authgate .lg-clock .t small{font-size:13px;color:var(--lgHeroAcc)}
+#authgate .lg-clock .d{font:600 10px/1.4 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--lgHeroMuted);margin-top:6px}
+#authgate .lg-sun{position:absolute;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,var(--lgSun) 0 45%,transparent 70%);right:18%;bottom:170px;animation:lgSun 6s ease-in-out infinite;z-index:0}
+@container (max-width:860px){#authgate .lg-sun{width:84px;height:84px;right:10%;bottom:118px}}
+#authgate .lg-stars{position:absolute;inset:0;z-index:0;opacity:0;transition:opacity .8s}
+html[data-skin="night"] #authgate .lg-stars{opacity:1}
+#authgate .lg-stars i{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;animation:lgTwinkle 3s infinite}
+#authgate .lg-cloud{position:absolute;height:10px;border-radius:20px;background:linear-gradient(90deg,transparent,color-mix(in srgb,#fff 28%,transparent),transparent);filter:blur(3px);z-index:0;animation:lgDrift linear infinite}
+html[data-skin="night"] #authgate .lg-cloud{opacity:.15}
+#authgate .lg-layer{position:absolute;left:0;bottom:0;width:200%;display:flex;z-index:1}
+#authgate .lg-layer svg{width:50%;height:100%;flex:none}
+#authgate .lg-city{height:170px;bottom:96px;animation:lgPan 90s linear infinite;color:var(--lgCity)}
+#authgate .lg-dunes{height:120px;bottom:70px;animation:lgPan 55s linear infinite;color:var(--lgDune2)}
+#authgate .lg-dunes2{height:90px;bottom:60px;animation:lgPan 38s linear infinite;color:var(--lgDune1)}
+#authgate .lg-road{position:absolute;left:0;right:0;bottom:0;height:78px;background:var(--lgRoad);z-index:2;overflow:hidden}
+#authgate .lg-road::before{content:"";position:absolute;left:0;top:36px;width:200%;height:4px;background:repeating-linear-gradient(90deg,var(--lgLane) 0 34px,transparent 34px 70px);animation:lgLane 1.1s linear infinite;opacity:.8}
+#authgate .lg-road::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:color-mix(in srgb,var(--lgLane) 45%,transparent)}
+@container (max-width:860px){#authgate .lg-city{height:105px;bottom:66px}#authgate .lg-dunes{height:90px;bottom:52px}#authgate .lg-dunes2{height:70px;bottom:46px}#authgate .lg-road{height:56px}#authgate .lg-road::before{top:26px}}
+#authgate .lg-rider{position:absolute;bottom:34px;z-index:3;width:92px;animation:lgRide linear infinite}
+#authgate .lg-rider svg{width:100%;display:block;animation:lgBob .45s ease-in-out infinite alternate}
+#authgate .lg-wheel{transform-box:fill-box;transform-origin:center;animation:lgSpin .5s linear infinite}
+#authgate .lg-rider.r2{bottom:12px;width:78px}
+#authgate .lg-rider.r3{bottom:40px;width:64px;opacity:.85}
+@container (max-width:860px){#authgate .lg-rider{bottom:20px;width:66px}#authgate .lg-rider.r2{bottom:4px;width:58px}#authgate .lg-rider.r3{bottom:26px;width:48px}}
+#authgate .lg-pin{position:absolute;z-index:3;width:14px;height:14px;border-radius:50%;background:var(--lgHeroAcc);animation:lgPing 2s infinite}
+#authgate .lg-pin::after{content:attr(data-l);position:absolute;left:20px;top:-4px;white-space:nowrap;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.08em;background:color-mix(in srgb,var(--lgHero) 80%,transparent);color:var(--lgHeroInk);padding:5px 7px;border-radius:7px}
+@container (max-width:860px){#authgate .lg-pin{display:none}}
+
+/* ---- right: sign-in card ---- */
+#authgate .lg-side{display:grid;place-items:center;padding:40px 28px;position:relative}
+@container (max-width:860px){#authgate .lg-side{padding:0 16px 32px;align-items:start}}
+#authgate .lg-card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:30px 30px 26px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 28px 60px -22px color-mix(in srgb,var(--ink) 30%,transparent);position:relative;animation:lgCardIn .8s cubic-bezier(.2,.8,.2,1.1) both}
+@container (max-width:860px){#authgate .lg-card{margin-top:-26px;border-radius:26px;padding:24px 20px 22px;z-index:5}}
+#authgate .lg-card.shake{animation:lgShake .5s cubic-bezier(.36,.07,.19,.97)}
+#authgate .lg-card.out{animation:lgCardOut .6s cubic-bezier(.6,-.2,.7,.2) forwards}
+#authgate .lg-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#authgate .lg-greet{font:700 11px/1 "JetBrains Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+#authgate .lg-card h2{font:800 30px/1.05 "Bricolage Grotesque",sans-serif !important;letter-spacing:-.03em !important;margin:10px 0 0;color:var(--ink)}
+#authgate .lg-sub{color:var(--muted);font-size:14px;margin:6px 0 0}
+#authgate .lg-mascot{width:78px;height:78px;flex:none;position:relative;animation:lgMascotIn .9s .35s cubic-bezier(.2,.8,.2,1.5) both}
+#authgate .lg-mascot svg{width:100%;height:100%;overflow:visible}
+#authgate .lg-visor{transform-origin:39px 31px;transition:transform .45s cubic-bezier(.3,1.6,.5,1);transform:translateY(-15px) scaleY(.32)}
+#authgate .lg-mascot.shy .lg-visor{transform:none}
+#authgate .lg-pupils{transition:transform .18s ease-out}
+#authgate .lg-mouth{transition:d .3s}
+#authgate .lg-mascot.sad .lg-mouth{d:path("M31 55 Q39 49 47 55")}
+#authgate .lg-mascot.happy{animation:lgHop .6s cubic-bezier(.3,1.8,.5,1) 2}
+#authgate .lg-blink{animation:lgBlink 4.5s infinite;transform-origin:center 40px;transform-box:fill-box}
+#authgate .lg-form{margin-top:22px;display:grid;gap:14px}
+#authgate .lg-field{position:relative}
+#authgate .lg-field input{width:100%;height:58px;border-radius:16px;border:1.5px solid var(--line-2,var(--line));background:var(--surface-2,var(--bg));padding:22px 48px 6px 46px;font-size:15px;font-weight:600;outline:none;box-shadow:none;transition:border-color .2s,box-shadow .2s,background .2s;color:var(--ink)}
+#authgate .lg-field input:focus{border-color:var(--acc);background:var(--panel);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 18%,transparent)}
+#authgate .lg-field label{position:absolute;left:46px;top:19px;font-size:14.5px;color:var(--muted);font-weight:600;pointer-events:none;transition:all .18s cubic-bezier(.2,.8,.2,1);margin:0}
+#authgate .lg-field input:focus+label,#authgate .lg-field input:not(:placeholder-shown)+label{top:9px;font-size:11px;letter-spacing:.04em;color:var(--acc)}
+#authgate .lg-ic{position:absolute;left:15px;top:18px;width:20px;height:20px;color:var(--muted);transition:color .2s,transform .3s}
+#authgate .lg-field input:focus~.lg-ic{color:var(--acc);transform:scale(1.12) rotate(-6deg)}
+#authgate .lg-field.bad input{border-color:var(--crit);background:var(--crit-bg)}
+#authgate .lg-eye{position:absolute;right:8px;top:9px;width:40px;height:40px;border:0;background:transparent;border-radius:12px;display:grid;place-items:center;color:var(--muted);cursor:pointer;padding:0}
+#authgate .lg-eye:hover{background:var(--surface-3,var(--line));color:var(--ink)}
+#authgate .lg-eye svg{width:20px;height:20px}
+#authgate .lg-caps{display:none;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--lgWarn);margin-top:6px;padding-left:4px}
+#authgate .lg-caps.on{display:flex;animation:lgFadeUp .25s both}
+#authgate .lg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);font-weight:600}
+#authgate .lg-check{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin:0}
+#authgate .lg-check input{display:none}
+#authgate .lg-bx{width:20px;height:20px;border-radius:7px;border:1.5px solid var(--line-2,var(--line));display:grid;place-items:center;transition:all .2s;background:var(--surface-2,var(--bg))}
+#authgate .lg-bx svg{width:13px;height:13px;color:var(--lgAccInk);transform:scale(0);transition:transform .25s cubic-bezier(.3,1.8,.5,1)}
+#authgate .lg-check input:checked+.lg-bx{background:var(--acc);border-color:var(--acc)}
+#authgate .lg-check input:checked+.lg-bx svg{transform:scale(1)}
+#authgate .lg-forgot{border:0;background:none;padding:0;color:var(--acc);font-weight:700;cursor:pointer;font-size:13px}
+#authgate .lg-msg{display:none;align-items:flex-start;gap:8px;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:700;line-height:1.35}
+#authgate .lg-msg.on{display:flex;animation:lgFadeUp .3s both}
+#authgate .lg-msg.err{background:var(--crit-bg);color:var(--crit)}
+#authgate .lg-msg.info{background:color-mix(in srgb,var(--acc) 12%,var(--panel));color:var(--ink)}
+#authgate .lg-msg svg{width:18px;height:18px;flex:none;margin-top:-1px}
+#authgate .lg-go{position:relative;height:58px;width:100%;border:0;border-radius:16px;background:var(--acc);color:var(--lgAccInk);font-weight:800;font-size:16px;cursor:pointer;overflow:hidden;box-shadow:0 12px 26px -10px color-mix(in srgb,var(--acc) 70%,transparent);transition:transform .15s,box-shadow .2s,background .3s;padding:0;display:block}
+#authgate .lg-go:hover{transform:translateY(-2px);box-shadow:0 16px 30px -10px color-mix(in srgb,var(--acc) 80%,transparent)}
+#authgate .lg-go:active{transform:translateY(0) scale(.98)}
+#authgate .lg-go:disabled{opacity:1}
+#authgate .lg-lbl{display:inline-flex;align-items:center;gap:10px;transition:transform .35s,opacity .25s}
+#authgate .lg-lbl svg{width:20px;height:20px;transition:transform .3s}
+#authgate .lg-go:hover .lg-lbl svg{transform:translateX(4px)}
+#authgate .lg-trip{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .25s}
+#authgate .lg-trip::before{content:"";position:absolute;left:0;right:0;top:44px;height:2px;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--lgAccInk) 70%,transparent) 0 12px,transparent 12px 22px);animation:lgLane .6s linear infinite}
+#authgate .lg-bk{position:absolute;top:10px;left:-50px;width:48px;color:var(--lgAccInk);animation:lgTrip 1.4s cubic-bezier(.45,.05,.55,.95) infinite}
+#authgate .lg-bk .lg-wheel{animation-duration:.35s}
+#authgate .lg-trip small{position:absolute;right:14px;top:8px;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.12em;opacity:.85}
+#authgate .lg-go.loading{cursor:progress}
+#authgate .lg-go.loading .lg-lbl{transform:translateY(-40px);opacity:0}
+#authgate .lg-go.loading .lg-trip{opacity:1}
+#authgate .lg-go.done{background:var(--good)}
+#authgate .lg-foot{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line-2,var(--line));display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);font-weight:600}
+#authgate .lg-foot span{display:inline-flex;align-items:center;gap:6px}
+#authgate .lg-foot svg{width:14px;height:14px}
+#authgate .lg-foot .mono{font-family:"JetBrains Mono",monospace}
+#authgate .lg-tools{position:absolute;top:-46px;right:4px;display:flex;gap:8px;align-items:center;z-index:6}
+@container (max-width:860px){#authgate .lg-tools{position:static;justify-content:center;margin:0 0 14px}}
+#authgate .lg-sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1.5px var(--line-2,var(--line));cursor:pointer;padding:0;transition:transform .2s,box-shadow .2s}
+#authgate .lg-sw:hover{transform:scale(1.12)}
+#authgate .lg-sw.on{box-shadow:0 0 0 2.5px var(--acc)}
+#authgate .lg-sw[data-v3skin="desert"]{background:conic-gradient(#C2410C 0 50%,#F6F1E7 0)}
+#authgate .lg-sw[data-v3skin="night"]{background:conic-gradient(#C6F432 0 50%,#0E1117 0)}
+#authgate .lg-sw[data-v3skin="gulf"]{background:conic-gradient(#1D4ED8 0 50%,#EEF3F6 0)}
+#authgate .lg-welcome{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none;opacity:0;z-index:7}
+#authgate .lg-welcome.on{opacity:1;animation:lgFadeUp .5s .5s both}
+#authgate .lg-big{width:96px;height:96px;border-radius:30px;background:var(--good);color:#fff;display:grid;place-items:center;margin:0 auto 16px;animation:lgPopBig .6s .3s cubic-bezier(.2,.8,.2,1.6) both}
+#authgate .lg-big svg{width:52px;height:52px;stroke-dasharray:40;stroke-dashoffset:40;animation:lgDraw .5s .7s forwards}
+#authgate .lg-welcome h3{font:800 28px/1.1 "Bricolage Grotesque",sans-serif !important;letter-spacing:-.03em;margin:0;color:var(--ink)}
+#authgate .lg-welcome p{color:var(--muted);margin:6px 0 0;font-weight:600}
+#authgate .lg-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:8}
+#authgate .lg-confetti i{position:absolute;top:50%;left:50%;width:8px;height:12px;border-radius:2px;opacity:0;animation:lgBoom 1.1s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes lgFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes lgFadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+@keyframes lgWord{to{opacity:1;transform:none}}
+@keyframes lgUnderline{to{transform:scaleX(1)}}
+@keyframes lgPop{from{opacity:0;transform:scale(.6) translateY(8px)}to{opacity:1;transform:none}}
+@keyframes lgPing{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--lgHeroAcc) 70%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+@keyframes lgSun{50%{transform:scale(1.08);opacity:.9}}
+@keyframes lgTwinkle{50%{opacity:.2}}
+@keyframes lgDrift{from{transform:translateX(-160px)}to{transform:translateX(110cqi)}}
+@keyframes lgPan{to{transform:translateX(-50%)}}
+@keyframes lgLane{to{transform:translateX(-70px)}}
+@keyframes lgRide{0%{left:-120px}100%{left:calc(100% + 40px)}}
+@keyframes lgBob{to{transform:translateY(-2px) rotate(-1deg)}}
+@keyframes lgSpin{to{transform:rotate(360deg)}}
+@keyframes lgCardIn{from{opacity:0;transform:translateY(30px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes lgCardOut{to{opacity:0;transform:translateY(-30px) scale(.94)}}
+@keyframes lgGateOut{to{opacity:0;visibility:hidden}}
+@keyframes lgShake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+@keyframes lgMascotIn{from{opacity:0;transform:translateY(20px) scale(.5) rotate(-20deg)}to{opacity:1;transform:none}}
+@keyframes lgHop{50%{transform:translateY(-12px) rotate(8deg)}}
+@keyframes lgBlink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+@keyframes lgTrip{0%{left:-50px}100%{left:calc(100% + 10px)}}
+@keyframes lgPopBig{from{transform:scale(0) rotate(-30deg)}to{transform:none}}
+@keyframes lgDraw{to{stroke-dashoffset:0}}
+@keyframes lgBoom{0%{opacity:1;transform:translate(-50%,-50%) rotate(0)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){#authgate.lg *,#authgate.lg *::before,#authgate.lg *::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -5911,6 +6087,165 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     }
     ccRefreshLive();
   },TICK_MS);
+})();
+
+/* ===== v3 login gate: animated scene + friendly sign-in card (same sign-in logic as before) ===== */
+(function(){
+  /* "Keep me signed in" unticked → forget the session when the browser is closed */
+  try{
+    if(localStorage.getItem("smou-noremember")==="1"&&!sessionStorage.getItem("smou-alive")){
+      for(var i=localStorage.length-1;i>=0;i--){var k=localStorage.key(i);if(/^sb-.*-auth-token$/.test(k))localStorage.removeItem(k);}
+      localStorage.removeItem("smou-role");
+    }
+    sessionStorage.setItem("smou-alive","1");
+  }catch(e){}
+
+  var TIMERS=[];
+  function I(p,w){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||2)+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';}
+  var EYE='<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+  var EYE_OFF='<path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>';
+  var ARROW='<path d="M5 12h14M13 6l6 6-6 6"/>',TICK='<path d="M5 12.5l4.5 4.5L19 7.5"/>',ALERT='<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>';
+  function bike(box){return '<svg viewBox="0 0 92 60" fill="none"><g class="lg-wheel"><circle cx="18" cy="46" r="11" stroke="#111" stroke-width="5"/><circle cx="18" cy="46" r="3" fill="#888"/></g><g class="lg-wheel"><circle cx="72" cy="46" r="11" stroke="#111" stroke-width="5"/><circle cx="72" cy="46" r="3" fill="#888"/></g><path d="M18 46l14-16h22l18 16" stroke="#2b2b2b" stroke-width="5" stroke-linejoin="round"/><path d="M50 30l6-12h8" stroke="#2b2b2b" stroke-width="4" stroke-linecap="round"/><rect x="6" y="10" width="26" height="22" rx="5" fill="'+box+'"/><path d="M11 17h16" stroke="rgba(0,0,0,.25)" stroke-width="2.5" stroke-linecap="round"/><path d="M40 28c-2-8 2-14 8-15" stroke="#3b3b3b" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="8" r="7" fill="'+box+'"/><path d="M50 8h7" stroke="#111" stroke-width="3" stroke-linecap="round"/></svg>';}
+  function city(){var p="",x=0,seed=7;function r(){seed=(seed*9301+49297)%233280;return seed/233280;}
+    while(x<800){var w=18+r()*34,h=40+r()*130;p+='<rect x="'+x.toFixed(1)+'" y="'+(210-h).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2"/>';
+      if(r()>.78){var cx=x+w/2;p+='<rect x="'+(cx-2)+'" y="'+(210-h-50)+'" width="4" height="52"/><circle cx="'+cx+'" cy="'+(210-h-30)+'" r="'+(7+r()*6).toFixed(1)+'"/>';}
+      if(r()>.6){for(var k=0;k<3;k++)p+='<rect x="'+(x+4+k*6).toFixed(1)+'" y="'+(214-h+12+k*14).toFixed(1)+'" width="3" height="5" fill="var(--lgHeroAcc)" opacity=".35"/>';}
+      x+=w+2+r()*6;}
+    return p;}
+  function kw(){var d=new Date(),f=function(o){o.timeZone="Asia/Kuwait";return new Intl.DateTimeFormat("en-GB",o).format(d);};
+    var h=parseInt(f({hour:"2-digit",hourCycle:"h23"}),10),h12=h%12||12;
+    return {t:(h12<10?"0":"")+h12+":"+String(f({minute:"2-digit"})).padStart(2,"0")+'<small> '+(h<12?"AM":"PM")+'</small>',
+      d:f({weekday:"short"})+" · "+f({day:"numeric"})+" "+f({month:"short"})+" · Kuwait",
+      g:h<5?"Good evening":h<12?"Good morning":h<17?"Good afternoon":"Good evening"};}
+  function noRem(){try{return localStorage.getItem("smou-noremember")==="1";}catch(e){return false;}}
+  function skinNow(){return document.documentElement.getAttribute("data-skin")||"desert";}
+  function cssv(n){return getComputedStyle(document.getElementById("authgate")||document.documentElement).getPropertyValue(n).trim();}
+
+  function build(){
+    var c=kw(),sk=skinNow(),stars="",words=["Every","rider.","Every","<em>kilometre.</em>","<br>","One","screen."],h1="",n=0;
+    for(var i=0;i<60;i++)stars+='<i style="left:'+(Math.random()*100).toFixed(1)+'%;top:'+(Math.random()*55).toFixed(1)+'%;animation-delay:'+(Math.random()*3).toFixed(2)+'s;opacity:'+(.3+Math.random()*.7).toFixed(2)+'"></i>';
+    words.forEach(function(w){h1+=w==="<br>"?"<br>":'<span style="animation-delay:'+(.35+(n++)*.12).toFixed(2)+'s">'+w+'</span> ';});
+    var cty=city(),dune='<path d="M0 120V70C80 40 160 30 260 55S420 95 520 60 700 30 800 70v50z"/>',dune2='<path d="M0 90V55C120 30 220 70 360 50S600 20 800 55v35z"/>';
+    var chip=function(ic,t,d){return '<span class="lg-chip" style="animation-delay:'+d+'s">'+I(ic)+t+'</span>';};
+    return '<div class="lg-gate">'+
+      '<section class="lg-scene" aria-hidden="true"><div class="lg-stars">'+stars+'</div>'+
+        '<div class="lg-cloud" style="top:18%;width:120px;animation-duration:70s"></div><div class="lg-cloud" style="top:30%;width:80px;animation-duration:95s;animation-delay:-40s"></div><div class="lg-sun"></div>'+
+        '<div class="lg-brand"><div class="lg-logo"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="22" r="4"/><circle cx="24" cy="22" r="4"/><path d="M8 22l5-9h6l5 9"/><path d="M13 13l-2-4h-3M19 13l2-4"/></svg></div><div><b>SMOU Fleet</b><small>ERP · Kuwait</small></div></div>'+
+        '<div class="lg-clock"><div class="t" id="lgClk">'+c.t+'</div><div class="d" id="lgClkD">'+c.d+'</div></div>'+
+        '<div class="lg-pitch"><div class="lg-eyebrow"><i></i>Fleet control room</div><h1 class="lg-h1">'+h1+'</h1><div class="lg-chips">'+
+          chip('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',"Live GPS",1.5)+
+          chip('<path d="M3 12h4l3 8 4-16 3 8h4"/>',"Shifts &amp; KM",1.65)+
+          chip('<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M4 21h11M15 9h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V8l-3-3"/>',"Fuel audits",1.8)+
+          chip('<path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',"SOS alerts",1.95)+'</div></div>'+
+        '<span class="lg-pin" style="left:18%;bottom:205px" data-l="HAWALLI"></span><span class="lg-pin" style="left:52%;bottom:238px;animation-delay:.7s" data-l="SALMIYA"></span><span class="lg-pin" style="left:80%;bottom:190px;animation-delay:1.3s" data-l="JAHRA"></span>'+
+        '<div class="lg-layer lg-city"><svg viewBox="0 0 800 210" preserveAspectRatio="none" fill="currentColor">'+cty+'</svg><svg viewBox="0 0 800 210" preserveAspectRatio="none" fill="currentColor">'+cty+'</svg></div>'+
+        '<div class="lg-layer lg-dunes"><svg viewBox="0 0 800 120" preserveAspectRatio="none" fill="currentColor">'+dune+'</svg><svg viewBox="0 0 800 120" preserveAspectRatio="none" fill="currentColor">'+dune+'</svg></div>'+
+        '<div class="lg-layer lg-dunes2"><svg viewBox="0 0 800 90" preserveAspectRatio="none" fill="currentColor">'+dune2+'</svg><svg viewBox="0 0 800 90" preserveAspectRatio="none" fill="currentColor">'+dune2+'</svg></div>'+
+        '<div class="lg-road"></div><div class="lg-rider r1" style="animation-duration:9s"></div><div class="lg-rider r2" style="animation-duration:12.5s;animation-delay:-5s"></div><div class="lg-rider r3" style="animation-duration:16s;animation-delay:-11s"></div>'+
+      '</section>'+
+      '<main class="lg-side">'+
+        '<div class="lg-card" id="lgCard">'+
+          '<div class="lg-tools">'+["desert","night","gulf"].map(function(s){return '<button type="button" class="lg-sw'+(s===sk?" on":"")+'" data-v3skin="'+s+'" title="'+s.charAt(0).toUpperCase()+s.slice(1)+' theme" aria-label="'+s+' theme"></button>';}).join("")+'</div>'+
+          '<div class="lg-top"><div><div class="lg-greet" id="lgGreet">'+c.g+'</div><h2>Welcome back</h2><p class="lg-sub">Sign in with your staff account.</p></div>'+
+            '<div class="lg-mascot" id="lgMascot" aria-hidden="true"><svg viewBox="0 0 78 78"><ellipse cx="39" cy="74" rx="22" ry="3" fill="currentColor" opacity=".12"/>'+
+              '<path d="M11 44a28 28 0 0 1 56 0v6a10 10 0 0 1-10 10H21a10 10 0 0 1-10-10z" fill="var(--acc)"/><path d="M18 28h42" stroke="var(--lgAccInk)" stroke-width="3" stroke-linecap="round" opacity=".35"/>'+
+              '<rect x="17" y="34" width="44" height="24" rx="11" fill="#FCE3CF"/><g class="lg-blink"><g class="lg-pupils" id="lgPupils"><circle cx="30" cy="44" r="3.4" fill="#1F1A14"/><circle cx="48" cy="44" r="3.4" fill="#1F1A14"/><circle cx="31.2" cy="42.8" r="1" fill="#fff"/><circle cx="49.2" cy="42.8" r="1" fill="#fff"/></g></g>'+
+              '<path class="lg-mouth" d="M33 52 Q39 57 45 52" stroke="#1F1A14" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="23" cy="51" r="2.6" fill="#F4A58A" opacity=".7"/><circle cx="55" cy="51" r="2.6" fill="#F4A58A" opacity=".7"/>'+
+              '<g class="lg-visor"><rect x="15" y="31" width="48" height="23" rx="11.5" fill="#1F1A14" opacity=".92"/><path d="M22 36h14" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".55"/></g></svg></div></div>'+
+          '<form class="lg-form" id="lgForm" novalidate autocomplete="on">'+
+            '<div class="lg-msg" id="lgMsg" role="alert">'+I(ALERT,2.2)+'<span id="lgMsgT"></span></div>'+
+            '<div class="lg-field" id="lgFe"><input id="authEmail" type="email" autocomplete="username" placeholder=" " spellcheck="false" autocapitalize="off"><label for="authEmail">Work email</label><span class="lg-ic">'+I('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/>')+'</span></div>'+
+            '<div><div class="lg-field" id="lgFp"><input id="authPass" type="password" autocomplete="current-password" placeholder=" "><label for="authPass">Password</label><span class="lg-ic">'+I('<rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>')+'</span>'+
+              '<button type="button" class="lg-eye" id="lgEye" aria-label="Show password">'+I(EYE)+'</button></div>'+
+              '<div class="lg-caps" id="lgCaps">'+I('<path d="M12 4l7 8h-4v6H9v-6H5z"/>',2.4)+'Caps Lock is on</div></div>'+
+            '<div class="lg-row"><label class="lg-check"><input type="checkbox" id="lgKeep"'+(noRem()?"":" checked")+'><span class="lg-bx">'+I('<path d="M5 12l5 5 9-10"/>',3.4)+'</span>Keep me signed in</label>'+
+              '<button type="button" class="lg-forgot" id="lgForgot">Forgot password?</button></div>'+
+            '<button class="lg-go" id="authBtn" type="submit"><span class="lg-lbl" id="lgGoL">Sign in '+I(ARROW,2.4)+'</span><span class="lg-trip"><small>CHECKING…</small><span class="lg-bk" id="lgBk"></span></span></button>'+
+          '</form>'+
+          '<div class="lg-foot"><span>'+I('<rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',2.2)+'Staff access only</span><span class="mono">v3 · SMOU</span></div>'+
+        '</div>'+
+        '<div class="lg-welcome" id="lgWelcome"><div><div class="lg-big">'+I(TICK,3)+'</div><h3>You’re in!</h3><p>Opening your fleet…</p></div></div><div class="lg-confetti" id="lgConfetti"></div>'+
+      '</main></div>';
+  }
+  function paintBikes(g){
+    var cols=[cssv("--lgBox1"),cssv("--lgBox2"),cssv("--lgBox3")];
+    Array.prototype.forEach.call(g.querySelectorAll(".lg-rider"),function(r,i){r.innerHTML=bike(cols[i]);});
+    var bk=g.querySelector("#lgBk");if(bk)bk.innerHTML=bike(cssv("--lgAccInk")).replace(/#111|#2b2b2b|#3b3b3b/g,"currentColor");
+  }
+  function $g(id){return document.getElementById(id);}
+  function msg(t,kind){var m=$g("lgMsg");if(!m)return;if(!t){m.className="lg-msg";return;}$g("lgMsgT").textContent=t;m.className="lg-msg on "+(kind||"err");}
+  function clearBad(){msg("");["lgFe","lgFp"].forEach(function(id){var f=$g(id);if(f)f.classList.remove("bad");});var mc=$g("lgMascot");if(mc)mc.classList.remove("sad");}
+  function btnIdle(){var b=$g("authBtn");if(!b)return;b.className="lg-go";b.disabled=false;$g("lgGoL").innerHTML="Sign in "+I(ARROW,2.4);}
+  function friendly(t){t=String(t||"");if(/invalid login credentials/i.test(t))return "Wrong email or password. Try again.";if(/email not confirmed/i.test(t))return "This account isn't confirmed yet — ask your admin.";return t;}
+
+  showLogin=function(errMsg){
+    setSave("","Sign in required");
+    var g=$g("authgate");
+    if(g&&g.classList.contains("lg")&&!g.classList.contains("bye")){   /* keep what was typed, just show the problem */
+      btnIdle();
+      if(errMsg){var bad=/email/i.test(errMsg)&&!/password/i.test(errMsg)?"lgFe":"lgFp";clearBad();msg(friendly(errMsg),"err");var f=$g(bad);if(f)f.classList.add("bad");
+        var mc=$g("lgMascot");if(mc){mc.classList.remove("shy","happy");mc.classList.add("sad");}
+        var card=$g("lgCard");if(card){card.classList.remove("shake");void card.offsetWidth;card.classList.add("shake");}
+        var inp=$g(bad==="lgFe"?"authEmail":"authPass");if(inp){inp.focus();if(inp.select)inp.select();}}
+      return;
+    }
+    if(g)g.remove();
+    TIMERS.forEach(clearInterval);TIMERS=[];
+    g=document.createElement("div");g.className="authgate lg";g.id="authgate";g.innerHTML=build();
+    document.body.appendChild(g);paintBikes(g);
+    if(errMsg){msg(friendly(errMsg),"err");}
+    TIMERS.push(setInterval(function(){var c=kw(),a=$g("lgClk"),b=$g("lgClkD"),gr=$g("lgGreet");if(!a){TIMERS.forEach(clearInterval);return;}a.innerHTML=c.t;b.textContent=c.d;gr.textContent=c.g;},1000));
+    var em=$g("authEmail"),pw=$g("authPass"),mc=$g("lgMascot"),open=false;
+    try{var last=localStorage.getItem("smou-last-email");if(last)em.value=last;}catch(e){}
+    function look(){var n=Math.min(em.value.length,28);$g("lgPupils").style.transform="translate("+(-3+n*.22).toFixed(1)+"px,2px)";}
+    em.addEventListener("focus",function(){mc.classList.remove("shy");look();});
+    em.addEventListener("input",function(){look();clearBad();});
+    em.addEventListener("blur",function(){$g("lgPupils").style.transform="";});
+    em.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();pw.focus();}});
+    pw.addEventListener("focus",function(){if(!open)mc.classList.add("shy");});
+    pw.addEventListener("blur",function(){mc.classList.remove("shy");});
+    pw.addEventListener("input",clearBad);
+    ["keydown","keyup"].forEach(function(ev){pw.addEventListener(ev,function(e){if(e.getModifierState)$g("lgCaps").classList.toggle("on",e.getModifierState("CapsLock"));});});
+    $g("lgEye").addEventListener("click",function(){open=!open;pw.type=open?"text":"password";this.innerHTML=I(open?EYE_OFF:EYE);this.setAttribute("aria-label",open?"Hide password":"Show password");mc.classList.toggle("shy",!open);pw.focus();});
+    $g("lgForgot").addEventListener("click",function(){msg("Ask your admin to reset your password from Admin → Users & Roles, then sign in with the new one.","info");});
+    Array.prototype.forEach.call(g.querySelectorAll(".lg-sw"),function(b){b.addEventListener("click",function(){
+      Array.prototype.forEach.call(g.querySelectorAll(".lg-sw"),function(x){x.classList.toggle("on",x===b);});setTimeout(function(){paintBikes(g);},40);});});
+    $g("lgForm").addEventListener("submit",function(e){e.preventDefault();doLogin();});
+    setTimeout(function(){var i=em.value?pw:em;if(i&&window.innerWidth>860)i.focus();},700);
+  };
+
+  hideLogin=function(){
+    var g=$g("authgate");if(!g)return;
+    var b=$g("authBtn");
+    if(g.classList.contains("lg")&&b&&b.classList.contains("loading")){   /* signed in: celebrate, then reveal the ERP */
+      g.classList.add("bye");b.className="lg-go done";b.disabled=true;$g("lgGoL").innerHTML="Signed in "+I(TICK,3);
+      var mc=$g("lgMascot");if(mc){mc.classList.remove("shy","sad");mc.classList.add("happy");}
+      setTimeout(function(){var c=$g("lgCard");if(c)c.classList.add("out");var w=$g("lgWelcome");if(w)w.classList.add("on");
+        var cols=[cssv("--acc"),cssv("--lgBox2"),cssv("--lgBox3"),cssv("--lgHeroAcc"),"#FFD166"],h="";
+        for(var i=0;i<46;i++){var a=Math.random()*Math.PI*2,d=120+Math.random()*220;h+='<i style="background:'+cols[i%5]+';--x:'+(Math.cos(a)*d).toFixed(0)+'px;--y:'+(Math.sin(a)*d-60).toFixed(0)+'px;--r:'+(Math.random()*720-360).toFixed(0)+'deg;animation-delay:'+(Math.random()*.15).toFixed(2)+'s"></i>';}
+        var cf=$g("lgConfetti");if(cf)cf.innerHTML=h;},350);
+      g.style.animation="lgGateOut .45s 1.25s ease forwards";
+      setTimeout(function(){var x=$g("authgate");if(x&&x===g)x.remove();TIMERS.forEach(clearInterval);TIMERS=[];},1750);
+      return;
+    }
+    g.remove();TIMERS.forEach(clearInterval);TIMERS=[];
+  };
+
+  doLogin=function(){
+    var em=(($g("authEmail")||{}).value||"").trim(),pw=($g("authPass")||{}).value||"";
+    if(!$g("lgForm")){if(!em||!pw){showLogin("Enter email and password.");return;}}
+    else if(!em){showLogin("Enter your work email.");return;}
+    else if(!pw){showLogin("Enter your password.");return;}
+    if(!SB||!SB.auth){showLogin("Still connecting to the database — try again in a moment.");return;}
+    clearBad();
+    var b=$g("authBtn");if(b){b.className="lg-go loading";b.disabled=true;}
+    var mc=$g("lgMascot");if(mc)mc.classList.remove("shy");
+    try{var keep=$g("lgKeep");if(keep&&!keep.checked)localStorage.setItem("smou-noremember","1");else localStorage.removeItem("smou-noremember");localStorage.setItem("smou-last-email",em);}catch(e){}
+    SB.auth.signInWithPassword({email:em,password:pw}).then(function(res){
+      if(res.error){showLogin(res.error.message||"Wrong email or password.");return;}
+      onAuthed(res.data.user);
+    }).catch(function(){showLogin("Sign in failed — check your internet.");});
+  };
 })();
 
 /* ===== Remember the signed-in role so admin tabs (Command, Admin) show instantly on refresh ===== */
