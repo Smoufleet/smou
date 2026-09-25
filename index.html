@@ -5760,7 +5760,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
       TABLES.forEach(function(t){ch.on("postgres_changes",{event:"*",schema:"public",table:t},function(p){ccOnRealtime(p);});});
       ch.subscribe(function(st){
         if(CC.chan!==ch)return;
-        if(st==="SUBSCRIBED"){var was=CC.rt;CC.rt="live";if(was!=="live"&&was!=="connecting"){ccPoll(true);}paintRt();}
+        if(st==="SUBSCRIBED"){var was=CC.rt;CC.rt="live";if(was!=="live"&&was!=="connecting"){catchUp();}paintRt();}
         else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED"){
           CC.rt="down";paintRt();
           try{SB.removeChannel(ch);}catch(e){}
@@ -5775,6 +5775,16 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     return '<span id="ccRt" class="pill '+(up?"good":"warn")+'" title="'+(up?"Realtime connected — positions arrive instantly":"Realtime reconnecting — refreshing every 15 s meanwhile")+'"><span class="pd"></span>'+(up?"Realtime":"Backup sync"+(age?" · "+age:""))+'</span>';
   }
 
+  /* after a dropped connection: reload everything once so nothing that happened meanwhile is missed */
+  function catchUp(){
+    if(!ccIsAdmin())return;
+    ccLoad(true).then(function(){
+      CC.lastSync=Date.now();var r=getRoute();
+      if(r.indexOf("cc/")===0){if(!_rtBusy())renderPage();}
+      else if(r==="overview"){var b=document.getElementById("ccBanner");if(b)b.outerHTML=ccBannerHTML();}
+      if(window.ccSosBar)window.ccSosBar();
+    });
+  }
   /* ---- polling backup: re-reads running shifts so nothing is missed if the socket drops ---- */
   var polling=false,lastTrail=0;
   function ccPoll(withTrails){
@@ -5792,6 +5802,8 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
         if(prev.status!==row.status||prev.live_at!==row.live_at||prev.live_lat!==row.live_lat||prev.live_lng!==row.live_lng||prev.break_started_at!==row.break_started_at)
           ccOnRealtime({table:"shifts",eventType:"UPDATE",new:row,old:{id:row.id}});
       });
+      if(CC.rt!=="live")SB.from("sos_alerts").select("*").eq("status","OPEN").then(function(x){      /* SOS must never wait for the socket */
+        if(x.error||!x.data)return;x.data.forEach(function(a){if(!(CC.sos||[]).some(function(y){return String(y.id)===String(a.id);}))ccOnRealtime({table:"sos_alerts",eventType:"INSERT",new:a,old:null});});});
       if(withTrails&&Date.now()-lastTrail>55000){lastTrail=Date.now();ccLoadTrails();}
       paintRt();
     },function(){polling=false;});
@@ -5901,6 +5913,39 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   },TICK_MS);
 })();
 
+/* ===== Remember the signed-in role so admin tabs (Command, Admin) show instantly on refresh ===== */
+(function(){
+  var KEY="smou-role";
+  function hasSession(){try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(/^sb-.*-auth-token$/.test(k)&&localStorage.getItem(k))return true;}}catch(e){}return false;}
+  var cached=null;try{cached=localStorage.getItem(KEY);}catch(e){}
+  /* while the saved session is being checked (1–2 s), draw the menu for the last known role.
+     Data access is still decided by the database (RLS) — this only affects what the menu shows. */
+  if(SB_ON&&cached&&hasSession()&&/^(admin|dataentry|viewer)$/.test(cached)){ROLE=cached;READONLY=true;}
+  var _apply=applyRole;
+  applyRole=function(){
+    _apply();
+    if(USER){try{localStorage.setItem(KEY,ROLE);}catch(e){}}
+    /* the real role is known now: load the Command Center and repaint a Command page that was waiting */
+    if(USER&&ROLE==="admin"&&typeof ccLoad==="function"){
+      ccLoad().then(function(){var r=getRoute();if(r.indexOf("cc/")===0&&!_rtBusy())renderPage();});
+    }
+  };
+  var _out=doLogout;
+  doLogout=function(){try{localStorage.removeItem(KEY);}catch(e){}return _out.apply(this,arguments);};
+  /* Command Center data needs the real signed-in session, not the remembered role */
+  var _isAdm=ccIsAdmin;
+  ccIsAdmin=function(){return _isAdm()&&!!USER;};
+  var _pcc=pageCC;
+  pageCC=function(pg,tab){
+    if(SB_ON&&!USER&&ROLE==="admin"){
+      setTitle("Command Center","Live from the Sumou driver app");ccTeardown();
+      pg.innerHTML='<div class="card"><div class="empty" style="padding:40px"><h4>Loading live driver data…</h4><p>Connecting to the fleet.</p></div></div>';
+      return;
+    }
+    return _pcc(pg,tab);
+  };
+})();
+
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
@@ -5913,7 +5958,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
   function safe(fn,d){try{var v=fn();return v==null?d:v;}catch(e){return d;}}
   function isAdmin(){return safe(function(){return SB_ON&&ROLE==="admin";},false);}
-  function ccOk(){return safe(function(){return typeof ccIsAdmin==="function"&&ccIsAdmin();},false);}
+  function ccOk(){return safe(function(){return typeof ccIsAdmin==="function"&&SB_ON&&ROLE==="admin";},false);} /* menu follows the (remembered) role; data loads once signed in */
   function entN(e){return safe(function(){return e==="payroll"?payEmployees().length:store(e).length;},null);}
 
   var LOGO='<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="22" r="4"/><circle cx="24" cy="22" r="4"/><path d="M8 22l5-9h6l5 9"/><path d="M13 13l-2-4H8"/><path d="M19 13l2-5h3"/></svg>';
@@ -6017,7 +6062,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     var nb=document.getElementById("newBtn"),sr=head.querySelector(".v3-sub-r");
     if(nb&&sr)sr.appendChild(nb);
     styleThemeBtn();hideDupAdd();
-    if(!ccTried&&ccOk()&&safe(function(){return !CC.loaded;},false)&&typeof ccLoad==="function"){ccTried=true;safe(function(){ccLoad().then(refresh);return 1;},0);}
+    if(!ccTried&&ccOk()&&safe(function(){return !!USER;},false)&&safe(function(){return !CC.loaded;},false)&&typeof ccLoad==="function"){ccTried=true;safe(function(){ccLoad().then(refresh);return 1;},0);}
   }
   var ccTried=false;
   function refresh(){
