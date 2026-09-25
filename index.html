@@ -5739,6 +5739,168 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   (document.head||document.documentElement).appendChild(st);
 })();
 
+/* ===== Command Center: accurate live location (full trails, stale ticker, realtime auto-reconnect, polling backup) ===== */
+(function(){
+  var ACC_MAX=100;              /* fixes worse than ±100 m are not drawn on the route */
+  var POLL_MS=15000, TICK_MS=10000;
+  CC.rt="connecting"; CC.lastSync=0;
+  function posMs(s){return s.live_pos_at?Date.parse(s.live_pos_at):(s.live_acc!=null?ccLiveMs(s):null);}
+  function shiftById(id){return CC.shifts.filter(function(x){return String(x.id)===String(id);})[0];}
+  /* GPS weak = phone is alive but no good position for 2+ minutes, or accuracy worse than 100 m */
+  function weak(s){if(ccStale(s))return false;var p=posMs(s);return (s.live_acc!=null&&s.live_acc>ACC_MAX)||(p&&Date.now()-p>CC_STALE);}
+  function accTxt(s){return s.live_acc!=null?"±"+Math.round(s.live_acc)+" m":"clock-in spot";}
+
+  /* ---- realtime channel with status + auto reconnect ---- */
+  var TABLES=["drivers","shifts","fuel_records","shift_points","sos_alerts","vehicle_checks","announcements"];
+  var retryT=null;
+  ccSubscribe=function(){
+    if(CC.chan||!SB)return;
+    try{
+      var ch=SB.channel("erp-command-center-"+Date.now());CC.chan=ch;
+      TABLES.forEach(function(t){ch.on("postgres_changes",{event:"*",schema:"public",table:t},function(p){ccOnRealtime(p);});});
+      ch.subscribe(function(st){
+        if(CC.chan!==ch)return;
+        if(st==="SUBSCRIBED"){var was=CC.rt;CC.rt="live";if(was!=="live"&&was!=="connecting"){ccPoll(true);}paintRt();}
+        else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED"){
+          CC.rt="down";paintRt();
+          try{SB.removeChannel(ch);}catch(e){}
+          CC.chan=null;clearTimeout(retryT);retryT=setTimeout(function(){if(!CC.chan&&ccIsAdmin())ccSubscribe();},5000);
+        }
+      });
+    }catch(e){CC.chan=null;CC.rt="down";}
+  };
+  function paintRt(){var el=document.getElementById("ccRt");if(el)el.outerHTML=rtBadge();}
+  function rtBadge(){
+    var up=CC.rt==="live",age=CC.lastSync?ccAgo(CC.lastSync):"";
+    return '<span id="ccRt" class="pill '+(up?"good":"warn")+'" title="'+(up?"Realtime connected — positions arrive instantly":"Realtime reconnecting — refreshing every 15 s meanwhile")+'"><span class="pd"></span>'+(up?"Realtime":"Backup sync"+(age?" · "+age:""))+'</span>';
+  }
+
+  /* ---- polling backup: re-reads running shifts so nothing is missed if the socket drops ---- */
+  var polling=false,lastTrail=0;
+  function ccPoll(withTrails){
+    if(polling||!ccIsAdmin()||!CC.loaded||!SB)return;
+    var r=getRoute();if(r.indexOf("cc/")!==0&&r!=="overview")return;
+    polling=true;
+    var ids=ccActive().map(function(s){return String(s.id);});
+    var q=SB.from("shifts").select("*");
+    q=ids.length?q.or("status.eq.ACTIVE,id.in.("+ids.join(",")+")"):q.eq("status","ACTIVE");
+    q.then(function(res){
+      polling=false;if(res.error||!res.data)return;CC.lastSync=Date.now();
+      res.data.forEach(function(row){
+        var prev=shiftById(row.id);
+        if(!prev){ccOnRealtime({table:"shifts",eventType:"INSERT",new:row,old:null});return;}
+        if(prev.status!==row.status||prev.live_at!==row.live_at||prev.live_lat!==row.live_lat||prev.live_lng!==row.live_lng||prev.break_started_at!==row.break_started_at)
+          ccOnRealtime({table:"shifts",eventType:"UPDATE",new:row,old:{id:row.id}});
+      });
+      if(withTrails&&Date.now()-lastTrail>55000){lastTrail=Date.now();ccLoadTrails();}
+      paintRt();
+    },function(){polling=false;});
+  }
+  setInterval(function(){if(CC.rt!=="live"||document.hidden===false&&Date.now()-CC.lastSync>60000)ccPoll(CC.rt!=="live");},POLL_MS);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)ccPoll(true);});
+  window.addEventListener("online",function(){ccPoll(true);if(!CC.chan&&ccIsAdmin())ccSubscribe();});
+
+  /* ---- full route of every running shift (PostgREST returns max 1000 rows per request) ---- */
+  function cleanTrail(pts){
+    var out=[],last=null;
+    pts.forEach(function(p){
+      if(p.lat==null||p.lng==null)return;if(p.acc!=null&&p.acc>ACC_MAX)return;
+      var t=Date.parse(p.recorded_at)||0;
+      if(last){var dt=Math.max(1,(t-last.t)/1000),d=ccDist(last.lat,last.lng,p.lat,p.lng);
+        if(dt<60&&d>2*((p.acc||20)+(last.acc||20))&&d/dt*3.6>180)return;} /* impossible jump */
+      last={lat:p.lat,lng:p.lng,acc:p.acc,t:t};out.push([p.lat,p.lng]);
+    });
+    return out;
+  }
+  function ccDist(a,b,c,d){var R=6371000,r=function(x){return x*Math.PI/180;},dl=r(c-a),dg=r(d-b);var s=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dg/2)*Math.sin(dg/2);return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
+  var trailSeq=0;
+  ccLoadTrails=function(){
+    var ids=ccActive().map(function(s){return String(s.id);});if(!ids.length||!CC.map)return;
+    var seq=++trailSeq,all=[],PAGE=1000;
+    function page(from){
+      return SB.from("shift_points").select("shift_id,lat,lng,acc,recorded_at").in("shift_id",ids)
+        .order("recorded_at",{ascending:true}).order("id",{ascending:true}).range(from,from+PAGE-1).then(function(r){
+          if(r.error)throw r.error;var d=r.data||[];all=all.concat(d);
+          if(d.length===PAGE&&from<60000)return page(from+PAGE);
+        });
+    }
+    page(0).then(function(){
+      if(seq!==trailSeq||!CC.map)return;var by={};
+      all.forEach(function(p){(by[p.shift_id]=by[p.shift_id]||[]).push(p);});
+      Object.keys(by).forEach(function(sid){
+        var ll=cleanTrail(by[sid]),s=shiftById(sid);if(s&&s.live_lat!=null)ll.push([s.live_lat,s.live_lng]);
+        if(CC.trails[sid])CC.trails[sid].setLatLngs(ll);
+        else CC.trails[sid]=window.L.polyline(ll,{color:"#E3A64A",weight:4,opacity:.85,lineJoin:"round"}).addTo(CC.map);
+      });
+    }).catch(function(){});
+  };
+  var _tp=ccTrailPoint;
+  ccOnRealtime=(function(prev){return function(p){
+    if(p.table==="shift_points"&&p.eventType==="INSERT"&&p.new&&p.new.acc!=null&&p.new.acc>ACC_MAX)return;
+    prev(p);
+  };})(ccOnRealtime);
+
+  /* ---- marker: accuracy circle + detailed popup ---- */
+  function popup(id){
+    var x=shiftById(id);if(!x)return "";var d=ccDrv(x.driver_id),w=weak(x),st=ccStale(x);
+    return '<b>'+esc((d&&d.name)||"Driver")+'</b><br>'+esc(x.platform||"")+' · '+(x.speed||0)+' km/h'+
+      '<br>Accuracy: <b>'+accTxt(x)+'</b>'+(x.live_acc!=null&&x.live_acc>ACC_MAX?' <span style="color:#c0392b">(weak)</span>':'')+
+      '<br>Position: '+ccAgo(posMs(x)||ccMs(x))+
+      '<br>Phone signal: '+(st?'<span style="color:#c0392b">lost · '+ccAgo(ccLiveMs(x))+'</span>':ccAgo(ccLiveMs(x)))+
+      (x.live_lat!=null?'<br><a href="https://maps.google.com/?q='+x.live_lat+','+x.live_lng+'" target="_blank" rel="noopener">Open in Google Maps ↗</a>':'')+
+      (w&&!st?'<br><span style="color:#b7791f">GPS weak — driver may be indoors</span>':'');
+  }
+  function setCircle(mk,s){
+    if(!CC.map||!mk)return;var ok=s.live_acc!=null&&s.live_lat!=null;
+    if(!ok){if(mk._acc){CC.map.removeLayer(mk._acc);mk._acc=null;}return;}
+    var ll=[s.live_lat,s.live_lng],r=Math.max(5,Math.min(2000,s.live_acc)),col=s.live_acc>ACC_MAX?"#c0392b":"#2f9e6e";
+    if(!mk._acc)mk._acc=window.L.circle(ll,{radius:r,color:col,weight:1,opacity:.6,fillColor:col,fillOpacity:.1,interactive:false}).addTo(CC.map);
+    else{mk._acc.setLatLng(ll);mk._acc.setRadius(r);mk._acc.setStyle({color:col,fillColor:col});}
+  }
+  var _add=ccAddMarker;
+  ccAddMarker=function(s){
+    _add(s);var mk=CC.markers[s.id];if(!mk)return;
+    mk.setPopupContent(function(){return popup(s.id);});
+    setCircle(mk,s);
+  };
+  var _move=ccMove;
+  ccMove=function(id){
+    _move(id);
+    var s=shiftById(id),mk=CC.markers[id];
+    if(s&&mk&&CC.map){if(s.status!=="ACTIVE"){removeMk(id);return;}setCircle(mk,s);if(mk.isPopupOpen&&mk.isPopupOpen())mk.setPopupContent(function(){return popup(id);});}
+  };
+  function removeMk(id){var mk=CC.markers[id];if(!mk||!CC.map)return;try{if(mk._acc)CC.map.removeLayer(mk._acc);CC.map.removeLayer(mk);}catch(e){}delete CC.markers[id];
+    var tr=CC.trails[id];if(tr){try{CC.map.removeLayer(tr);}catch(e){}delete CC.trails[id];}}
+
+  /* ---- live list: accuracy + weak-GPS state ---- */
+  var _list=ccLiveList;
+  ccLiveList=function(){
+    var html=_list();
+    ccActive().filter(ccPass).forEach(function(s){
+      if(ccStale(s))return;
+      var tag=weak(s)?' <span class="pill warn"><span class="pd"></span>GPS weak · '+accTxt(s)+'</span>':' <span class="sub">· '+accTxt(s)+'</span>';
+      var i=html.indexOf('data-act="ccfollow" data-id="'+s.id+'"');if(i<0)return;
+      var j=html.lastIndexOf('</div><div class="cc-live-a">',i);if(j>0)html=html.slice(0,j)+tag+html.slice(j);
+    });
+    return (ccActive().length?rtBadge().replace('id="ccRt"','id="ccRt" style="margin:0 0 10px"'):"")+html;
+  };
+
+  /* ---- ticker: marker colour / ages keep updating even if a phone goes silent ---- */
+  setInterval(function(){
+    if(!CC.loaded)return;
+    if(CC.map){
+      Object.keys(CC.markers).forEach(function(id){
+        var s=shiftById(id),mk=CC.markers[id];if(!mk)return;
+        if(!s||s.status!=="ACTIVE"){removeMk(id);return;}
+        var st=ccStale(s);if(st!==mk._stale){mk.setIcon(ccLiveIcon((ccDrv(s.driver_id)||{}).name,st));mk._stale=st;}
+        if(mk.isPopupOpen&&mk.isPopupOpen())mk.setPopupContent(function(){return popup(id);});
+      });
+      ccActive().filter(ccPass).forEach(function(s){if(!CC.markers[s.id])ccAddMarker(s);});
+    }
+    ccRefreshLive();
+  },TICK_MS);
+})();
+
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
