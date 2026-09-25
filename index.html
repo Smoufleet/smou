@@ -5596,6 +5596,149 @@ var _ccS=null;document.addEventListener("input",function(e){if(e.target&&e.targe
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="ccBanner")go("cc/live");});
 
 /* ============ INIT ============ */
+/* ===== Command Center v2: SOS alerts, vehicle checks, breaks, announcements (from driver app v2) ===== */
+(function(){
+  CC.sos=[];CC.checks=[];CC.ann=[];
+  var _load=ccLoad;
+  ccLoad=function(force){
+    return _load(force).then(function(){
+      if(!ccIsAdmin()||!CC.loaded||!SB)return;
+      if(CC._x2&&!force)return;CC._x2=true;
+      return Promise.all([
+        SB.from("sos_alerts").select("*").order("created_at",{ascending:false}).limit(300),
+        SB.from("vehicle_checks").select("*").order("created_at",{ascending:false}).limit(500),
+        SB.from("announcements").select("*").order("created_at",{ascending:false}).limit(100)
+      ]).then(function(r){
+        if(!r[0].error)CC.sos=r[0].data||[];if(!r[1].error)CC.checks=r[1].data||[];if(!r[2].error)CC.ann=r[2].data||[];
+        ccSosBar();
+      }).catch(function(){});
+    });
+  };
+  var _sub=ccSubscribe;
+  ccSubscribe=function(){
+    var had=!!CC.chan;
+    if(!had&&SB){try{
+      CC.chan=SB.channel("erp-command-center");
+      ["drivers","shifts","fuel_records","shift_points","sos_alerts","vehicle_checks","announcements"].forEach(function(t){CC.chan.on("postgres_changes",{event:"*",schema:"public",table:t},ccOnRealtime);});
+      CC.chan.subscribe();}catch(e){CC.chan=null;_sub();}}
+  };
+  var _apply=ccApply;
+  ccApply=function(table,ev,nw,old){
+    var arr={sos_alerts:CC.sos,vehicle_checks:CC.checks,announcements:CC.ann}[table];
+    if(!arr)return _apply(table,ev,nw,old);
+    if(ev==="DELETE"){var id=old&&old.id,i=arr.findIndex(function(x){return String(x.id)===String(id);});if(i>=0)arr.splice(i,1);return;}
+    if(!nw)return;var j=arr.findIndex(function(x){return String(x.id)===String(nw.id);});if(j>=0)arr[j]=nw;else arr.unshift(nw);
+  };
+  var _rt=ccOnRealtime;
+  ccOnRealtime=function(p){
+    if(p.table==="sos_alerts"||p.table==="vehicle_checks"||p.table==="announcements"){
+      ccApply(p.table,p.eventType,p.new,p.old);
+      if(p.table==="sos_alerts"&&p.eventType==="INSERT"&&p.new){ccBeep();var d=ccDrv(p.new.driver_id);toast("SOS · "+((d&&d.name)||"Driver")+" · "+(p.new.type||""),"err");}
+      if(p.table==="vehicle_checks"&&p.eventType==="INSERT"&&p.new&&!p.new.ok){var d2=ccDrv(p.new.driver_id);toast("Vehicle check problem · "+((d2&&d2.name)||"Driver"),"err");}
+      ccSosBar();
+      var r=getRoute();if(r==="cc/alerts"||r==="cc/announce"){if(!_rtBusy())renderPage();}
+      return;
+    }
+    _rt(p);
+  };
+  function ccBeep(){try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var ac=new A();[0,.35,.7].forEach(function(t){var o=ac.createOscillator(),g=ac.createGain();o.type="square";o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+.22);});setTimeout(function(){try{ac.close();}catch(e){}},1500);}catch(e){}}
+  function openSos(){return (CC.sos||[]).filter(function(s){return s.status==="OPEN";});}
+  function mapLink(s){return s.lat!=null?'https://maps.google.com/?q='+s.lat+','+s.lng:"";}
+  /* red SOS bar across every ERP page while any SOS is open */
+  window.ccSosBar=ccSosBar;
+  function ccSosBar(){
+    var el=document.getElementById("ccSos");var list=ccIsAdmin()?openSos():[];
+    if(!list.length){if(el)el.remove();return;}
+    if(!el){el=document.createElement("div");el.id="ccSos";document.body.appendChild(el);}
+    el.innerHTML=list.slice(0,3).map(function(s){var d=ccDrv(s.driver_id),ml=mapLink(s);
+      return '<div class="ccsos-row"><i class="ccsos-dot"></i><b>SOS · '+esc((d&&d.name)||"Driver")+'</b><span>'+esc(s.type||"")+' · '+ccAgo(Date.parse(s.created_at))+(s.place?' · '+esc(s.place):"")+(s.note?' · “'+esc(s.note)+'”':"")+'</span>'+
+        (d&&d.phone?'<a class="btn sm" href="tel:'+esc(d.phone)+'">Call</a>':"")+(ml?'<a class="btn sm" href="'+ml+'" target="_blank" rel="noopener">Map</a>':"")+
+        '<button class="btn sm" data-route="cc/alerts">Open</button><button class="btn sm primary" data-act="ccsosres" data-id="'+esc(s.id)+'">Resolve</button></div>';}).join("")+
+      (list.length>3?'<div class="ccsos-more">+'+(list.length-3)+' more open SOS</div>':"");
+  }
+  setInterval(function(){if(document.getElementById("ccSos"))ccSosBar();},30000);
+  function resolveSos(id){
+    if(!SB)return;var who=(USER&&USER.email)||"admin";
+    SB.from("sos_alerts").update({status:"RESOLVED",resolved_at:new Date().toISOString(),resolved_by:who}).eq("id",id).then(function(r){
+      if(r&&r.error){toast("Could not resolve: "+r.error.message,"err");return;}
+      var s=CC.sos.filter(function(x){return String(x.id)===String(id);})[0];if(s){s.status="RESOLVED";s.resolved_at=new Date().toISOString();s.resolved_by=who;}
+      ccSosBar();toast("SOS marked resolved.","good");if(getRoute()==="cc/alerts")renderPage();});
+  }
+  /* ---------- new Command Center pages ---------- */
+  CC_TABS.push(["alerts","SOS & Checks"],["announce","Announcements"]);
+  var _page=pageCC;
+  pageCC=function(pg,tab){
+    if(tab!=="alerts"&&tab!=="announce")return _page(pg,tab);
+    setTitle("Command Center · "+(tab==="alerts"?"SOS & Checks":"Announcements"),"Live from the Sumou driver app");
+    if(!ccIsAdmin()||!CC.loaded)return _page(pg,tab);
+    ccTeardown();
+    pg.innerHTML=tab==="alerts"?alertsPage():announcePage();
+    if(LANG==="ar")transEl(pg);
+  };
+  function alertsPage(){
+    var td=ccToday(),open=openSos(),wk=(CC.sos||[]).filter(function(s){return Date.now()-Date.parse(s.created_at)<7*86400000;});
+    var chT=(CC.checks||[]).filter(function(c){return c.date===td;}),bad=chT.filter(function(c){return !c.ok;});
+    var brk=ccActive().filter(function(s){return s.break_started_at;});
+    var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Open SOS",open.length,wk.length+" in the last 7 days",open.length?"var(--crit)":"var(--good)")+ccKpi("Checks today",chT.length,(chT.length-bad.length)+" all OK","var(--teal)")+ccKpi("Check problems",bad.length,"sent to Maintenance as Pending","var(--amber)")+ccKpi("On break now",brk.length,ccActive().length+" on duty","var(--indigo)")+'</div>';
+    var sosRows=(CC.sos||[]).slice(0,40).map(function(s){var d=ccDrv(s.driver_id),ml=mapLink(s),on=s.status==="OPEN";
+      return '<tr><td>'+ccDrvCell(d)+'</td><td><span class="pill '+(on?"crit":"neutral")+'"><span class="pd"></span>'+esc(s.type||"")+'</span></td><td>'+esc(fmtD(String(s.created_at).slice(0,10)))+'<div class="sub">'+ccAgo(Date.parse(s.created_at))+'</div></td>'+
+        '<td>'+esc(s.place||"—")+(ml?'<div class="sub"><a href="'+ml+'" target="_blank" rel="noopener">open map ↗</a></div>':"")+'</td><td style="white-space:normal;max-width:240px">'+esc(s.note||"—")+(s.incident_id?'<div class="sub">Incident record created</div>':"")+'</td>'+
+        '<td>'+(on?'<button class="btn sm primary" data-act="ccsosres" data-id="'+esc(s.id)+'">Resolve</button>':'<span class="sub">Resolved '+(s.resolved_at?ccAgo(Date.parse(s.resolved_at)):"")+(s.resolved_by?' · '+esc(String(s.resolved_by).split("@")[0]):"")+'</span>')+'</td></tr>';}).join("");
+    var chkRows=(CC.checks||[]).slice(0,60).map(function(c){var d=ccDrv(c.driver_id),badI=(c.items||[]).filter(function(i){return i&&i.ok===false;});
+      return '<tr><td>'+ccDrvCell(d)+'</td><td>'+esc(fmtD(c.date))+'<div class="sub">'+new Date(c.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kuwait"})+'</div></td><td><span class="tag-plate">'+esc(c.plate||"—")+'</span></td>'+
+        '<td>'+(c.ok?'<span class="pill good"><span class="pd"></span>All OK</span>':badI.map(function(i){return '<span class="pill crit" style="margin:1px"><span class="pd"></span>'+esc(i.label||i.k)+'</span>';}).join(" "))+'</td><td style="white-space:normal;max-width:220px">'+esc(c.note||"—")+'</td><td>'+(c.photo?'<a class="chip" href="'+esc(c.photo)+'" target="_blank" rel="noopener">photo</a>':'<span class="sub">—</span>')+'</td></tr>';}).join("");
+    var brkRows=brk.map(function(s){var d=ccDrv(s.driver_id);return '<div class="cc-live">'+ccDrvCell(d)+'<div class="cc-live-m"><span class="pill indigo"><span class="pd"></span>On break</span> <span class="sub">since '+ccAgo(Date.parse(s.break_started_at))+'</span></div></div>';}).join("");
+    return kpis+
+      '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>SOS alerts</h3><span class="hint">from the driver app · accidents, breakdowns and robbery also create an Incident record</span></div><div class="card-b">'+
+        (sosRows?'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Type</th><th>When</th><th>Where</th><th>Note</th><th></th></tr></thead><tbody>'+sosRows+'</tbody></table></div>':'<div class="empty" style="padding:18px"><p>No SOS alerts.</p></div>')+'</div></div>'+
+      '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Daily vehicle checks</h3><span class="hint">problems go to Fleet → Maintenance as Pending</span></div><div class="card-b">'+
+        (chkRows?'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Date</th><th>Plate</th><th>Result</th><th>Note</th><th>Photo</th></tr></thead><tbody>'+chkRows+'</tbody></table></div>':'<div class="empty" style="padding:18px"><p>No checks yet.</p></div>')+'</div></div>'+
+      '<div class="card"><div class="card-h"><h3>On break now</h3><span class="hint">GPS stays on during breaks</span></div><div class="card-b">'+(brkRows||'<div class="empty" style="padding:18px"><p>Nobody is on a break.</p></div>')+'</div></div>';
+  }
+  function announcePage(){
+    var rows=(CC.ann||[]).map(function(a){var exp=a.expires_at&&Date.parse(a.expires_at)<Date.now();var live=a.active&&!exp;
+      return '<tr><td style="white-space:normal"><div class="nm">'+esc(a.title)+'</div><div class="sub" style="white-space:normal;max-width:420px">'+esc(a.body||"")+'</div></td><td>'+esc(fmtD(String(a.created_at).slice(0,10)))+'</td><td>'+(a.expires_at?esc(fmtD(String(a.expires_at).slice(0,10))):'<span class="sub">never</span>')+'</td>'+
+        '<td><span class="pill '+(live?"good":"neutral")+'"><span class="pd"></span>'+(live?"Showing":exp?"Expired":"Hidden")+'</span></td>'+
+        '<td style="white-space:nowrap"><button class="btn sm" data-act="ccanntog" data-id="'+esc(a.id)+'">'+(a.active?"Hide":"Show")+'</button> <button class="btn sm danger" data-act="ccanndel" data-id="'+esc(a.id)+'">Delete</button></td></tr>';}).join("");
+    return '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Send an announcement to all drivers</h3><span class="hint">shows on the driver app home screen and in their notifications</span></div><div class="card-b"><div class="form-grid">'+
+      '<div class="field wide"><label for="annTitle">Title <span class="req">*</span></label><input id="annTitle" maxlength="80" placeholder="e.g. Weekend bonus is live"></div>'+
+      '<div class="field wide"><label for="annBody">Message</label><textarea id="annBody" rows="3" maxlength="400" placeholder="e.g. +2.000 KWD for every 30 orders, Thu–Sat."></textarea></div>'+
+      '<div class="field"><label for="annExp">Show for</label><select id="annExp"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>1 week</option><option value="30">1 month</option><option value="0">Until I hide it</option></select></div>'+
+      '</div><div style="margin-top:12px"><button class="btn primary" data-act="ccannsend">Send to drivers</button></div></div></div>'+
+      '<div class="card"><div class="card-h"><h3>Announcements</h3><span class="hint">'+(CC.ann||[]).length+' total</span></div><div class="card-b">'+
+      (rows?'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Message</th><th>Sent</th><th>Until</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty" style="padding:18px"><p>No announcements yet.</p></div>')+'</div></div>';
+  }
+  /* SOS pins on the live map */
+  var _mount=ccMountMap;
+  ccMountMap=function(){
+    _mount();
+    try{if(CC.map&&window.L)openSos().forEach(function(s){if(s.lat==null)return;var d=ccDrv(s.driver_id);
+      window.L.marker([s.lat,s.lng],{icon:window.L.divIcon({className:"",html:'<div class="ccsos-pin">SOS</div>',iconSize:[38,22],iconAnchor:[19,11]})}).addTo(CC.map).bindPopup("SOS · "+esc((d&&d.name)||"Driver")+" · "+esc(s.type||""));});}catch(e){}
+  };
+  document.addEventListener("click",function(e){
+    var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act"),id=a.getAttribute("data-id");
+    if(act==="ccsosres"){e.stopPropagation();resolveSos(id);}
+    else if(act==="ccannsend"){e.stopPropagation();
+      var t=(document.getElementById("annTitle")||{}).value||"",b=(document.getElementById("annBody")||{}).value||"",days=+((document.getElementById("annExp")||{}).value||0);
+      if(!t.trim()){toast("Write a title first.","err");return;}a.disabled=true;
+      SB.from("announcements").insert({title:t.trim(),body:b.trim()||null,active:true,expires_at:days?new Date(Date.now()+days*86400000).toISOString():null}).select().then(function(r){
+        a.disabled=false;if(r.error){toast("Could not send: "+r.error.message,"err");return;}
+        (r.data||[]).forEach(function(x){if(!CC.ann.some(function(y){return y.id===x.id;}))CC.ann.unshift(x);});toast("Announcement sent to drivers.","good");renderPage();});}
+    else if(act==="ccanntog"){e.stopPropagation();var an=CC.ann.filter(function(x){return String(x.id)===String(id);})[0];if(!an)return;
+      SB.from("announcements").update({active:!an.active}).eq("id",id).then(function(r){if(r.error){toast(r.error.message,"err");return;}an.active=!an.active;renderPage();});}
+    else if(act==="ccanndel"){e.stopPropagation();if(!confirm("Delete this announcement?"))return;
+      SB.from("announcements").delete().eq("id",id).then(function(r){if(r.error){toast(r.error.message,"err");return;}CC.ann=CC.ann.filter(function(x){return String(x.id)!==String(id);});renderPage();});}
+  },true);
+  var st=document.createElement("style");
+  st.textContent="#ccSos{position:fixed;left:50%;bottom:20px;translate:-50% 0;z-index:9000;width:min(760px,calc(100vw - 110px));display:flex;flex-direction:column;gap:6px;animation:ccsosin .35s cubic-bezier(.2,.8,.2,1.2) both}"+
+    ".ccsos-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:#B42318;color:#fff;box-shadow:0 14px 34px rgba(180,35,24,.45);font-size:13px}"+
+    ".ccsos-row b{font-weight:800}.ccsos-row span{flex:1;min-width:120px;opacity:.95}.ccsos-row .btn{height:32px;padding:0 12px}.ccsos-row .btn{background:rgba(255,255,255,.16)!important;border-color:rgba(255,255,255,.3)!important;color:#fff!important}.ccsos-row .btn.primary{background:#fff!important;color:#B42318!important}"+
+    ".ccsos-dot{width:12px;height:12px;border-radius:50%;background:#fff;animation:ccsospulse 1.2s ease-out infinite;flex:none}.ccsos-more{text-align:center;font-size:12px;font-weight:700;color:#B42318;background:#fff;border-radius:10px;padding:4px}"+
+    ".ccsos-pin{background:#B42318;color:#fff;font:800 11px/22px sans-serif;border-radius:8px;text-align:center;box-shadow:0 0 0 4px rgba(180,35,24,.3);animation:ccsospulse 1.2s ease-out infinite}"+
+    "@keyframes ccsospulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.8)}70%{box-shadow:0 0 0 10px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}@media(max-width:860px){#ccSos{bottom:calc(92px + env(safe-area-inset-bottom));width:calc(100vw - 24px)}}@keyframes ccsosin{from{opacity:0;translate:-50% 14px}to{opacity:1;translate:-50% 0}}";
+  (document.head||document.documentElement).appendChild(st);
+})();
+
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
@@ -5632,7 +5775,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     var adm=isAdmin();
     var S=[
       {k:"home",t:"Home",items:[["overview","Dashboard"],["alerts","Alerts & Expiries",function(){return computeAlerts().length;}]]},
-      {k:"cc",t:"Command",show:ccOk(),live:true,items:[["cc/live","Live Map",function(){return CC.loaded?ccActive().length:null;}],["cc/shifts","Shift Logs"],["cc/km","KM Records"],["cc/fuel","Fuel Audits"],["cc/drivers","Driver Accounts",function(){return CC.loaded?CC.drivers.length:null;}]]},
+      {k:"cc",t:"Command",show:ccOk(),live:true,items:[["cc/live","Live Map",function(){return CC.loaded?ccActive().length:null;}],["cc/shifts","Shift Logs"],["cc/km","KM Records"],["cc/fuel","Fuel Audits"],["cc/drivers","Driver Accounts",function(){return CC.loaded?CC.drivers.length:null;}],["cc/alerts","SOS & Checks",function(){return CC.loaded&&CC.sos?(CC.sos.filter(function(s){return s.status==="OPEN";}).length||null):null;}],["cc/announce","Announcements"]]},
       {k:"orders",t:"Orders",items:[["orders","Order Overview"]]},
       {k:"ops",t:"Ops",items:[["grd/drivers","Employees","drivers"],["grd/sims","SIM / Mobile","sims"],["grd/fuel","Fuel Cards","fuel"],["grd/housing","Accommodation","housing"],["grd/compdocs","Company Documents","compdocs"],["grd/attendance","Attendance / Leave","attendance"],["grd/hiring","Hiring / Onboarding","hiring"]]},
       {k:"fleet",t:"Fleet",items:[["grd/vehicles","Vehicles","vehicles"],["grd/service","Vehicle Service","service"],["fueltracker","Fuel Tracker"],["grd/maintenance","Maintenance","maintenance"],["grd/fines","Traffic Fines","fines"],["grd/incidents","Accident / Incident","incidents"]]},
