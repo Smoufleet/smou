@@ -1439,6 +1439,77 @@ html[data-skin="night"] #authgate .lg-cloud{opacity:.15}
 @keyframes lgDraw{to{stroke-dashoffset:0}}
 @keyframes lgBoom{0%{opacity:1;transform:translate(-50%,-50%) rotate(0)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r))}}
 @media (prefers-reduced-motion:reduce){#authgate.lg *,#authgate.lg *::before,#authgate.lg *::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}}
+
+/* ===== v3 dock header: slim glass capsules + a scooter riding on the tab bar (desktop) ===== */
+.v3-dock,.v3-subdock{display:contents}
+.v3-rider,.v3-tpill,.v3-spill,.v3-trail,.v3-stop{display:none}
+@media (min-width:861px){
+  html[data-skin] .v3-head{--glass:color-mix(in srgb,var(--sb) 88%,transparent);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);padding-bottom:10px}
+  html[data-skin="night"] .v3-head{--glass:color-mix(in srgb,#222A38 90%,transparent)}
+  html[data-skin] .v3-bar{height:auto;background:transparent;color:var(--sb-ink);padding:28px 20px 0;gap:12px;align-items:center}
+  .v3-glass{background:var(--glass);color:var(--sb-ink);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);
+    border:1px solid rgba(255,255,255,.09);box-shadow:0 16px 32px -18px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+  /* main capsule: logo + tabs, ends right after the last tab */
+  .v3-dock{display:inline-flex;position:relative;align-items:center;gap:2px;height:50px;padding:5px 6px 5px 5px;border-radius:25px;flex:0 1 auto;min-width:0}
+  .v3-dock .v3-brand{margin:0;padding-right:10px;gap:8px;flex:none}
+  .v3-dock .v3-brand .box{width:40px;height:40px;border-radius:20px;box-shadow:0 6px 16px -6px var(--acc)}
+  .v3-dock .v3-brand b{font-size:14.5px;color:var(--sb-ink)}
+  .v3-dock .v3-brand small{font-size:8.5px;letter-spacing:.16em}
+  .v3-dock .v3-brand::after{content:"";width:1px;height:24px;background:rgba(255,255,255,.14);margin-left:10px}
+  .v3-dock .v3-main{position:relative;height:40px;gap:2px}
+  .v3-dock .v3-tab{position:relative;z-index:1;height:40px;border-radius:20px;padding:0 13px;color:var(--sb-muted);font-size:13.5px;background:transparent !important;transition:color .3s}
+  .v3-dock .v3-tab:not(.on):hover{color:var(--sb-ink);background:transparent}
+  .v3-dock .v3-tab.on{color:var(--sb-active-ink);background:transparent !important}
+  .v3-dock .v3-tab svg{transition:transform .2s ease-out}
+  .v3-tpill{display:block;position:absolute;left:0;top:5px;height:40px;width:0;border-radius:20px;background:var(--sb-active);z-index:0;pointer-events:none;
+    box-shadow:0 8px 20px -8px var(--sb-active),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .6s cubic-bezier(.3,1.35,.5,1),width .6s cubic-bezier(.3,1.35,.5,1)}
+  .v3-tpill.still,.v3-spill.still{transition:none}
+  /* the scooter on top of the capsule edge */
+  .v3-rider{display:block;position:absolute;bottom:calc(100% - 3px);left:-30px;width:44px;height:28px;margin-left:-22px;pointer-events:none;z-index:4;transition:left 1s cubic-bezier(.55,0,.3,1)}
+  .v3-rider.still{transition:none}
+  .v3-rider svg{width:100%;height:100%;display:block;overflow:visible;animation:v3bob .38s ease-in-out infinite alternate;transform-origin:50% 100%}
+  .v3-rider.back svg{animation-name:v3bobBack}
+  .v3-rider .wh{transform-box:fill-box;transform-origin:center}
+  .v3-rider.go .wh{animation:v3spin .28s linear infinite}
+  .v3-rider.go svg{animation-duration:.18s}
+  .v3-rider .puff{position:absolute;bottom:3px;left:-4px;width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--sb-ink) 60%,transparent);opacity:0}
+  .v3-rider.go .puff{animation:v3puff .45s ease-out infinite}
+  .v3-rider.go .puff.p2{animation-delay:.22s}
+  .v3-rider.back .puff{left:auto;right:-4px}
+  .v3-rider.back.go .puff{animation-name:v3puffBack}
+  .v3-rider .shd{position:absolute;bottom:0;left:8px;right:8px;height:3px;border-radius:50%;background:rgba(0,0,0,.25);filter:blur(1px)}
+  .v3-trail{display:block;position:absolute;top:-1px;height:2px;border-radius:2px;left:0;width:0;background:linear-gradient(90deg,transparent,var(--sb-active),transparent);opacity:0;transition:opacity .4s;pointer-events:none;z-index:3}
+  .v3-trail.on{opacity:.9}
+  .v3-stop{display:block;position:absolute;top:-4px;width:6px;height:6px;border-radius:50%;background:var(--sb-active);box-shadow:0 0 10px var(--sb-active);margin-left:-3px;opacity:0;transform:scale(0);transition:opacity .3s,transform .4s cubic-bezier(.3,1.8,.5,1);z-index:3;pointer-events:none}
+  .v3-stop.on{opacity:1;transform:scale(1)}
+  /* right tools capsule */
+  html[data-skin] .v3-right{height:50px;padding:5px;border-radius:25px}
+  html[data-skin] .v3-right .icon-btn{border-radius:20px;border:0;background:rgba(255,255,255,.08)}
+  html[data-skin] .v3-right .save-ind{border-radius:20px !important;border:0 !important;background:rgba(255,255,255,.08) !important}
+  html[data-skin] .v3-right #themeBtn{border-radius:20px}
+  html[data-skin] .v3-right .userbtn{border-radius:22px}
+  /* sub row: slim glass capsule, left-aligned, ends after the last sub-tab */
+  html[data-skin] .v3-sub{height:auto;background:transparent;border:0;padding:12px 20px 0;align-items:center;gap:12px}
+  .v3-subdock{display:inline-flex;position:relative;align-items:center;height:42px;padding:4px;border-radius:21px;flex:0 1 auto;min-width:0;overflow:hidden}
+  .v3-subdock.grow{animation:v3grow .5s cubic-bezier(.3,1.3,.5,1)}
+  .v3-subdock .v3-sub-nav{position:relative;height:34px;align-items:center;gap:2px}
+  .v3-subdock .v3-st{position:relative;z-index:1;height:34px;border:0 !important;border-radius:17px;padding:0 13px;background:transparent !important;color:var(--sb-muted);font-size:13px;font-weight:700;transition:color .3s}
+  .v3-subdock .v3-st:hover:not(.on){color:var(--sb-ink)}
+  .v3-subdock .v3-st.on{color:var(--sb-ink);font-weight:800}
+  .v3-subdock .v3-st .c{background:rgba(255,255,255,.12);color:var(--sb-ink)}
+  .v3-subdock .v3-st.on .c{background:var(--sb-active);color:var(--sb-active-ink)}
+  .v3-subdock.in .v3-st{animation:v3subIn .45s cubic-bezier(.2,.8,.2,1.2) both}
+  .v3-spill{display:block;position:absolute;left:0;top:4px;height:34px;width:0;border-radius:17px;background:rgba(255,255,255,.1);pointer-events:none;z-index:0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 -2px 0 var(--sb-active);transition:transform .5s cubic-bezier(.3,1.35,.5,1),width .5s cubic-bezier(.3,1.35,.5,1)}
+}
+@keyframes v3bob{from{transform:translateY(0)}to{transform:translateY(-1.5px) rotate(-1deg)}}
+@keyframes v3bobBack{from{transform:scaleX(-1)}to{transform:scaleX(-1) translateY(-1.5px) rotate(-1deg)}}
+@keyframes v3spin{to{transform:rotate(360deg)}}
+@keyframes v3puff{0%{opacity:.8;transform:scale(.5)}100%{opacity:0;transform:translate(-14px,-3px) scale(2)}}
+@keyframes v3puffBack{0%{opacity:.8;transform:scale(.5)}100%{opacity:0;transform:translate(14px,-3px) scale(2)}}
+@keyframes v3subIn{from{opacity:0;transform:translateX(-10px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes v3grow{from{clip-path:inset(0 100% 0 0 round 21px)}to{clip-path:inset(0 0 0 0 round 21px)}}
+@media (prefers-reduced-motion:reduce){.v3-rider,.v3-tpill,.v3-spill{transition:none !important}.v3-rider svg,.v3-rider .wh,.v3-rider .puff{animation:none !important}}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -6553,6 +6624,78 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   setTimeout(ensure,300);setTimeout(ensure,1200);
   setInterval(function(){hideDupAdd();styleThemeBtn();},700);
   setInterval(refresh,5000);
+})();
+
+/* ===== v3 dock header: glass capsules, sliding pills and a scooter that rides to the open section ===== */
+(function(){
+  var RIDER='<span class="shd"></span><i class="puff"></i><i class="puff p2"></i><svg viewBox="0 0 44 28" aria-hidden="true">'+
+    '<g class="wh"><circle cx="9" cy="22" r="5.2" fill="#15110D" stroke="#8a8a8a" stroke-width="1.2"/><circle cx="9" cy="22" r="1.6" fill="#8a8a8a"/></g>'+
+    '<g class="wh"><circle cx="35" cy="22" r="5.2" fill="#15110D" stroke="#8a8a8a" stroke-width="1.2"/><circle cx="35" cy="22" r="1.6" fill="#8a8a8a"/></g>'+
+    '<path d="M9 22c2-7 11-8 18-7h5l3 7" fill="none" stroke="#3a3530" stroke-width="3" stroke-linejoin="round"/><path d="M15 16h13a3 3 0 0 1 3 3v1H13z" fill="var(--sb-active)"/>'+
+    '<rect x="1" y="5" width="13" height="11" rx="2.5" fill="var(--acc)"/><path d="M4 9h7" stroke="rgba(0,0,0,.25)" stroke-width="1.6" stroke-linecap="round"/>'+
+    '<path d="M18 15c-1-5 1-8 5-9" stroke="var(--sb-active)" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M24 8l5 1 3-3" stroke="var(--sb-active)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'+
+    '<circle cx="23" cy="4.5" r="4" fill="var(--acc)"/><path d="M24 3.5h3.5" stroke="#15110D" stroke-width="2.2" stroke-linecap="round"/>'+
+    '<path d="M31 15l2-7h3" fill="none" stroke="#3a3530" stroke-width="2.4" stroke-linecap="round"/><circle cx="37" cy="12" r="1.6" fill="#FFE8A3"/></svg>';
+  var D={head:null,sec:null,riderX:null,goT:null,rode:false};
+  function desk(){return window.matchMedia&&matchMedia("(min-width:861px)").matches;}
+  function rel(el,ref){var a=el.getBoundingClientRect(),b=ref.getBoundingClientRect();return {x:a.left-b.left,w:a.width,cx:a.left-b.left+a.width/2};}
+  function still(el){el.classList.add("still");void el.offsetWidth;requestAnimationFrame(function(){el.classList.remove("still");});}
+  function setup(){
+    var head=document.querySelector("#root > .app > .v3-head");if(!head||head.querySelector(".v3-dock"))return head;
+    var bar=head.querySelector(".v3-bar"),brand=head.querySelector(".v3-brand"),main=head.querySelector(".v3-main"),right=head.querySelector(".v3-right");
+    var sub=head.querySelector(".v3-sub"),nav=head.querySelector(".v3-sub-nav");
+    if(!bar||!brand||!main||!sub||!nav)return null;
+    var dock=document.createElement("div");dock.className="v3-dock v3-glass";
+    bar.insertBefore(dock,brand);dock.appendChild(brand);dock.appendChild(main);
+    dock.insertAdjacentHTML("beforeend",'<span class="v3-tpill"></span><span class="v3-trail"></span><span class="v3-stop"></span><span class="v3-rider">'+RIDER+'</span>');
+    if(right)right.classList.add("v3-glass");
+    var sd=document.createElement("div");sd.className="v3-subdock v3-glass";
+    sub.insertBefore(sd,nav);sd.appendChild(nav);sd.insertAdjacentHTML("afterbegin",'<span class="v3-spill"></span>');
+    new MutationObserver(function(){paint(false);}).observe(main,{childList:true});
+    new MutationObserver(function(){paintSub();}).observe(nav,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});
+    main.addEventListener("scroll",function(){paint(false,true);},{passive:true});
+    nav.addEventListener("scroll",function(){paintSub(true);},{passive:true});
+    main.addEventListener("mousemove",function(e){main.querySelectorAll(".v3-tab svg").forEach(function(s){var r=s.getBoundingClientRect(),d=Math.abs(e.clientX-(r.left+r.width/2)),k=1+.28*Math.max(0,1-d/90);s.style.transform="scale("+k.toFixed(3)+")";});});
+    main.addEventListener("mouseleave",function(){main.querySelectorAll(".v3-tab svg").forEach(function(s){s.style.transform="";});});
+    D.head=head;D.sec=null;D.riderX=null;
+    return head;
+  }
+  function paint(force,noRide){
+    var head=D.head;if(!head||!head.isConnected||!desk())return;
+    var dock=head.querySelector(".v3-dock"),main=head.querySelector(".v3-main"),on=main&&main.querySelector(".v3-tab.on");
+    var pill=dock&&dock.querySelector(".v3-tpill"),rider=dock&&dock.querySelector(".v3-rider");
+    if(!on||!pill||!rider){if(pill)pill.style.width="0px";return;}
+    var r=rel(on,dock),sec=on.getAttribute("data-v3sec"),changed=D.sec!==null&&D.sec!==sec;
+    if(!changed&&D.sec!==null)still(pill);
+    pill.style.transform="translateX("+r.x+"px)";pill.style.width=r.w+"px";
+    var x=r.cx,trail=dock.querySelector(".v3-trail"),stop=dock.querySelector(".v3-stop");
+    if(changed||(!D.rode&&!noRide)){
+      var from=D.riderX==null?-30:D.riderX;
+      if(D.riderX==null){rider.classList.add("still");rider.style.left="-30px";void rider.offsetWidth;rider.classList.remove("still");}
+      rider.classList.toggle("back",x<from);rider.classList.add("go");stop.classList.remove("on");
+      trail.style.left=Math.min(from,x)+"px";trail.style.width=Math.abs(x-from)+"px";trail.classList.add("on");
+      clearTimeout(D.goT);D.goT=setTimeout(function(){rider.classList.remove("go");trail.classList.remove("on");stop.style.left=x+"px";stop.classList.add("on");},1000);
+      requestAnimationFrame(function(){rider.style.left=x+"px";});D.rode=true;
+      if(changed){var sd=head.querySelector(".v3-subdock");if(sd){sd.classList.remove("grow","in");void sd.offsetWidth;sd.classList.add("grow","in");}}
+    }else{still(rider);rider.style.left=x+"px";stop.style.left=x+"px";}
+    D.riderX=x;D.sec=sec;
+    paintSub(!changed);
+  }
+  function paintSub(noAnim){
+    var head=D.head;if(!head||!head.isConnected||!desk())return;
+    var sd=head.querySelector(".v3-subdock"),nav=head.querySelector(".v3-sub-nav"),pill=sd&&sd.querySelector(".v3-spill"),on=nav&&nav.querySelector(".v3-st.on");
+    if(!pill)return;
+    if(!on){pill.style.width="0px";return;}
+    requestAnimationFrame(function(){var r=rel(on,sd);if(noAnim)still(pill);pill.style.transform="translateX("+r.x+"px)";pill.style.width=r.w+"px";});
+  }
+  function tick(){var h=setup();if(h&&h!==D.head){D.head=h;}if(D.head&&!D.head.isConnected){D.head=null;}if(D.head)paint(false);}
+  var root=document.getElementById("root");
+  if(root)new MutationObserver(function(){setTimeout(tick,0);}).observe(root,{childList:true,subtree:false});
+  window.addEventListener("hashchange",function(){setTimeout(function(){paint(false);},30);});
+  window.addEventListener("resize",function(){paint(false,true);});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){paint(false,true);});
+  setInterval(tick,1500);
+  setTimeout(tick,350);setTimeout(tick,1300);
 })();
 
 if(!location.hash){var r0="overview";try{r0=localStorage.getItem("smou-route")||"overview";}catch(e){}history.replaceState(null,"","#/"+r0);}
