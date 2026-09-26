@@ -1128,9 +1128,9 @@ html[data-skin] .sub-tabs{background:var(--surface-2);border-radius:14px;padding
 html[data-skin] .sub-tab{border-radius:10px;font-weight:700}
 html[data-skin] .sub-tab.active{background:var(--ink);color:var(--panel)}
 html[data-skin] .modal{border-radius:20px}
-html[data-skin] .page > *{animation:v3rise .5s cubic-bezier(.2,.8,.2,1) both}
+html[data-skin] .page > *{animation:v3rise .5s cubic-bezier(.2,.8,.2,1) backwards}
 html[data-skin] .page > *:nth-child(2){animation-delay:.05s}html[data-skin] .page > *:nth-child(3){animation-delay:.1s}html[data-skin] .page > *:nth-child(n+4){animation-delay:.15s}
-html[data-skin] .grid.g4 > .stat{animation:v3rise .5s cubic-bezier(.2,.8,.2,1) both}
+html[data-skin] .grid.g4 > .stat{animation:v3rise .5s cubic-bezier(.2,.8,.2,1) backwards}
 html[data-skin] .grid.g4 > .stat:nth-child(2){animation-delay:.07s}html[data-skin] .grid.g4 > .stat:nth-child(3){animation-delay:.14s}html[data-skin] .grid.g4 > .stat:nth-child(4){animation-delay:.21s}
 
 /* ---------- dashboard hero + clock ---------- */
@@ -1263,6 +1263,9 @@ html[data-skin] #ccBanner.cc-banner:hover{transform:translateY(-3px)}
   .v3-ccb-n b{font-size:18px}
   html[data-skin] #ccBanner.cc-banner > .btn{order:4;width:100%;justify-content:center}
 }
+
+/* filter / action dropdowns in a page toolbar always open above the table below it */
+@media (min-width:861px){html[data-skin] #page > .toolbar{position:relative;z-index:30}}
 
 /* ===== v3 login gate (animated fleet scene + sign-in card) ===== */
 #authgate.lg{position:fixed;inset:0;z-index:9500;background:var(--bg);color:var(--ink);overflow-y:auto;overflow-x:hidden;container-type:inline-size;display:block;padding:0;place-items:normal;justify-items:normal;
