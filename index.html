@@ -1510,6 +1510,31 @@ html[data-skin="night"] #authgate .lg-cloud{opacity:.15}
 @keyframes v3subIn{from{opacity:0;transform:translateX(-10px) scale(.94)}to{opacity:1;transform:none}}
 @keyframes v3grow{from{clip-path:inset(0 100% 0 0 round 21px)}to{clip-path:inset(0 0 0 0 round 21px)}}
 @media (prefers-reduced-motion:reduce){.v3-rider,.v3-tpill,.v3-spill{transition:none !important}.v3-rider svg,.v3-rider .wh,.v3-rider .puff{animation:none !important}}
+
+/* ===== start-up loader: speedometer rev (covers the page until fresh data is in) ===== */
+#v3load{position:fixed;inset:0;z-index:9400;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:opacity .45s ease,visibility .45s}
+#v3load.bye{opacity:0;visibility:hidden}
+#v3load .ld{display:flex;flex-direction:column;align-items:center;text-align:center;transform:translateY(-10px)}
+#v3load .g{position:relative;width:240px;height:156px}
+#v3load .g svg{width:100%;height:100%;overflow:visible}
+#v3load .arc{fill:none;stroke:var(--surface-3,#E7E0D2);stroke-width:14;stroke-linecap:round}
+#v3load .val{fill:none;stroke:url(#v3gg);stroke-width:14;stroke-linecap:round;stroke-dasharray:330;stroke-dashoffset:330;animation:v3ldFill 2.6s cubic-bezier(.6,0,.3,1) infinite}
+#v3load .needle{transform-origin:115px 120px;animation:v3ldNeedle 2.6s cubic-bezier(.6,0,.3,1) infinite}
+#v3load.done .val{animation:none;stroke-dashoffset:0;transition:stroke-dashoffset .5s}
+#v3load.done .needle{animation:none;transform:rotate(90deg);transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+#v3load .tick{stroke:var(--muted);stroke-width:2;opacity:.5}
+#v3load .hub{fill:var(--ink)}
+#v3load .kmh{position:absolute;left:0;right:0;top:74px;text-align:center;font:800 30px/1 "JetBrains Mono",monospace;color:var(--ink)}
+#v3load .kmh small{display:block;font-size:10px;letter-spacing:.14em;color:var(--muted);margin-top:4px}
+#v3load b.t{display:block;margin-top:14px;font:800 18px/1.2 "Bricolage Grotesque",sans-serif;letter-spacing:-.01em;color:var(--ink)}
+#v3load small.s{display:block;font:700 10.5px/1 "JetBrains Mono",monospace;letter-spacing:.14em;color:var(--muted);margin-top:7px;text-transform:uppercase}
+#v3load .steps{display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+#v3load .steps i{font-style:normal;font:700 10.5px/1 "JetBrains Mono",monospace;padding:5px 8px;border-radius:99px;background:var(--surface-3,#E7E0D2);color:var(--muted);transition:all .3s}
+#v3load .steps i.ok{background:color-mix(in srgb,var(--good) 18%,var(--panel,#fff));color:var(--good)}
+#v3load .steps i.now{background:var(--acc);color:var(--acc-ink,#fff)}
+@keyframes v3ldIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
+@keyframes v3ldFill{0%{stroke-dashoffset:330}70%,85%{stroke-dashoffset:40}100%{stroke-dashoffset:330}}
+@keyframes v3ldNeedle{0%{transform:rotate(-90deg)}70%{transform:rotate(68deg)}76%{transform:rotate(58deg)}85%{transform:rotate(64deg)}100%{transform:rotate(-90deg)}}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -6374,6 +6399,63 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     }
     return _pcc(pg,tab);
   };
+})();
+
+/* ===== start-up loader (speedometer): hides the "draw cached data → redraw fresh data" blink ===== */
+(function(){
+  var L={el:null,t0:0,iv:null,kv:null,hideT:null,safety:null,step:0,done:false,first:true};
+  var STEPS=["Connecting","Drivers","Vehicles","Finance","Live GPS"];
+  function html(){
+    var ticks="";for(var i=0;i<=6;i++){var a=Math.PI*(1-i/6),x1=115+Math.cos(a)*78,y1=120-Math.sin(a)*78,x2=115+Math.cos(a)*68,y2=120-Math.sin(a)*68;ticks+='<line class="tick" x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'"/>';}
+    return '<div class="ld" role="status" aria-live="polite"><div class="g"><svg viewBox="0 0 230 150" aria-hidden="true"><defs><linearGradient id="v3gg" x1="0" x2="1"><stop offset="0" stop-color="var(--good)"/><stop offset=".6" stop-color="var(--amber,#B7871A)"/><stop offset="1" stop-color="var(--acc)"/></linearGradient></defs>'+
+      '<path class="arc" d="M20 120 A95 95 0 0 1 210 120"/><path class="val" d="M20 120 A95 95 0 0 1 210 120"/>'+ticks+
+      '<g class="needle"><path d="M113 120 L115 42 L117 120 z" fill="var(--acc)"/></g><circle class="hub" cx="115" cy="120" r="9"/></svg>'+
+      '<div class="kmh"><span id="v3ldN">0</span><small>KM/H · SYNC</small></div></div>'+
+      '<b class="t" id="v3ldT">Syncing your fleet…</b><small class="s">SMOU Fleet ERP</small>'+
+      '<div class="steps">'+STEPS.map(function(s){return '<i>'+s+'</i>';}).join("")+'</div></div>';
+  }
+  function paintSteps(){var is=L.el&&L.el.querySelectorAll(".steps i");if(!is)return;is.forEach(function(x,i){x.className=L.done||i<L.step?"ok":i===L.step?"now":"";});}
+  function show(msg){
+    if(L.done&&L.el)return;
+    if(!L.el){
+      L.done=false;L.step=0;L.hideT=null;
+      L.el=document.createElement("div");L.el.id="v3load";L.el.innerHTML=html();document.body.appendChild(L.el);L.t0=Date.now();
+      L.iv=setInterval(function(){if(L.step<STEPS.length-2){L.step++;paintSteps();}},520);paintSteps();
+      L.kv=setInterval(function(){var n=document.getElementById("v3ldN");if(!n)return;var t=((Date.now()-L.t0)%2600)/2600,v=L.done?160:t<.7?Math.round(160*Math.pow(t/.7,1.6)):t<.85?150:Math.round(150*(1-(t-.85)/.15));n.textContent=v;},60);
+      L.safety=setTimeout(function(){hide(true);},7000);   /* never keep the page covered on a slow line */
+    }
+    if(msg){var t=document.getElementById("v3ldT");if(t)t.textContent=/connect/i.test(msg)?"Syncing your fleet…":msg;}
+  }
+  function hide(now){
+    if(!L.el||L.hideT)return;
+    L.done=true;L.step=STEPS.length;paintSteps();L.el.classList.add("done");
+    var wait=now?0:Math.max(0,900-(Date.now()-L.t0))+450;          /* let the needle hit the top */
+    L.hideT=setTimeout(function(){if(!L.el)return;L.el.classList.add("bye");clearInterval(L.iv);clearInterval(L.kv);clearTimeout(L.safety);
+      var el=L.el;setTimeout(function(){if(el&&el.parentNode)el.parentNode.removeChild(el);},500);L.el=null;},wait);
+  }
+  window.v3Loader={show:show,hide:hide};
+  /* old text splash → the new loader */
+  showSplash=function(msg){show(msg);};
+  /* no saved session → the login screen replaces the loader */
+  var _sl=showLogin;
+  showLogin=function(){var r=_sl.apply(this,arguments);if(L.el){L.done=true;hide(true);}return r;};
+  /* fresh data arrived: wait for the redraw (and the Command Center on cc pages), then fade out */
+  var _load=sbLoad;
+  sbLoad=function(){
+    if(L.first){L.first=false;show();}
+    if(L.el){L.step=Math.max(L.step,1);paintSteps();}
+    return _load.apply(this,arguments).then(function(r){
+      var t0=Date.now();
+      (function wait(){
+        var r2=getRoute(),cc=r2.indexOf("cc/")===0&&ROLE==="admin";
+        if(!cc||(typeof CC!=="undefined"&&(CC.loaded||CC.err))||Date.now()-t0>3000){setTimeout(function(){hide(false);},80);}
+        else setTimeout(wait,120);
+      })();
+      return r;
+    },function(e){hide(true);throw e;});
+  };
+  /* start now (before the cached page is drawn) when this browser talks to the database */
+  if(SB_ON){try{show();}catch(e){}}
 })();
 
 /* ===== v3 redesign module ===== */
