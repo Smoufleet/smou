@@ -1267,6 +1267,11 @@ html[data-skin] #ccBanner.cc-banner:hover{transform:translateY(-3px)}
 /* filter / action dropdowns in a page toolbar always open above the table below it */
 @media (min-width:861px){html[data-skin] #page > .toolbar{position:relative;z-index:30}}
 
+/* calm redraws: no entrance animation when the same page refreshes with new data */
+html.v3-calm[data-skin] .page > *,html.v3-calm[data-skin] .grid.g4 > .stat,html.v3-calm .page > *{animation:none !important}
+.ms-opt em.ms-n{margin-inline-start:auto;font:600 11px/1 "JetBrains Mono",monospace;font-style:normal;color:var(--muted);padding-inline-start:8px}
+.ms-opt.zero{opacity:.55}
+
 /* ===== v3 login gate (animated fleet scene + sign-in card) ===== */
 #authgate.lg{position:fixed;inset:0;z-index:9500;background:var(--bg);color:var(--ink);overflow-y:auto;overflow-x:hidden;container-type:inline-size;display:block;padding:0;place-items:normal;justify-items:normal;
   font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
@@ -1850,7 +1855,7 @@ function flushPending(){
   var ups=PENDING.map(function(p){return {collection:p.collection,id:p.id,data:p.data};});
   return mergeUps(ups).then(function(mups){
     return SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}).then(function(res){
-      if(!res.error){mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});PENDING=[];savePending();if(mups.some(function(m){return m.merged;})&&!_rtBusy())renderApp();}
+      if(!res.error){mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});PENDING=[];savePending();if(mups.some(function(m){return m.merged;}))calmRefresh();}
     });
   }).catch(function(){});
 }
@@ -1955,7 +1960,7 @@ function persistSB(){
       // Broadcast ONLY after a confirmed DB write, and send the MERGED data (mups) — not the raw pre-merge copy.
       mups.forEach(function(m){ broadcastChange(m.collection,m.id,m.data,"UPDATE"); });
       delOps.forEach(function(d){ broadcastChange(d[0],d[1],null,"DELETE"); });
-      if(mups.some(function(m){return m.merged;})){if(!_rtBusy())renderApp();toast("Merged with changes from another device — nothing lost.","good");}
+      if(mups.some(function(m){return m.merged;})){calmRefresh();toast("Merged with changes from another device — nothing lost.","good");}
       setSave("","Saved & synced");
     });
   }).catch(function(e){
@@ -1996,7 +2001,7 @@ function sbReconcile(){
     if(res.error||!res.data)return;
     if(dataSig(res.data)===_lastSig){bumpLastSync(res.data);flushPending();flushPendingDel();return;} // server unchanged → no rebuild, no blink, no scroll reset
     applyRows(res.data);bumpLastSync(res.data);flushPending();flushPendingDel();
-    if(!_rtBusy())renderApp();
+    calmRefresh();
   }).catch(function(){_reconciling=false;});
 }
 // cheap delta fetch — only rows changed since lastSync; merges them in (used on focus/reconnect when available)
@@ -2007,7 +2012,7 @@ function sbDelta(){
     _reconciling=false;
     if(res.error){_deltaOK=false;return sbReconcile();} // any issue → safe full reconcile
     var rows=res.data||[];
-    if(rows.length){applyDelta(rows);bumpLastSync(rows);if(!_rtBusy())renderApp();}
+    if(rows.length){applyDelta(rows);bumpLastSync(rows);calmRefresh();}
     flushPending();flushPendingDel();
   }).catch(function(){_reconciling=false;});
 }
@@ -2041,7 +2046,7 @@ function applyRealtimeRecord(coll,id,data,eventType){
     shadow[coll+"/"+id]=JSON.stringify(data);
   }
   cacheSave();
-  if(!_rtBusy())renderApp();
+  calmRefresh();
 }
 function sbSubscribe(){
   if(!SB_ON||!SB)return;
@@ -2837,7 +2842,7 @@ window.addEventListener("hashchange",renderApp);
 
 var view={search:"",sort:null,dir:1,filters:{},sel:{},_visIds:[]};
 function renderPage(){
-  var route=getRoute();view={search:"",sort:null,dir:1,filters:{},sel:{},_visIds:[]};
+  var route=getRoute();view=keptView(route)||{search:"",sort:null,dir:1,filters:{},sel:{},_visIds:[]};
   var pg=$("#page");
   var rk=routeKind(route);var _vb=$("#vbadge");if(_vb){_vb.innerHTML=vIcon(rk.v);_vb.title=(rk.v==="bike"?"Bike":"Car")+" register";}
   if(pg){pg.style.backgroundImage=rk.p;pg.style.backgroundSize="108px 108px";}
@@ -3068,7 +3073,7 @@ function fillRows(ent){
   var cfg=ENT[ent],rows=store(ent).slice();
   if(view.search&&view.search.trim()){var toks=view.search.toLowerCase().split(/\s+/).filter(Boolean);
     rows=rows.filter(function(r){var hay=Object.keys(r).map(function(k){return (k==="docs"||k==="photo"||k==="receipt")?"":String(r[k]||"");}).join("  ").toLowerCase();return toks.every(function(t){return hay.indexOf(t)>=0;});});}
-  Object.keys(view.filters).forEach(function(k){var sel=view.filters[k];if(sel&&sel.length)rows=rows.filter(function(r){return sel.indexOf(String(r[k]||""))>=0;});});
+  rows=msApply(rows,view.filters);
   if(view.sort!=null){var c=cfg.columns[view.sort];rows.sort(function(a,b){var av=c.s(a),bv=c.s(b);if(typeof av==="number"&&typeof bv==="number")return (av-bv)*view.dir;var as=String(av==null?"":av).trim(),bs=String(bv==null?"":bv).trim();if(!as&&bs)return 1;if(as&&!bs)return -1;return as.localeCompare(bs)*view.dir;});}
   view._visIds=rows.map(function(r){return r.id;});
   if(!view.sel)view.sel={};
@@ -6490,6 +6495,119 @@ function roleLimited(){return SB_ON&&ROLE==="dataentry";}
   };
 })();
 
+/* ===== Calm refresh: data changes from other users / sync / own saves never blink the screen =====
+   - same page re-draws only the page (the header/dock stays), keeps scroll, search, filters, sort, ticks
+   - entrance animations run only when you open a different page
+   - live changes from others update just the table rows; paused while you type, open a menu or a form
+   - the echo of your own save is ignored (nothing changed) */
+var CALM={last:null,sig:null,pend:false,t:null,down:false};
+function keptView(route){return (CALM.last===route&&view&&typeof view==="object")?view:null;}
+function calmSig(){try{return [ROLE,(USER&&USER.email)||"",LANG,SB_ON?1:0,READONLY?1:0].join("|");}catch(e){return "";}}
+function calmFormOpen(){
+  var pg=document.getElementById("page");if(!pg)return false;
+  if(getRoute()==="finance/new")return true;
+  return !!pg.querySelector("textarea, select, input:not(#q):not([data-mssearch]):not([type=checkbox]):not([type=file]):not([type=radio])");
+}
+function calmBusy(){
+  if(typeof _rtBusy==="function"&&_rtBusy())return true;
+  if(document.querySelector(".ms-pop:not([hidden]), .popmenu, #rowmenu"))return true;
+  var tp=document.getElementById("themepop");if(tp&&!tp.hidden)return true;
+  try{var s=window.getSelection&&getSelection();if(s&&!s.isCollapsed&&String(s).trim())return true;}catch(e){}
+  return CALM.down;
+}
+document.addEventListener("pointerdown",function(){CALM.down=true;},true);
+document.addEventListener("pointerup",function(){CALM.down=false;},true);
+document.addEventListener("pointercancel",function(){CALM.down=false;},true);
+function calmRefresh(){CALM.pend=true;clearTimeout(CALM.t);CALM.t=setTimeout(calmRun,350);}
+function calmRun(){
+  if(!CALM.pend)return;
+  if(calmBusy()){clearTimeout(CALM.t);CALM.t=setTimeout(calmRun,1200);return;}
+  var route=getRoute();
+  if(route==="cc"||route.indexOf("cc/")===0){CALM.pend=false;return;}          /* Command Center keeps its own live data */
+  var tb=document.getElementById("tbody"),q=document.getElementById("q");
+  if(tb&&q&&curEnt&&ENT[curEnt]&&CALM.last===route){                             /* a register: refresh the rows only */
+    CALM.pend=false;var y=window.scrollY;try{fillRows(curEnt);}catch(e){renderApp();}
+    if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y);return;
+  }
+  if(calmFormOpen()){clearTimeout(CALM.t);CALM.t=setTimeout(calmRun,3000);return;}  /* never wipe a half-filled form */
+  CALM.pend=false;renderApp();
+}
+(function(){
+  /* page-only redraw when you stay on the same page */
+  var _ra=renderApp;
+  renderApp=function(){
+    var route=getRoute(),pg=document.getElementById("page");
+    if(pg&&CALM.last===route&&CALM.sig===calmSig()&&document.querySelector("#root > .app")){
+      var y=window.scrollY,h=document.documentElement.style.minHeight;
+      document.documentElement.style.minHeight=(document.documentElement.scrollHeight)+"px";   /* no jump while the page redraws */
+      try{renderPage();if(LANG==="ar")transEl(pg);}finally{
+        document.documentElement.style.minHeight=h;window.scrollTo(0,y);requestAnimationFrame(function(){if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,y);});}
+      return;
+    }
+    CALM.sig=calmSig();
+    var y2=window.scrollY,same=CALM.last===route,r=_ra.apply(this,arguments);
+    if(same)window.scrollTo(0,y2);
+    return r;
+  };
+  var _rp=renderPage;
+  renderPage=function(){
+    var route=getRoute(),same=CALM.last===route;
+    document.documentElement.classList.toggle("v3-calm",same);                    /* no entrance animation on a redraw */
+    var r=_rp.apply(this,arguments);
+    CALM.last=route;
+    if(same){var q=document.getElementById("q");if(q&&view&&view.search&&q.value!==view.search)q.value=view.search;}
+    return r;
+  };
+  /* your own save comes back from the server unchanged: nothing to redraw */
+  var _arr=applyRealtimeRecord;
+  applyRealtimeRecord=function(coll,id,data,ev){
+    try{if(ev!=="DELETE"&&coll&&data&&shadow[coll+"/"+id]===JSON.stringify(data))return;}catch(e){}
+    return _arr.apply(this,arguments);
+  };
+})();
+
+/* ===== Filters that always work: month from the date, any spelling / case, blanks, counts ===== */
+var MS_MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"],MS_BLANK="(Blank)";
+function fNorm(v){return String(v==null?"":v).replace(/\s+/g," ").trim().toLowerCase();}
+function msMonthOf(r){
+  var d=null;try{d=parseD(r.date);}catch(e){}
+  var m=String(r.month==null?"":r.month).trim(),y=String(r.year==null?"":r.year).trim(),mi=-1;
+  if(m){var n=parseInt(m,10);if(n>=1&&n<=12&&/^\d+$/.test(m))mi=n-1;else{var p=m.slice(0,3).toLowerCase();MS_MONTHS.forEach(function(x,i){if(x.slice(0,3).toLowerCase()===p)mi=i;});}}
+  if(mi<0&&d){mi=d.getMonth();y=y||String(d.getFullYear());}
+  else if(mi>=0&&!y&&d)y=String(d.getFullYear());
+  return mi<0?"":MS_MONTHS[mi]+(y?" "+y:"");
+}
+function msVal(r,k){return k==="month"?msMonthOf(r):String(r[k]==null?"":r[k]).replace(/\s+/g," ").trim();}
+function msApply(rows,filters){
+  Object.keys(filters||{}).forEach(function(k){var sel=filters[k];if(!sel||!sel.length)return;var S={};
+    sel.forEach(function(v){S[fNorm(v===MS_BLANK?"":v)]=1;});
+    rows=rows.filter(function(r){return S[fNorm(msVal(r,k))]===1;});});
+  return rows;
+}
+function msOptions(ent,f){
+  var cnt={},disp={},order=[];
+  store(ent).forEach(function(r){var v=msVal(r,f.k),n=fNorm(v);if(!(n in cnt)){cnt[n]=0;disp[n]=v||MS_BLANK;order.push(n);}cnt[n]++;});
+  var lk=(f.opts&&f.opts!=="months")?L(f.opts):[];
+  var sel=(view.filters[f.k]||[]);sel.forEach(function(v){var n=fNorm(v===MS_BLANK?"":v);if(!(n in cnt)){cnt[n]=0;disp[n]=v;order.push(n);}});
+  var li={};lk.forEach(function(v,i){li[fNorm(v)]=i;});
+  order.sort(function(a,b){
+    if(a==="")return 1;if(b==="")return -1;
+    if(f.k==="month"){var pa=Date.parse("1 "+disp[a]),pb=Date.parse("1 "+disp[b]);if(isFinite(pa)&&isFinite(pb))return pb-pa;}
+    var ia=a in li?li[a]:1e4,ib=b in li?li[b]:1e4;if(ia!==ib)return ia-ib;
+    return disp[a].localeCompare(disp[b]);
+  });
+  return order.map(function(n){return {v:disp[n],c:cnt[n]};});
+}
+msFilter=function(ent,f){
+  var opts=msOptions(ent,f),sel=view.filters[f.k]||[];
+  var valTxt=sel.length?(sel.length===1?sel[0]:sel.length+" selected"):shortLab(f.lab);
+  return '<div class="ms" data-mskey="'+f.k+'">'+
+    '<button class="ms-btn" data-msbtn type="button"><span class="ms-val'+(sel.length?" has":"")+'">'+esc(valTxt)+'</span>'+(sel.length>1?'<span class="ms-cnt">'+sel.length+'</span>':"")+'<svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'+
+    '<div class="ms-pop" hidden><div class="ms-search"><input placeholder="Search…" data-mssearch autocomplete="off"></div>'+
+    '<div class="ms-actions"><a data-msall>Select all</a><a data-msclear>Clear</a></div>'+
+    '<div class="ms-list">'+(opts.length?opts.map(function(o){var c=sel.some(function(s){return fNorm(s)===fNorm(o.v);});return '<label class="ms-opt'+(o.c?"":" zero")+'"><input type="checkbox" value="'+esc(o.v)+'"'+(c?" checked":"")+'><span>'+esc(o.v)+'</span><em class="ms-n">'+o.c+'</em></label>';}).join(""):'<div class="ms-empty">No options</div>')+'</div></div></div>';
+};
+
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
@@ -6617,11 +6735,12 @@ function roleLimited(){return SB_ON&&ROLE==="dataentry";}
     var app=document.querySelector("#root > .app");if(!app)return;
     var old=app.querySelector(":scope > .v3-head");if(!old){ensure();return;}
     var fresh=buildHead();
-    old.querySelector(".v3-main").innerHTML=fresh.querySelector(".v3-main").innerHTML;
-    old.querySelector(".v3-sub-nav").innerHTML=fresh.querySelector(".v3-sub-nav").innerHTML;
-    old.querySelector(".v3-sub").className=fresh.querySelector(".v3-sub").className;
-    old.querySelector(".v3-mtitle").innerHTML=fresh.querySelector(".v3-mtitle").innerHTML;
-    old.querySelector(".v3-tabbar").innerHTML=fresh.querySelector(".v3-tabbar").innerHTML;
+    function put(sel){var a=old.querySelector(sel),b=fresh.querySelector(sel);if(!a||!b)return;
+      var t=document.createElement("div");t.innerHTML=a.innerHTML;Array.prototype.forEach.call(t.querySelectorAll("[style]"),function(x){x.removeAttribute("style");});
+      var t2=document.createElement("div");t2.innerHTML=b.innerHTML;Array.prototype.forEach.call(t2.querySelectorAll("[style]"),function(x){x.removeAttribute("style");});
+      if(t.innerHTML!==t2.innerHTML)a.innerHTML=b.innerHTML;}
+    put(".v3-main");put(".v3-sub-nav");put(".v3-mtitle");put(".v3-tabbar");
+    var os=old.querySelector(".v3-sub"),fs=fresh.querySelector(".v3-sub");if(os&&fs&&os.className!==fs.className)os.className=fs.className;
     var ow=old.querySelector(".v3-sub-r .v3-wd"),nw=fresh.querySelector(".v3-sub-r .v3-wd");
     if(ow&&nw){if(ow.textContent!==nw.textContent)ow.outerHTML=nw.outerHTML;}else if(ow&&!nw)ow.remove();else if(nw)old.querySelector(".v3-sub-r").insertBefore(nw,old.querySelector(".v3-sub-r").firstChild);
     var ob=old.querySelector(".v3-bell"),nbl=fresh.querySelector(".v3-bell");if(ob&&nbl&&ob.innerHTML!==nbl.innerHTML)ob.innerHTML=nbl.innerHTML;
@@ -6775,7 +6894,7 @@ function roleLimited(){return SB_ON&&ROLE==="dataentry";}
     nav.addEventListener("scroll",function(){paintSub(true);},{passive:true});
     main.addEventListener("mousemove",function(e){main.querySelectorAll(".v3-tab svg").forEach(function(s){var r=s.getBoundingClientRect(),d=Math.abs(e.clientX-(r.left+r.width/2)),k=1+.28*Math.max(0,1-d/90);s.style.transform="scale("+k.toFixed(3)+")";});});
     main.addEventListener("mouseleave",function(){main.querySelectorAll(".v3-tab svg").forEach(function(s){s.style.transform="";});});
-    D.head=head;D.sec=null;D.riderX=null;
+    D.head=head;  /* keep last section + rider spot so a redraw never re-animates */
     return head;
   }
   function paint(force,noRide){
