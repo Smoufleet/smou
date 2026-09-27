@@ -6461,6 +6461,35 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   if(SB_ON){try{show();}catch(e){}}
 })();
 
+/* ===== Data Entry role: add / edit everywhere, never delete (the database blocks it too),
+   no Admin section, and in Finance only the Expense Log + New Expense.
+   Income / Payroll / Company Wallet are also locked in the database for this role. ===== */
+function roleLimited(){return SB_ON&&ROLE==="dataentry";}
+(function(){
+  var FIN_OK={"finance/log":1,"finance/new":1};
+  function blocked(r){
+    if(!roleLimited())return null;
+    if(r==="finance"||r==="finance/")return "finance/log";
+    if(r.indexOf("finance/")===0&&!FIN_OK[r]&&r.indexOf("finance/log/")!==0)return "finance/log";
+    if(/^grd\/(income|payroll|funds)(\/|$)/.test(r))return "finance/log";
+    if(r==="users"||r==="activity"||r==="reports")return "overview";
+    return null;
+  }
+  var _rp=renderPage;
+  renderPage=function(){
+    var to=blocked(getRoute());
+    if(to){try{localStorage.setItem("smou-route",to);}catch(e){}location.replace("#/"+to);return;}
+    return _rp.apply(this,arguments);
+  };
+  /* the old sidebar (only used without the v3 skin) follows the same rules */
+  var _ra=renderApp;
+  renderApp=function(){
+    var keep=[];
+    if(roleLimited())try{NAVGROUPS.forEach(function(g){if(g.key!=="finance")return;keep.push([g,g.items]);g.items=g.items.filter(function(it){return it.r==="finance/log"||it.r==="finance/new";});});}catch(e){}
+    try{return _ra.apply(this,arguments);}finally{keep.forEach(function(k){k[0].items=k[1];});}
+  };
+})();
+
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
@@ -6504,6 +6533,10 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
       {k:"fin",t:"Finance",items:[["finance","Finance Dashboard"],["finance/log","Expense Log",function(){return STATE.finance.expenses.length;}],["finance/new","New Expense"],["grd/income","Income / Revenue","income"],["grd/payroll","Payroll","payroll"],["grd/funds","Company Wallet","funds"]]},
       {k:"admin",t:adm?"Admin":"Reports",items:adm?[["users","Users & Roles"],["activity","Activity Log"],["reports","Reports & Export"]]:[["reports","Reports & Export"]]}
     ];
+    if(safe(function(){return typeof roleLimited==="function"&&roleLimited();},false)){   /* Data Entry: no Admin tab; Finance = Expense Log + New Expense only */
+      S=S.filter(function(s){return s.k!=="admin";});
+      S.forEach(function(s){if(s.k==="fin")s.items=s.items.filter(function(it){return it[0]==="finance/log"||it[0]==="finance/new";});});
+    }
     return S.filter(function(s){return s.show!==false;});
   }
   var FULL={home:"Home",cc:"Command Center",orders:"Performance",ops:"Operations",fleet:"Fleet",fin:"Finance",admin:"Admin"};
