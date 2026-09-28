@@ -6484,10 +6484,10 @@ function ccShiftsPage(){
       '<td><div class="mono">'+esc(s.login_time||"—")+'</div><div class="sub">'+esc(s.login_place||"")+(s.login_src==="hub"?" · hub":"")+'</div></td>'+
       '<td><div class="mono">'+esc(s.logout_time||"—")+'</div><div class="sub">'+esc(s.logout_place||"")+'</div></td>'+
       '<td class="mono">'+(s.status==="COMPLETED"?"+"+(s.distance||0)+" km":"—")+'</td><td class="mono">'+(s.orders_done||0)+' / '+(s.orders_cancelled||0)+'</td>'+
-      '<td class="mono">'+esc(s.duration||"—")+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+'</td>'+
+      '<td class="mono">'+esc(s.duration||"—")+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td>'+
       '<td>'+(s.status==="ACTIVE"?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End</button>':'')+'</td></tr>';}).join("")
     :'<tr><td colspan="11"><div class="empty" style="padding:24px"><h4>No shifts match</h4><p>Try clearing the filters.</p></div></td></tr>';
-  return ccFilters(true)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>ODO photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  return ccFilters(true)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     '<div class="tbl-foot"><span>'+rows.length+' shifts</span><button class="btn sm" data-act="ccexport" data-what="shifts">Export CSV</button></div>';
 }
 /* ---------- KM ---------- */
@@ -6495,9 +6495,9 @@ function ccKmPage(){
   var rows=ccDone().filter(ccPass).slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"")||ccMs(b)-ccMs(a);});
   var tot=rows.reduce(function(a,s){return a+(s.distance||0);},0);
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Distance (filtered)",fmtKm(tot)+" km",rows.length+" completed shifts","var(--teal)")+ccKpi("Today",fmtKm(ccKmDay(ccToday()))+" km","all drivers","var(--good)")+ccKpi("Last 7 days",fmtKm([0,1,2,3,4,5,6].reduce(function(a,i){return a+ccKmDay(ccDay(i));},0))+" km","all drivers","var(--indigo)")+ccKpi("Flagged",rows.filter(ccFlag).length,"over "+CC_KM_FLAG+" km or negative","var(--crit)")+'</div>';
-  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+'</td></tr>';}).join("")
+  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td></tr>';}).join("")
     :'<tr><td colspan="8"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
-  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>ODO photos</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>Photos</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="km">Export CSV</button></div>';
 }
 /* ---------- FUEL ---------- */
