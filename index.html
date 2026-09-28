@@ -1839,6 +1839,35 @@ tr[data-rprow]{cursor:pointer}
 @media (max-width:860px){.rp-dfs .field{width:auto;flex:1 1 0;min-width:0}.rp-dfs{gap:8px}}
 
 .rp-style b{align-self:center;grid-row:1/3}
+
+/* ===== Attachments (forms + record folder) ===== */
+.attfld{display:flex;flex-direction:column;gap:10px}
+.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.att-grid:empty{display:none}
+.att-tile{position:relative;display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:10px;background:var(--panel);overflow:hidden;cursor:pointer;min-width:0}
+.att-tile:hover{border-color:var(--muted)}
+.att-tile.new{border-style:dashed;border-color:var(--acc);cursor:default}
+.att-th{height:92px;display:grid;place-items:center;background:var(--surface-2);overflow:hidden}
+.att-th img{width:100%;height:100%;object-fit:cover;display:block}
+.att-ic{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted)}
+.att-ic svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.att-ic b{font:700 10px "JetBrains Mono",monospace;letter-spacing:.08em}
+.att-meta{padding:7px 9px 8px;min-width:0}
+.att-nm{font:600 12.5px "Plus Jakarta Sans",sans-serif;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-tile.new .att-sub{color:var(--acc)}
+.att-x{position:absolute;top:6px;right:6px;height:24px;min-width:24px;padding:0 5px;border-radius:7px;border:0;background:rgba(20,16,12,.62);color:#fff;display:grid;place-items:center;cursor:pointer;font:700 11px "Plus Jakarta Sans",sans-serif}
+.att-x svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.att-x:hover,.att-x.sure{background:var(--crit,#d0443a)}
+.att-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.att-bar .btn svg{width:15px;height:15px}
+.att-count{font:600 12px "JetBrains Mono",monospace;color:var(--acc)}
+.att-cnt{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line-2);font:600 11.5px "JetBrains Mono",monospace;color:var(--muted);vertical-align:2px}
+.att-empty{display:flex;align-items:center;justify-content:center;gap:8px;padding:18px;color:var(--muted);font-size:13px}
+.att-empty svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.att-field{margin:0}
+#page.flatform .nx-f .att-field{grid-column:1/-1}
+@media (max-width:860px){.att-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.att-th{height:84px}}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -2780,7 +2809,7 @@ var ENT={
     columns:[
       {h:"Date",v:function(r){return '<span class="mono">'+fmtD(r.date)+'</span>';},s:function(r){var d=parseD(r.date);return d?d.getTime():0;}},
       {h:"Category",v:function(r){return '<span class="nm">'+esc(r.category||"—")+'</span>'+(r.sub?'<div class="sub">'+esc(r.sub)+'</div>':"");},s:function(r){return r.category;}},
-      {h:"Amount (KWD)",v:function(r){return '<span class="mono nm" style="color:var(--amber-2)">'+money(num(r.amount))+'</span>'+(r.receipt?' <span class="docbadge" title="receipt attached">'+svg('<path d="M21 8v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h9z"/><path d="M13 2v6h6"/>')+'</span>':'');},s:function(r){return num(r.amount)||0;}},
+      {h:"Amount (KWD)",v:function(r){return '<span class="mono nm" style="color:var(--amber-2)">'+money(num(r.amount))+'</span>'+((r.receipt||(r.files&&r.files.length))?' <span class="docbadge" title="file attached">'+svg('<path d="M21 8v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h9z"/><path d="M13 2v6h6"/>')+'</span>':'');},s:function(r){return num(r.amount)||0;}},
       {h:"Platform",v:function(r){return r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—";},s:function(r){return r.platform;}},
       {h:"Payment",v:function(r){return esc(r.payment||"—");},s:function(r){return r.payment;}},
       {h:"Driver / Ref",v:function(r){return r.driver?nameCell(r.driver):('<span class="mono">'+esc(r.plate||"—")+'</span>');},s:function(r){return r.driver;}}
@@ -7120,7 +7149,6 @@ function nxRestyle(pg){
   Array.prototype.slice.call(grid.children).forEach(function(el){
     if(el.classList.contains("fieldset-lab")){var g=el.textContent.trim();cur=sec(/salary|wage/i.test(g)?"Salary month":g,nxDesc(g));return;}
     if(!cur)cur=sec("Entry",nxDesc("Entry"));cur.appendChild(el);});
-  var rw=pg.querySelector("#rcpWrap");if(rw){var rf=sec("Receipt","Photo or PDF of the bill (optional).");rf.appendChild(rw);}
   var save=pg.querySelector('[data-act="saveExp"]'),clr=pg.querySelector('[data-act="clearExp"]');
   var bar=document.createElement("div");bar.className="nx-bar";if(save)bar.appendChild(save);if(clr)bar.appendChild(clr);
   bar.insertAdjacentHTML("beforeend",'<span style="flex:1"></span><a class="btn ghost" data-route="finance/log">Open expense log</a>');
@@ -7333,6 +7361,174 @@ document.addEventListener("change",function(e){
   if(r===RPT_VIEW){if(s.id==="rpvGroup")RPT.group=s.value;else if(s.id==="rpvRows")RPT.prow=s.value;else if(s.id==="rpvCols")RPT.pcol=s.value;else if(s.id==="rpvVal")RPT.pval=s.value;else if(s.id==="rpvSort"){var q=s.value.split("|");RPT.sort={k:q[0],d:+q[1]};}else return;RPT.closed={};rpSave();rpRefresh();return;}
   if(s.id==="rpFrom"||s.id==="rpTo"){rpReadBuild();var n2=$(".rp-note");if(n2)n2.textContent=rpPeriodText();rpLive();return;}
   if(/^rp(Group|RowsSel|ColsSel|Val)$/.test(s.id))rpReadBuild();
+});
+
+/* ===== Attachments: pick many files at once, they show straight away, one Save uploads them all,
+   and they appear in the record's Attachments folder right after saving. Older single attachments
+   (Attach File / Receipt) keep showing in the same folder. ===== */
+var ATT_ACCEPT="image/*,application/pdf",ATT_UP='<path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/>',ATT_PDF='<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>';
+function attFields(ent){var c=ENT[ent];return c&&c.fields?c.fields.filter(function(f){return f.t==="file";}):[];}
+function attHas(ent){return attFields(ent).length>0;}
+function attSrc(x){return x.url||x.data||"";}
+function attIsImg(x){var s=attSrc(x);return /^image\//.test(x.mime||"")||/^data:image\//.test(s)||/\.(jpe?g|png|webp|gif)(\?|$)/i.test(s);}
+function attIsPdf(x){var s=attSrc(x);return /pdf/.test(x.mime||"")||/^data:application\/pdf/.test(s)||/\.pdf(\?|$)/i.test(s);}
+/* every file of a record: new list + older single ones */
+function attAll(rec,keys){
+  var out=(rec&&rec.files||[]).slice();if(!rec)return out;
+  (keys||[]).forEach(function(k){var v=rec[k];if(v&&typeof v==="object"&&(v.url||v.data))out.push({id:"legacy:"+k,name:v.name||rec[k+"Name"]||rec.docName||"Attachment",mime:v.mime||"",url:v.url||v.data,legacy:k});});
+  if(rec.receipt&&typeof rec.receipt==="string")out.push({id:"legacy:receipt",name:"Receipt",mime:/^data:image\//.test(rec.receipt)?"image/jpeg":"",url:rec.receipt,legacy:"receipt"});
+  return out;
+}
+function attKeys(ent){return attFields(ent).map(function(f){return f.k;});}
+/* file picker kept in the page (a detached input can miss its first pick on some phones) */
+var _attInp=null;
+function attPick(cb){
+  if(_attInp)try{_attInp.remove();}catch(e){}
+  var i=document.createElement("input");i.type="file";i.accept=ATT_ACCEPT;i.multiple=true;i.setAttribute("aria-hidden","true");
+  i.style.cssText="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0";document.body.appendChild(i);_attInp=i;
+  i.addEventListener("change",function(){var fs=Array.prototype.slice.call(i.files||[]);setTimeout(function(){try{i.remove();}catch(e){}if(_attInp===i)_attInp=null;},0);if(fs.length)cb(fs);});
+  i.click();
+}
+function attUploadOne(ent,rid,file){
+  return prepDoc({},file,"").then(function(doc){
+    var o={id:uid("f"),name:file.name,mime:doc.mime||file.type||"",size:doc.size||file.size||0,at:new Date().toISOString(),by:(typeof USER!=="undefined"&&USER&&USER.email)||""};
+    if(SB_ON)return sbUpload(ent+"/"+rid+"/"+o.id+"."+extFor(o.mime),dataURLtoBlob(doc.data),o.mime).then(function(u){o.url=u;return o;});
+    o.data=doc.data;return o;
+  });
+}
+function attUploadAll(ent,rid,files){
+  var out=[],bad=[],ch=Promise.resolve();
+  files.forEach(function(f){ch=ch.then(function(){return attUploadOne(ent,rid,f).then(function(o){out.push(o);},function(){bad.push(f.name);});});});
+  return ch.then(function(){if(bad.length)toast("Could not upload: "+bad.join(", ")+" (max ~4 MB each).","err");return out;});
+}
+function attThumb(x,obj){
+  if(obj&&/^image\//.test(obj.type||""))return '<img src="'+esc(URL.createObjectURL(obj))+'" alt="">';
+  if(!obj&&attIsImg(x))return '<img src="'+esc(attSrc(x))+'" alt="" loading="lazy">';
+  return '<span class="att-ic">'+svg(ATT_PDF)+'<b>'+(obj?(/pdf/.test(obj.type)?"PDF":"FILE"):(attIsPdf(x)?"PDF":"FILE"))+'</b></span>';
+}
+function attTile(x,o){ /* o: {newIdx, canRm, open} */
+  var sub=[x.size?fmtSize(x.size):"",x.at?fmtD(x.at):""].filter(Boolean).join(" · ");
+  return '<div class="att-tile'+(o.isNew?" new":"")+'"'+(o.open?' data-attopen="'+esc(x.id)+'"':"")+'><div class="att-th">'+attThumb(x,o.file)+'</div>'+
+    '<div class="att-meta"><div class="att-nm" title="'+esc(x.name)+'">'+esc(x.name)+'</div><div class="att-sub">'+(o.isNew?"New · saves with this entry":esc(sub||"Saved"))+'</div></div>'+
+    (o.canRm?'<button type="button" class="att-x" '+(o.isNew?'data-attrmnew="'+o.newIdx+'"':'data-attrm="'+esc(x.id)+'"')+' title="Remove" aria-label="Remove">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button>':"")+'</div>';
+}
+/* ---------- the form field (add / edit forms and New Expense) ---------- */
+(function(){
+  var _fh=fieldHTML;
+  fieldHTML=function(f,data){
+    if(f.k==="docName"||f.k==="attachName"){var v=(data&&data[f.k])||"";return '<div class="field" data-fk="'+f.k+'" hidden><input type="hidden" name="'+f.k+'" value="'+esc(v)+'"></div>';}
+    if(f.t!=="file")return _fh.apply(this,arguments);
+    var keys=[f.k],have=attAll(data,keys);
+    return '<div class="field wide att-field" data-fk="'+f.k+'"><div class="attfld" data-attk="'+f.k+'" data-have="'+esc(JSON.stringify(have.map(function(x){return x.id;})))+'">'+
+      '<div class="att-grid">'+have.map(function(x){return attTile(x,{canRm:can("delete"),open:true});}).join("")+'</div><div class="att-grid att-new"></div>'+
+      '<div class="att-bar"><button type="button" class="btn sm" data-attadd>'+svg(ATT_UP)+'Add files</button><span class="att-count"></span></div></div></div>';
+  };
+})();
+function attFormHave(fld){try{return JSON.parse(fld.getAttribute("data-have")||"[]");}catch(e){return [];}}
+function attPaintNew(fld){
+  var st=fld._att||[],box=fld.querySelector(".att-new"),c=fld.querySelector(".att-count");
+  box.innerHTML=st.map(function(file,i){return attTile({id:"n"+i,name:file.name,size:file.size},{isNew:true,newIdx:i,canRm:true,file:file});}).join("");
+  if(c)c.textContent=st.length?st.length+" new file"+(st.length>1?"s":""):"";
+}
+/* which record's files is this form showing (for opening a saved file) */
+function attFormRec(fld){
+  var pg=document.getElementById("page"),ov=fld.closest(".overlay");
+  var ent=ov&&ov._attEnt,id=ov&&ov._attId;return ent&&id?store(ent).filter(function(r){return r.id===id;})[0]:null;
+}
+(function(){
+  var _of=openForm;
+  openForm=function(ent,id){var r=_of.apply(this,arguments);var ov=document.getElementById("overlay");if(ov){ov._attEnt=ent;ov._attId=id||null;}return r;};
+  var _cf=collectForm;
+  collectForm=function(ov,cfg){var out=_cf.apply(this,arguments);
+    if(out&&ov&&ov._attFinal){out.files=ov._attFinal;Object.keys(ov._attRm||{}).forEach(function(k){if(k.indexOf("legacy:")===0)out[k.slice(7)]=null;});}
+    return out;};
+  var _sf=saveForm;
+  saveForm=function(ent,id){
+    var ov=document.getElementById("overlay"),fld=ov&&ov.querySelector(".attfld");
+    if(!fld||ov._attFinal)return _sf.apply(this,arguments);
+    if(!collectForm(ov,ENT[ent]))return _sf.apply(this,arguments);            /* shows the required-field message */
+    var staged=fld._att||[],rm=fld._rm||{},rec=id?store(ent).filter(function(r){return r.id===id;})[0]:null;
+    var keep=((rec&&rec.files)||[]).filter(function(x){return !rm[x.id];});
+    function done(up){hideLoader();ov._attFinal=keep.concat(up);ov._attRm=rm;_sf(ent,id);
+      if(up.length)setTimeout(function(){toast(up.length+" file"+(up.length>1?"s":"")+" saved in Attachments.","good");},400);}
+    if(!staged.length){done([]);return;}
+    showLoader("Uploading "+staged.length+" file"+(staged.length>1?"s":"")+"…");
+    attUploadAll(ent,id||("new-"+Date.now().toString(36)),staged).then(done,function(){done([]);});
+  };
+})();
+/* New Expense page: same fields, files go up with the expense */
+saveExpensePage=function(pg){
+  var cfg=ENT.expenses,out={},ok=true;
+  cfg.fields.forEach(function(f){if(f.g||f.t==="file")return;var el=pg.querySelector('[name="'+f.k+'"]');if(!el)return;var val=(el.value||"").trim();out[f.k]=val;
+    var fld=el.closest(".field");if(fld){fld.classList.remove("invalid");if(f.req&&!val){ok=false;fld.classList.add("invalid");}}});
+  if(!ok){toast("Fill date, expense type and amount.","err");return;}
+  out.id=uid("e");
+  var af=pg.querySelector(".attfld"),staged=(af&&af._att)||[],rcp=pg._receipt;
+  function fin(files){if(files&&files.length)out.files=files;
+    STATE.finance.expenses.unshift(out);persist();renderApp();
+    var pg2=$("#page");pageNewExpense(pg2);
+    var d=pg2.querySelector('[name="date"]');if(d)d.value=out.date;
+    var m=pg2.querySelector('[name="month"]');if(m)m.value=out.month||MON[TODAY.getMonth()];
+    toast("Expense logged: "+money(num(out.amount))+" KWD"+(files&&files.length?" · "+files.length+" file"+(files.length>1?"s":"")+" attached":""),"good");}
+  function withFiles(){if(!staged.length){fin([]);return;}
+    showLoader("Uploading "+staged.length+" file"+(staged.length>1?"s":"")+"…");
+    attUploadAll("expenses",out.id,staged).then(function(f){hideLoader();fin(f);},function(){hideLoader();fin([]);});}
+  if(rcp&&SB_ON){var bl=dataURLtoBlob(rcp);sbUpload("expenses/"+out.id+"/receipt."+extFor(bl.type),bl,bl.type).then(function(url){out.receipt=url;withFiles();}).catch(function(){withFiles();});}
+  else{if(rcp)out.receipt=rcp;withFiles();}
+};
+/* ---------- the Attachments folder on every record page ---------- */
+(function(){
+  var _pd=pageDetail;
+  pageDetail=function(pg,ent,id){
+    var r=_pd.apply(this,arguments);
+    try{
+      if(!attHas(ent))return r;
+      var rec=store(ent).filter(function(x){return x.id===id;})[0];if(!rec)return r;
+      $$(".groups .card",pg).forEach(function(c){var h=c.querySelector(".card-h h3");if(h&&/^(Attachment|Document)$/i.test(h.textContent.trim())&&c.querySelectorAll(".kv-row").length<=2)c.remove();});
+      $$(".card",pg).forEach(function(c){var h=c.querySelector(":scope > .card-h h3");if(h&&h.textContent.trim()==="Receipt")c.remove();});
+      var list=attAll(rec,attKeys(ent));
+      var html='<div class="card att-card" style="margin-top:16px"><div class="card-h"><h3>Attachments <span class="att-cnt">'+list.length+'</span></h3>'+
+        (can("edit")?'<button type="button" class="btn sm" data-attaddrec="'+esc(ent)+'" data-id="'+esc(id)+'">'+svg(ATT_UP)+'Add files</button>':"")+'</div><div class="card-b">'+
+        (list.length?'<div class="att-grid">'+list.map(function(x){return attTile(x,{canRm:can("delete"),open:true});}).join("")+'</div>':'<div class="att-empty">'+svg(ATT_PDF)+'<span>No files yet</span></div>')+
+        '</div></div>';
+      var d2=pg.querySelector(".detail2");if(d2)d2.insertAdjacentHTML("afterend",html);else pg.insertAdjacentHTML("beforeend",html);
+      var card=pg.querySelector(".att-card");if(card){card._attEnt=ent;card._attId=id;}
+    }catch(e){}
+    return r;
+  };
+})();
+function attFind(ent,id,fid){var rec=store(ent).filter(function(x){return x.id===id;})[0];return rec?attAll(rec,attKeys(ent)).filter(function(x){return x.id===fid;})[0]:null;}
+function attOpen(x){
+  if(!x)return;var s=attSrc(x);
+  if(attIsImg(x)){showImage(s,x.name||"Attachment");return;}
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay2";ov.style.zIndex="140";
+  ov.innerHTML='<div class="modal" style="max-width:880px;width:94vw"><div class="modal-h"><h3>'+esc(x.name||"Attachment")+'</h3><div style="display:flex;gap:8px"><a class="btn sm" href="'+esc(s)+'" target="_blank" rel="noopener" download="'+esc(x.name||"file")+'">Download</a><button class="icon-btn" data-act="closeview" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div></div>'+
+    '<div class="modal-b" style="padding:0"><iframe src="'+esc(s)+'" style="width:100%;height:75vh;border:0;display:block;background:#fff" title="'+esc(x.name||"file")+'"></iframe></div></div>';
+  ov.addEventListener("click",function(e){if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+document.addEventListener("click",function(e){
+  var t=e.target,b;
+  if((b=t.closest("[data-attadd]"))){e.preventDefault();var fld=b.closest(".attfld");if(!fld)return;
+    attPick(function(files){fld._att=(fld._att||[]).concat(files);attPaintNew(fld);});return;}
+  if((b=t.closest("[data-attrmnew]"))){e.preventDefault();e.stopPropagation();var f2=b.closest(".attfld");if(!f2)return;f2._att.splice(+b.getAttribute("data-attrmnew"),1);attPaintNew(f2);return;}
+  if((b=t.closest("[data-attrm]"))){e.preventDefault();e.stopPropagation();
+    if(!b.classList.contains("sure")){b.classList.add("sure");b.innerHTML="Remove?";setTimeout(function(){if(b.isConnected){b.classList.remove("sure");b.innerHTML=svg('<path d="M18 6 6 18M6 6l12 12"/>');}},3000);return;}
+    var fid=b.getAttribute("data-attrm"),f3=b.closest(".attfld");
+    if(f3){f3._rm=f3._rm||{};f3._rm[fid]=1;var tl=b.closest(".att-tile");if(tl)tl.remove();return;}      /* in a form: removed when you press Save */
+    var card=b.closest(".att-card");if(!card)return;var ent=card._attEnt,id=card._attId,rec=store(ent).filter(function(x){return x.id===id;})[0];if(!rec)return;
+    if(fid.indexOf("legacy:")===0)delete rec[fid.slice(7)];else rec.files=(rec.files||[]).filter(function(x){return x.id!==fid;});
+    persist();pageDetail($("#page"),ent,id);toast("File removed.","good");return;}
+  if((b=t.closest("[data-attaddrec]"))){e.preventDefault();var ent2=b.getAttribute("data-attaddrec"),id2=b.getAttribute("data-id");
+    if(typeof READONLY!=="undefined"&&READONLY){toast("You have view-only access.","err");return;}
+    attPick(function(files){showLoader("Uploading "+files.length+" file"+(files.length>1?"s":"")+"…");
+      attUploadAll(ent2,id2,files).then(function(up){hideLoader();var rec=store(ent2).filter(function(x){return x.id===id2;})[0];if(!rec||!up.length)return;
+        rec.files=(rec.files||[]).concat(up);persist();if(getRoute().indexOf(id2)>=0)pageDetail($("#page"),ent2,id2);
+        toast(up.length+" file"+(up.length>1?"s":"")+" saved in Attachments.","good");},function(){hideLoader();});});return;}
+  if((b=t.closest("[data-attopen]"))&&!t.closest(".att-x")){var card2=b.closest(".att-card"),fld2=b.closest(".attfld"),fid2=b.getAttribute("data-attopen"),x=null;
+    if(card2)x=attFind(card2._attEnt,card2._attId,fid2);
+    else if(fld2){var ov=fld2.closest(".overlay");if(ov&&ov._attEnt&&ov._attId)x=attFind(ov._attEnt,ov._attId,fid2);}
+    if(x){e.preventDefault();attOpen(x);}return;}
 });
 
 /* ===== v3 redesign module ===== */
