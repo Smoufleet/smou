@@ -1837,6 +1837,8 @@ tr[data-rprow]{cursor:pointer}
 .fl-pop.rp-calpop .rp-d{height:32px}
 @media (max-width:860px){.rp-dfs .field{width:calc(50% - 16px)}.rp-dfs{flex-wrap:nowrap}}
 @media (max-width:860px){.rp-dfs .field{width:auto;flex:1 1 0;min-width:0}.rp-dfs{gap:8px}}
+
+.rp-style b{align-self:center;grid-row:1/3}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -2409,12 +2411,12 @@ function showLogin(errMsg){
   var ex=document.getElementById("authgate");if(ex)ex.remove();
   var g=document.createElement("div");g.className="authgate";g.id="authgate";
   g.innerHTML='<div class="authcard"><div class="authbrand"><span class="lg">◈</span><div class="ab-t"><b>SMOU</b><small>Fleet · Kuwait</small></div></div>'+
-    '<h2>Sign in</h2><div class="authsub">Enter your staff account to continue</div>'+
+    '<h2>Sign in</h2>'+
     (errMsg?'<div class="autherr">'+esc(errMsg)+'</div>':'')+
     '<div class="authfield"><label>Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="you@company.com"></div>'+
     '<div class="authfield"><label>Password</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
     '<button class="btn primary authbtn" id="authBtn">Sign in</button>'+
-    '<div class="authnote">No account? Ask your admin to create one in Supabase.</div></div>';
+    '</div>';
   document.body.appendChild(g);
   var run=function(){doLogin();};
   g.querySelector("#authBtn").addEventListener("click",run);
@@ -3109,7 +3111,7 @@ function renderAIChat(){
   var b=document.getElementById("aiBody");if(!b)return;
   var html="";
   if(!AICHAT.length){
-    html='<div class="ai-welcome"><div class="ai-wave">✦</div><h4>Ask me about your fleet</h4><p>I can read your drivers, vehicles, alerts and orders and answer in plain language.</p><div class="ai-chips">'+AI_SUGGEST.map(function(s){return '<button class="ai-chip" data-aiq="'+esc(s)+'">'+esc(s)+'</button>';}).join("")+'</div></div>';
+    html='<div class="ai-welcome"><div class="ai-wave">✦</div><h4>Ask me about your fleet</h4><div class="ai-chips">'+AI_SUGGEST.map(function(s){return '<button class="ai-chip" data-aiq="'+esc(s)+'">'+esc(s)+'</button>';}).join("")+'</div></div>';
   } else {
     html=AICHAT.map(function(m){return '<div class="ai-msg '+m.role+'">'+(m.role==="ai"?'<span class="ai-av">✦</span>':'')+'<div class="ai-bub">'+esc(m.text).replace(/\n/g,"<br>")+'</div></div>';}).join("");
     if(AIBUSY)html+='<div class="ai-msg ai"><span class="ai-av">✦</span><div class="ai-bub ai-typing"><span></span><span></span><span></span></div></div>';
@@ -3180,7 +3182,7 @@ function pageRegister(pg,ent){
       (can("delete")?'<button class="btn sm danger" data-act="seldel">'+svg(IC_del)+'Delete selected</button>':'')+
       '<button class="btn ghost sm" data-act="selclear">Clear</button></div>'+
     '<div class="tbl-wrap"><table class="dt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>'+
-    '<div class="tbl-foot"><span id="foot"></span><span>Tap a row to open · tick boxes to select · ⋮ for actions</span></div>';
+    '<div class="tbl-foot"><span id="foot"></span></div>';
   $("#thead").innerHTML='<tr><th class="selcol"><input type="checkbox" class="selchk" data-selall title="Select all"></th>'+cfg.columns.map(function(c,i){return '<th data-sort="'+i+'">'+esc(c.h)+' <span class="sar">⇅</span></th>';}).join("")+'<th class="actcol">Actions</th></tr>';
   fillRows(ent);
   $("#q").addEventListener("input",function(){view.search=this.value;fillRows(ent);});
@@ -3612,7 +3614,7 @@ function auditRowHTML(d){
   return '<div class="aud-item"><span class="aud-ic '+m.cls+'">'+svg(m.ic)+'</span><div class="aud-body"><div class="aud-txt"><b>'+esc(d.user||"—")+'</b> '+m.v+' '+esc((sing||"record").toLowerCase())+' <b>“'+esc(d.label||"—")+'”</b></div><div class="aud-meta">'+esc(fmtTS(d.ts))+'</div>'+chg+'</div></div>';}
 function sortByTs(rows){return rows.sort(function(a,b){return (b.ts||"").localeCompare(a.ts||"");});}
 function pageActivity(pg){
-  pg.innerHTML='<div class="card"><div class="card-h"><h3>Recent Activity</h3><span class="hint">who changed what · when</span></div><div class="card-b" id="actwrap"><div class="empty" style="padding:26px">Loading activity…</div></div></div>';
+  pg.innerHTML='<div class="card"><div class="card-h"><h3>Recent Activity</h3></div><div class="card-b" id="actwrap"><div class="empty" style="padding:26px">Loading activity…</div></div></div>';
   if(!SB){var w0=$("#actwrap");if(w0)w0.innerHTML='<div class="empty" style="padding:26px">Activity log is available in cloud (synced) mode.</div>';return;}
   SB.from("records").select("data").eq("collection","__audit__").order("id",{ascending:false}).limit(300).then(function(res){
     var w=$("#actwrap");if(!w)return;if(res.error){w.innerHTML='<div class="empty" style="padding:26px">Could not load activity.</div>';return;}
@@ -3634,7 +3636,7 @@ function loadRecHistory(recId){
 function openFullHistory(recId){
   if(!SB)return;
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay2";ov.style.zIndex="140";
-  ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>Change History</h3><div class="sub">who changed what · when</div></div><button class="icon-btn" data-act="closeview">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b" id="fullHistBody"><div class="empty" style="padding:24px">Loading…</div></div></div>';
+  ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>Change History</h3></div><button class="icon-btn" data-act="closeview">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b" id="fullHistBody"><div class="empty" style="padding:24px">Loading…</div></div></div>';
   document.body.appendChild(ov);
   SB.from("records").select("data").eq("collection","__audit__").eq("data->>recId",recId).order("id",{ascending:false}).then(function(res){
     var bb=document.getElementById("fullHistBody");if(!bb)return;
@@ -3769,7 +3771,7 @@ function pageUsers(pg){
     var tbl='<div class="tbl-wrap"><table class="dt"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>'+
       (rows.length?rows.map(function(u){var self=USER&&u.id===USER.id;return '<tr><td><span class="nm">'+esc(u.name||"—")+'</span>'+(self?' <span class="sub">(you)</span>':'')+'</td><td class="mono">'+esc(u.email||"")+'</td><td><select class="urole" data-urole data-uid="'+u.id+'"'+(self?' disabled':'')+'>'+["admin","dataentry","viewer"].map(function(r){return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+roleLabel(r)+'</option>';}).join("")+'</select></td></tr>';}).join(""):'<tr><td colspan="3"><div class="empty" style="padding:22px"><h4>No users yet</h4><p>Create staff accounts in Supabase dashboard.</p></div></td></tr>')+
     '</tbody></table></div>';
-    box.innerHTML=info+tbl+'<div class="sub" style="margin-top:10px;color:var(--muted);font-size:12px"><b>Admin</b> = full access (delete + manage users) · <b>Data Entry</b> = add / edit (no delete) · <b>View-only</b> = read-only</div>';
+    box.innerHTML=info+tbl;
     if(LANG==="ar")transEl(box);
   }).catch(function(e){var box=document.getElementById("usersBox");if(box)box.innerHTML='<div class="autherr">'+esc((e&&e.message)||e)+'</div>';});
 }
@@ -3816,7 +3818,7 @@ function hiringDash(){
   // PENDING DOCS (clickable → shows candidate names)
   var pend=HIRE_STEPS.map(function(s){return {key:s[0],label:s[1],value:H.filter(function(r){return up(r[s[0]])==="PENDING";}).length};}).filter(function(x){return x.value>0;}).sort(function(a,b){return b.value-a.value;});
   var pmax=Math.max.apply(null,pend.map(function(x){return x.value;}).concat([1]));
-  var pendCard='<div class="card"><div class="card-h"><h3>⏳ Pending Documents</h3><span class="hint">tap to see who</span></div><div class="card-b">'+
+  var pendCard='<div class="card"><div class="card-h"><h3>⏳ Pending Documents</h3></div><div class="card-b">'+
     (pend.length?pend.map(function(p){var ratio=p.value/total;var col=ratio>=0.75?"var(--crit)":ratio>=0.4?"var(--amber)":"var(--teal)";var w=Math.max(4,Math.round(p.value/pmax*100));return '<div class="pd-row" data-penddoc="'+p.key+'" data-lab="'+esc(p.label)+'"><span class="pd-name">'+esc(p.label)+'</span><span class="pd-bar"><span class="pd-fill" style="width:'+w+'%;background:'+col+'"></span></span><span class="pd-count">'+p.value+'</span><svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>';}).join(""):'<div class="empty" style="padding:22px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>All documents cleared</h4><p>Nothing pending across candidates.</p></div>')+
   '</div></div>';
   // CANDIDATE PROGRESS
@@ -3840,7 +3842,7 @@ function openPendDoc(key,label){
   var list=H.filter(function(r){return String(r[key]||"").trim().toUpperCase()==="PENDING";});
   var body=list.length?'<div>'+list.map(function(r){var p=hireProgress(r);return '<div class="crow" data-route="grd/hiring/'+r.id+'" style="border-top:1px solid var(--line)"><span class="cava">'+esc(hireInitials(r.nameEn))+'</span><span class="cnm">'+esc(r.nameEn||"—")+'<div class="sub" style="font-size:11px;color:var(--muted);font-weight:400">'+esc([r.nat,r.veh,r.reference].filter(Boolean).join(" · "))+'</div></span><span class="cpc">'+p.pct+'%</span></div>';}).join("")+'</div>':'<div class="empty" style="padding:24px">'+svg('<path d="M20 6 9 17l-5-5"/>')+'<h4>None pending</h4><p>Every candidate has this document done.</p></div>';
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
-  ov.innerHTML='<div class="modal" style="max-width:480px"><div class="modal-h"><div><h3>'+esc(label)+' — Pending</h3><div class="sub">'+list.length+' candidate'+(list.length===1?"":"s")+' · tap a name to open</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div></div>';
+  ov.innerHTML='<div class="modal" style="max-width:480px"><div class="modal-h"><div><h3>'+esc(label)+' — Pending</h3><div class="sub">'+list.length+' candidate'+(list.length===1?"":"s")+'</div></div><button class="icon-btn" data-act="close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div><div class="modal-b">'+body+'</div></div>';
   document.body.appendChild(ov);
 }
 
@@ -4094,7 +4096,7 @@ function ordersDaily(){
   var ed=dailyEdit?(log.filter(function(x){return x.id===dailyEdit;})[0]||null):null;
   var today=isoToday();
   var vehOpts=["","CAR","BIKE","REPORTER","SCOOTER","VAN","BICYCLE"];
-  var form=can("edit")?'<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>'+(ed?"Edit entry":"Add daily entry")+'</h3>'+(ed?'<button class="btn xs ghost" data-act="dailycancel">Cancel edit</button>':'<span class="hint">Enter each driver’s orders for a day</span>')+'</div><div class="card-b"><div class="dl-form">'+
+  var form=can("edit")?'<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>'+(ed?"Edit entry":"Add daily entry")+'</h3>'+(ed?'<button class="btn xs ghost" data-act="dailycancel">Cancel edit</button>':'')+'</div><div class="card-b"><div class="dl-form">'+
     '<div class="dl-fld"><label>Date</label><input type="date" id="dlDate" value="'+esc(ed?ed.date:today)+'"></div>'+
     '<div class="dl-fld dl-drv"><label>Driver</label><div class="empc" data-src="perfdrv"><input class="empc-inp" id="dlDriver" autocomplete="off" placeholder="Type to search…" value="'+esc(ed?ed.driver:"")+'"><div class="empc-pop" hidden><div class="empc-list"></div></div></div></div>'+
     '<div class="dl-fld"><label>Platform</label><select id="dlPlat">'+["Talabat","Keeta"].map(function(p){return '<option'+(ed&&ed.platform===p?" selected":"")+'>'+p+'</option>';}).join("")+'</select></div>'+
@@ -4181,13 +4183,13 @@ function ordersRecords(P){
   months.sort(function(a,b){var pa=a.split(" "),pb=b.split(" ");return (pb[1]-pa[1])||(moIdx(pb[0])-moIdx(pa[0]));});
   var rows=P.slice().sort(function(a,b){return (b.year-a.year)||(moIdx(b.month)-moIdx(a.month))||((num(b.orders)||0)-(num(a.orders)||0));});
   var body=rows.map(function(r){return '<tr style="cursor:pointer" data-act="orddriver" data-n="'+esc(r.driver)+'"><td class="nm" style="color:var(--teal-ink)">'+esc(r.driver)+'</td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td></tr>';}).join("");
-  return '<div class="card"><div class="card-h"><h3>Performance Records</h3><span class="hint">'+P.length+' rows · tap a row for driver detail</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Platform</th><th>Month</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+  return '<div class="card"><div class="card-h"><h3>Performance Records</h3><span class="hint">'+P.length+' rows</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Platform</th><th>Month</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
 }
 function ordersByDriver(P){
   var agg={};P.forEach(function(r){var k=r.driver;if(!agg[k])agg[k]={driver:r.driver,orders:0,days:0,months:0,tal:0,kee:0,vehicle:r.vehicle};var a=agg[k];a.orders+=num(r.orders)||0;a.days+=num(r.days)||0;a.months++;if(r.platform==="Talabat")a.tal+=num(r.orders)||0;else if(r.platform==="Keeta")a.kee+=num(r.orders)||0;});
   var list=Object.keys(agg).map(function(k){return agg[k];}).sort(function(a,b){return b.orders-a.orders;});
   var body=list.map(function(a,i){var utr=a.days>0?a.orders/a.days:0;return '<tr style="cursor:pointer" data-act="orddriver" data-n="'+esc(a.driver)+'"><td class="mono">'+(i+1)+'</td><td class="nm" style="color:var(--teal-ink)">'+esc(a.driver)+'</td><td class="mono" style="text-align:right">'+fmtN(a.orders)+'</td><td class="mono" style="text-align:right">'+fmtN(a.days)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+utr.toFixed(1)+'</td><td class="mono" style="text-align:right">'+fmtN(a.tal)+'</td><td class="mono" style="text-align:right">'+fmtN(a.kee)+'</td><td class="mono" style="text-align:right">'+a.months+'</td></tr>';}).join("");
-  return '<div class="card"><div class="card-h"><h3>Driver Ranking</h3><span class="hint">'+list.length+' drivers · tap a driver for full detail</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>#</th><th>Driver</th><th style="text-align:right">Orders</th><th style="text-align:right">Days</th><th style="text-align:right">UTR</th><th style="text-align:right">Talabat</th><th style="text-align:right">Keeta</th><th style="text-align:right">Months</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+  return '<div class="card"><div class="card-h"><h3>Driver Ranking</h3><span class="hint">'+list.length+' drivers</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>#</th><th>Driver</th><th style="text-align:right">Orders</th><th style="text-align:right">Days</th><th style="text-align:right">UTR</th><th style="text-align:right">Talabat</th><th style="text-align:right">Keeta</th><th style="text-align:right">Months</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
 }
 function openDriverDetail(name){
   var all=STATE.grd.perf||[];
@@ -4431,7 +4433,7 @@ function pageFinance(pg){
   else if(hasDemo)sampleBar='<div class="banner info" style="margin-bottom:16px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div style="flex:1">Sample/demo expenses are loaded so you can preview insights. Clear them before real use.</div><button class="btn sm" data-act="clearsample">Clear sample data</button></div>';
 
   // insights panel
-  var insHtml='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>✦ Smart Insights</h3><span class="hint">auto-checked on every entry</span></div><div class="card-b">'+
+  var insHtml='<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>✦ Smart Insights</h3></div><div class="card-b">'+
     (all.length<4?'<div class="empty" style="padding:20px">'+svg('<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>')+'<h4>Add a few more entries</h4><p>Insights unlock once there is enough data to compare.</p></div>'
      :insights.length?insights.map(function(i){var col=i.sev==="danger"?"crit":i.sev==="warn"?"warn":"teal";
         return '<div style="display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line)"><span style="width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;background:var(--'+col+'-bg);color:var(--'+col+')">'+svg(i.sev==="info"?'<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>':'<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')+'</span>'+
@@ -5561,13 +5563,13 @@ function pageFuelTracker(pg){
   // data-gap alerts
   var gaps="";
   if(noKm.length||noFuel.length){
-    gaps='<div class="card" style="margin-top:16px"><div class="card-h"><h3>⚠️ Data Gaps</h3><span class="hint">fix these for accurate cost/km</span></div><div class="card-b">'+
-      (noKm.length?'<div style="margin-bottom:8px"><b style="font-size:13px">Fuel logged but no KM ('+noKm.length+'):</b> <span style="color:var(--muted);font-size:12.5px">'+noKm.map(function(r){return esc(r.plate);}).join(", ")+'</span><div class="sub" style="font-size:11.5px;color:var(--muted)">Add daily KM for these in Vehicle Service.</div></div>':'')+
-      (noFuel.length?'<div><b style="font-size:13px">KM logged but no fuel ('+noFuel.length+'):</b> <span style="color:var(--muted);font-size:12.5px">'+noFuel.map(function(r){return esc(r.plate);}).join(", ")+'</span><div class="sub" style="font-size:11.5px;color:var(--muted)">Add fuel fills for these in Fuel Cards (with the matching plate).</div></div>':'')+
+    gaps='<div class="card" style="margin-top:16px"><div class="card-h"><h3>⚠️ Data Gaps</h3></div><div class="card-b">'+
+      (noKm.length?'<div style="margin-bottom:8px"><b style="font-size:13px">Fuel logged but no KM ('+noKm.length+'):</b> <span style="color:var(--muted);font-size:12.5px">'+noKm.map(function(r){return esc(r.plate);}).join(", ")+'</span></div>':'')+
+      (noFuel.length?'<div><b style="font-size:13px">KM logged but no fuel ('+noFuel.length+'):</b> <span style="color:var(--muted);font-size:12.5px">'+noFuel.map(function(r){return esc(r.plate);}).join(", ")+'</span></div>':'')+
     '</div></div>';
   }
   var help='<div class="banner info" style="margin-top:16px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div style="font-size:12.5px">Cost/km = fuel spent ÷ km driven for each vehicle (matched by plate). Lower is better. Log daily KM in <b>Vehicle Service</b> and daily fuel in <b>Fuel Cards</b> — the tracker updates automatically.</div></div>';
-  pg.innerHTML=tabs+kpis+list+gaps+help;
+  pg.innerHTML=tabs+kpis+list+gaps;
   if(LANG==="ar")transEl(pg);
 }
 function serviceCard(rec,id){
@@ -6050,7 +6052,7 @@ function ccKmPage(){
   var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+'</td></tr>';}).join("")
     :'<tr><td colspan="8"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
   return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>ODO photos</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
-    '<div class="tbl-foot"><span>Auto-recorded from each clock-in / clock-out odometer · photos verify the reading</span><button class="btn sm" data-act="ccexport" data-what="km">Export CSV</button></div>';
+    '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="km">Export CSV</button></div>';
 }
 /* ---------- FUEL ---------- */
 function ccFuelPage(){
@@ -6062,7 +6064,7 @@ function ccFuelPage(){
   var tb=rows.length?rows.map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(r.receipt_photo?'<a href="'+esc(r.receipt_photo)+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(r.receipt_photo)+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td></tr>';}).join("")
     :'<tr><td colspan="5"><div class="empty" style="padding:24px"><h4>No fuel entries yet</h4><p>Drivers log fuel from the app with a receipt photo.</p></div></td></tr>';
   return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
-    '<div class="tbl-foot"><span>Refills logged by drivers in the app</span><button class="btn sm" data-act="ccexport" data-what="fuel">Export CSV</button></div>';
+    '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="fuel">Export CSV</button></div>';
 }
 /* ---------- DRIVER ACCOUNTS ---------- */
 function ccDriversPage(){
@@ -6079,7 +6081,7 @@ function ccDriversPage(){
     :'<tr><td colspan="9"><div class="empty" style="padding:24px"><h4>No driver accounts yet</h4><p>Add a driver to give them app access.</p></div></td></tr>';
   return '<div class="toolbar" style="margin-bottom:14px"><div class="search">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>')+'<input id="ccSearch" placeholder="Search name, plate or phone…" value="'+esc(CC.f.search)+'" autocomplete="off"></div><span style="flex:1"></span><button class="btn primary sm" data-act="ccadd">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add driver</button></div>'+
     '<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>ERP employee</th><th>Phone (login)</th><th>Platforms</th><th>Status</th><th>Device</th><th>PIN</th><th>Lifetime</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
-    '<div class="banner info" style="margin-top:14px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+'<div style="font-size:12.5px">Drivers sign in on the app with their <b>phone number + 4-digit PIN</b>. A driver is linked to an ERP employee automatically when the phone matches the employee\'s mobile. <b>Reset phone</b> lets a driver sign in on a new device.</div></div>';
+    '';
 }
 function ccDriverModal(id){
   var d=id?ccDrv(id):null;
@@ -6087,7 +6089,7 @@ function ccDriverModal(id){
   var pl=(d&&d.platforms)||["Talabat","Keeta"];
   var pin=d?d.pin:String(Math.floor(1000+Math.random()*9000));
   var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
-  ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>'+(d?"Edit driver":"Add driver")+'</h3><div class="sub">Driver app login · phone + PIN</div></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
+  ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>'+(d?"Edit driver":"Add driver")+'</h3></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
     '<div class="modal-b"><div class="form-grid">'+
       '<div class="field wide"><label for="ccEmp">ERP employee</label><select id="ccEmp"><option value="">— pick an employee (fills the details) —</option>'+emps.map(function(e){return '<option value="'+esc(e.id)+'"'+(d&&d.employee_id===e.id?" selected":"")+'>'+esc(e.name)+(e.mobile?" · "+esc(e.mobile):"")+'</option>';}).join("")+'</select></div>'+
       '<div class="field"><label for="ccName">Name <span class="req">*</span></label><input id="ccName" value="'+esc(d?d.name:"")+'"></div>'+
@@ -6263,18 +6265,18 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
         '<td>'+(c.ok?'<span class="pill good"><span class="pd"></span>All OK</span>':badI.map(function(i){return '<span class="pill crit" style="margin:1px"><span class="pd"></span>'+esc(i.label||i.k)+'</span>';}).join(" "))+'</td><td style="white-space:normal;max-width:220px">'+esc(c.note||"—")+'</td><td>'+(c.photo?'<a class="chip" href="'+esc(c.photo)+'" target="_blank" rel="noopener">photo</a>':'<span class="sub">—</span>')+'</td></tr>';}).join("");
     var brkRows=brk.map(function(s){var d=ccDrv(s.driver_id);return '<div class="cc-live">'+ccDrvCell(d)+'<div class="cc-live-m"><span class="pill indigo"><span class="pd"></span>On break</span> <span class="sub">since '+ccAgo(Date.parse(s.break_started_at))+'</span></div></div>';}).join("");
     return kpis+
-      '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>SOS alerts</h3><span class="hint">from the driver app · accidents, breakdowns and robbery also create an Incident record</span></div><div class="card-b">'+
+      '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>SOS alerts</h3></div><div class="card-b">'+
         (sosRows?'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Type</th><th>When</th><th>Where</th><th>Note</th><th></th></tr></thead><tbody>'+sosRows+'</tbody></table></div>':'<div class="empty" style="padding:18px"><p>No SOS alerts.</p></div>')+'</div></div>'+
-      '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Daily vehicle checks</h3><span class="hint">problems go to Fleet → Maintenance as Pending</span></div><div class="card-b">'+
+      '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Daily vehicle checks</h3></div><div class="card-b">'+
         (chkRows?'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Date</th><th>Plate</th><th>Result</th><th>Note</th><th>Photo</th></tr></thead><tbody>'+chkRows+'</tbody></table></div>':'<div class="empty" style="padding:18px"><p>No checks yet.</p></div>')+'</div></div>'+
-      '<div class="card"><div class="card-h"><h3>On break now</h3><span class="hint">GPS stays on during breaks</span></div><div class="card-b">'+(brkRows||'<div class="empty" style="padding:18px"><p>Nobody is on a break.</p></div>')+'</div></div>';
+      '<div class="card"><div class="card-h"><h3>On break now</h3></div><div class="card-b">'+(brkRows||'<div class="empty" style="padding:18px"><p>Nobody is on a break.</p></div>')+'</div></div>';
   }
   function announcePage(){
     var rows=(CC.ann||[]).map(function(a){var exp=a.expires_at&&Date.parse(a.expires_at)<Date.now();var live=a.active&&!exp;
       return '<tr><td style="white-space:normal"><div class="nm">'+esc(a.title)+'</div><div class="sub" style="white-space:normal;max-width:420px">'+esc(a.body||"")+'</div></td><td>'+esc(fmtD(String(a.created_at).slice(0,10)))+'</td><td>'+(a.expires_at?esc(fmtD(String(a.expires_at).slice(0,10))):'<span class="sub">never</span>')+'</td>'+
         '<td><span class="pill '+(live?"good":"neutral")+'"><span class="pd"></span>'+(live?"Showing":exp?"Expired":"Hidden")+'</span></td>'+
         '<td style="white-space:nowrap"><button class="btn sm" data-act="ccanntog" data-id="'+esc(a.id)+'">'+(a.active?"Hide":"Show")+'</button> <button class="btn sm danger" data-act="ccanndel" data-id="'+esc(a.id)+'">Delete</button></td></tr>';}).join("");
-    return '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Send an announcement to all drivers</h3><span class="hint">shows on the driver app home screen and in their notifications</span></div><div class="card-b"><div class="form-grid">'+
+    return '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Send an announcement to all drivers</h3></div><div class="card-b"><div class="form-grid">'+
       '<div class="field wide"><label for="annTitle">Title <span class="req">*</span></label><input id="annTitle" maxlength="80" placeholder="e.g. Weekend bonus is live"></div>'+
       '<div class="field wide"><label for="annBody">Message</label><textarea id="annBody" rows="3" maxlength="400" placeholder="e.g. +2.000 KWD for every 30 orders, Thu–Sat."></textarea></div>'+
       '<div class="field"><label for="annExp">Show for</label><select id="annExp"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>1 week</option><option value="30">1 month</option><option value="0">Until I hide it</option></select></div>'+
@@ -6568,7 +6570,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
       '<main class="lg-side">'+
         '<div class="lg-card" id="lgCard">'+
           '<div class="lg-tools">'+["desert","night","gulf"].map(function(s){return '<button type="button" class="lg-sw'+(s===sk?" on":"")+'" data-v3skin="'+s+'" title="'+s.charAt(0).toUpperCase()+s.slice(1)+' theme" aria-label="'+s+' theme"></button>';}).join("")+'</div>'+
-          '<div class="lg-top"><div><div class="lg-greet" id="lgGreet">'+c.g+'</div><h2>Welcome back</h2><p class="lg-sub">Sign in with your staff account.</p></div>'+
+          '<div class="lg-top"><div><div class="lg-greet" id="lgGreet">'+c.g+'</div><h2>Welcome back</h2></div>'+
             '<div class="lg-mascot" id="lgMascot" aria-hidden="true"><svg viewBox="0 0 78 78"><ellipse cx="39" cy="74" rx="22" ry="3" fill="currentColor" opacity=".12"/>'+
               '<path d="M11 44a28 28 0 0 1 56 0v6a10 10 0 0 1-10 10H21a10 10 0 0 1-10-10z" fill="var(--acc)"/><path d="M18 28h42" stroke="var(--lgAccInk)" stroke-width="3" stroke-linecap="round" opacity=".35"/>'+
               '<rect x="17" y="34" width="44" height="24" rx="11" fill="#FCE3CF"/><g class="lg-blink"><g class="lg-pupils" id="lgPupils"><circle cx="30" cy="44" r="3.4" fill="#1F1A14"/><circle cx="48" cy="44" r="3.4" fill="#1F1A14"/><circle cx="31.2" cy="42.8" r="1" fill="#fff"/><circle cx="49.2" cy="42.8" r="1" fill="#fff"/></g></g>'+
@@ -7114,7 +7116,7 @@ function nxDesc(g){if(NX_DESC[g])return NX_DESC[g];if(/salary|wage/i.test(g))ret
 function nxRestyle(pg){
   var grid=pg.querySelector("#formGrid");if(!grid||pg.querySelector(".nx"))return;
   var nx=document.createElement("div");nx.className="nx";var cur=null;
-  function sec(title,desc){var r=document.createElement("div");r.className="nx-row";r.innerHTML='<div class="nx-l"><h4>'+esc(title)+'</h4>'+(desc?'<p>'+esc(desc)+'</p>':"")+'</div><div class="nx-f"></div>';nx.appendChild(r);return r.querySelector(".nx-f");}
+  function sec(title,desc){var r=document.createElement("div");r.className="nx-row";r.innerHTML='<div class="nx-l"><h4>'+esc(title)+'</h4></div><div class="nx-f"></div>';nx.appendChild(r);return r.querySelector(".nx-f");}
   Array.prototype.slice.call(grid.children).forEach(function(el){
     if(el.classList.contains("fieldset-lab")){var g=el.textContent.trim();cur=sec(/salary|wage/i.test(g)?"Salary month":g,nxDesc(g));return;}
     if(!cur)cur=sec("Entry",nxDesc("Entry"));cur.appendChild(el);});
@@ -7174,7 +7176,7 @@ function rpOpts(k){var c={};rpBase().forEach(function(r){var v=rpDim(r,k);c[v]=(
 function rpPeriodText(){var rg=rpRange();if(!rg[0]&&!rg[1])return "All time";return (rg[0]?fmtD(rg[0]):"Beginning")+" – "+(rg[1]?fmtD(rg[1]):"today");}
 function rpPickLabel(k){var s=RPT.f[k]||[];return s.length?(s.length===1?rpDimLabel(k,s[0]):s.length+" selected"):"All";}
 
-function rpTop(step,title,sub){return '<div class="rp-top"><div><a class="rp-back" data-route="finance/log">'+flI("back")+'Expense log</a><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div>'+
+function rpTop(step,title,sub){return '<div class="rp-top"><div><a class="rp-back" data-route="finance/log">'+flI("back")+'Expense log</a><h2>'+esc(title)+'</h2>'+(sub?'<p>'+esc(sub)+'</p>':"")+'</div>'+
   '<ol class="rp-steps"><li class="'+(step===1?"on":"done")+'"'+(step===2?' data-route="'+RPT_ROUTE+'"':"")+'><i>1</i>Choose filters</li><li class="'+(step===2?"on":"")+'"><i>2</i>View report</li></ol></div>';}
 /* ---------- builder page ---------- */
 function pageReportBuild(pg){
@@ -7187,14 +7189,14 @@ function pageReportBuild(pg){
   var dims=Object.keys(RPD);
   function sel(id,cur,list){return '<select id="'+id+'">'+list.map(function(k){return '<option value="'+k+'"'+(cur===k?" selected":"")+'>'+esc(k==="none"?"No grouping":RPD[k])+'</option>';}).join("")+'</select>';}
   var style='<div class="rp-styles">'+
-      '<button type="button" class="rp-style'+(RPT.style==="list"?" on":"")+'" data-rps="list"><span class="rp-ill">'+rpIll("list")+'</span><b>List</b><small>Every expense, grouped with subtotals</small></button>'+
-      '<button type="button" class="rp-style'+(RPT.style==="pivot"?" on":"")+'" data-rps="pivot"><span class="rp-ill">'+rpIll("pivot")+'</span><b>Pivot</b><small>Totals in a grid — e.g. type × month</small></button></div>'+
+      '<button type="button" class="rp-style'+(RPT.style==="list"?" on":"")+'" data-rps="list"><span class="rp-ill">'+rpIll("list")+'</span><b>List</b></button>'+
+      '<button type="button" class="rp-style'+(RPT.style==="pivot"?" on":"")+'" data-rps="pivot"><span class="rp-ill">'+rpIll("pivot")+'</span><b>Pivot</b></button></div>'+
     '<div class="rp-opts" data-for="list"'+(RPT.style==="list"?"":" hidden")+'><div class="field"><label>Group by</label>'+sel("rpGroup",RPT.group,["none"].concat(dims))+'</div></div>'+
     '<div class="rp-opts" data-for="pivot"'+(RPT.style==="pivot"?"":" hidden")+'><div class="field"><label>Rows</label>'+sel("rpRowsSel",RPT.prow,dims)+'</div><div class="field"><label>Columns</label>'+sel("rpColsSel",RPT.pcol,dims)+'</div><div class="field"><label>Show</label><select id="rpVal"><option value="sum"'+(RPT.pval==="sum"?" selected":"")+'>Total amount (KWD)</option><option value="count"'+(RPT.pval==="count"?" selected":"")+'>Number of entries</option></select></div></div>';
-  pg.innerHTML=rpTop(1,"Expense report","Pick the dates and filters, choose List or Pivot, then press View report.")+'<div class="nx rp-build">'+
-      row("Period","Tap From or To to pick a date on the calendar.",period,"nx-one")+
-      row("Filters","Leave “All” to include everything. Pick several values in any box.",filters)+
-      row("Report style","How the result should look. You can switch later on the report page.",style,"nx-one")+
+  pg.innerHTML=rpTop(1,"Expense report","")+'<div class="nx rp-build">'+
+      row("Period","",period,"nx-one")+
+      row("Filters","",filters)+
+      row("Report style","",style,"nx-one")+
       '<div class="nx-bar"><button type="button" class="btn amber" data-rpgo>'+svg('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>')+'View report</button><button type="button" class="btn ghost" data-rpreset>Reset filters</button><span class="rp-live" id="rpLive"></span><span style="flex:1"></span><a class="btn ghost" data-route="finance/log">Back to expense log</a></div>'+
     '</div>';
   pg.classList.add("flatform");var px=parseFloat(getComputedStyle(pg).paddingLeft)||24;pg.style.setProperty("--pgx",px+"px");
@@ -7262,7 +7264,7 @@ function rpPivotHTML(rows){
       return '<td class="mono rp-cell'+(v?"":" z")+'" data-rpa="'+esc(a)+'" data-rpb="'+esc(c)+'" style="text-align:right;'+(v?'background:color-mix(in oklab,var(--acc) '+Math.round(4+k*26)+'%,var(--panel))':"")+'" title="'+esc(rpDimLabel(RPT.prow,a)+" · "+rpDimLabel(RPT.pcol,c))+'">'+(v?f(v):"—")+'</td>';}).join("")+
     '<td class="mono rp-tc" style="text-align:right"><b>'+f(P.rt[a])+'</b></td></tr>';}).join("")+'</tbody>';
   var ft='<tfoot><tr class="rp-tot"><th class="rp-rh">Total</th>'+P.ck.map(function(c){return '<td class="mono" style="text-align:right"><b>'+f(P.ct[c])+'</b></td>';}).join("")+'<td class="mono rp-tc" style="text-align:right"><b>'+f(P.gt)+'</b></td></tr></tfoot>';
-  return '<div class="tbl-wrap rp-pivot"><table class="dt" data-fsort="own">'+h+b+ft+'</table></div><div class="rp-hint">Tap any number to see the expenses behind it.</div>';
+  return '<div class="tbl-wrap rp-pivot"><table class="dt" data-fsort="own">'+h+b+ft+'</table></div>';
 }
 function rpExport(){
   var rows=rpRows();if(!rows.length){toast("Nothing to export.","err");return;}
@@ -7563,7 +7565,7 @@ document.addEventListener("change",function(e){
       },{on:0,lost:0,km:"0",ord:0,sh:0});
       return '<div id="ccBanner" class="card cc-banner" data-route="cc/live" role="link" tabindex="0" style="cursor:pointer">'+
         '<span class="v3-ccb-ic">'+I(IC.cc)+'</span>'+
-        '<div style="flex:1;min-width:0"><div class="v3-ccb-t">'+(d.on?'<i></i>':'')+'Command Center · live from the driver app</div><div class="v3-ccb-s">Real-time GPS, shifts, KM and fuel from the drivers’ phones · '+d.sh+' shift'+(d.sh===1?'':'s')+' today</div></div>'+
+        '<div style="flex:1;min-width:0"><div class="v3-ccb-t">'+(d.on?'<i></i>':'')+'Command Center · live from the driver app</div><div class="v3-ccb-s">'+d.sh+' shift'+(d.sh===1?'':'s')+' today</div></div>'+
         '<div class="v3-ccb-n"><span><b>'+d.on+'</b>on duty now</span><span><b>'+esc(d.km)+' km</b>driven today</span><span><b>'+d.ord+'</b>orders today</span><span><b class="'+(d.lost?"bad":"")+'">'+d.lost+'</b>GPS lost</span></div>'+
         '<span class="btn sm primary">Open live map →</span></div>';
     };
