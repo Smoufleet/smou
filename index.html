@@ -2272,6 +2272,19 @@ html[data-skin="night"] .pnl .kpi.hero .fav{color:#0B5D3B}html[data-skin="night"
   html.pnlp #pnlStmt .tw{overflow:visible;margin:0;padding:0}html.pnlp #pnlStmt table.pl{min-width:0;font-size:10.5px}
   html.pnlp #pnlStmt tr.ln.x .car{display:none}
 }
+
+/* Command → Driver Accounts: clear history */
+.cch-list{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cch-r{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line);font-size:13.5px;font-weight:700}
+.cch-r:first-child{border-top:0}
+.cch-r span{flex:1}
+.cch-r small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:1px}
+.cch-r b{font-size:14px}
+.cch-keep{margin:12px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.cch-ok{display:flex;gap:9px;align-items:flex-start;margin-top:14px;padding:11px 12px;border-radius:10px;background:var(--crit-bg,#FDE4E1);color:var(--crit,#B42318);font-size:12.5px;font-weight:700;line-height:1.4;cursor:pointer}
+.cch-ok input{margin-top:2px;accent-color:var(--crit,#B42318);flex:none}
+.cch-warn{margin-bottom:12px;padding:10px 12px;border-radius:10px;background:var(--warn-bg,#FCEBD3);color:var(--warn,#9A4A06);font-size:12.5px;font-weight:700}
+#cchGo svg{width:15px;height:15px}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -6510,7 +6523,7 @@ function ccDriversPage(){
       '<td>'+(on?'<span class="pill good"><span class="pd"></span>On duty</span>':'<span class="pill neutral"><span class="pd"></span>Off duty</span>')+'</td>'+
       '<td>'+(d.active_device?'<span class="pill indigo">Phone linked</span>':'<span class="sub">no device</span>')+(d.locked_until&&Date.parse(d.locked_until)>Date.now()?' <span class="pill crit">Locked</span>':'')+'</td>'+
       '<td class="mono"><button class="chip" data-act="ccpin" data-id="'+d.id+'" title="Show PIN">••••</button></td><td class="mono">'+fmtKm(km)+' km</td>'+
-      '<td style="white-space:nowrap"><button class="btn sm" data-act="ccedit" data-id="'+d.id+'">Edit</button> <button class="btn sm" data-act="ccreset" data-id="'+d.id+'" title="Reset phone login">Reset</button> <button class="btn sm danger" data-act="ccdel" data-id="'+d.id+'" aria-label="Delete driver">'+svg(IC_del)+'</button></td></tr>';}).join("")
+      '<td style="white-space:nowrap"><button class="btn sm" data-act="ccedit" data-id="'+d.id+'">Edit</button> <button class="btn sm" data-act="ccreset" data-id="'+d.id+'" title="Reset phone login">Reset</button> <button class="btn sm" data-act="cchist" data-id="'+d.id+'" title="Delete this driver\'s Command history">Clear history</button> <button class="btn sm danger" data-act="ccdel" data-id="'+d.id+'" aria-label="Delete driver">'+svg(IC_del)+'</button></td></tr>';}).join("")
     :'<tr><td colspan="9"><div class="empty" style="padding:24px"><h4>No driver accounts yet</h4><p>Add a driver to give them app access.</p></div></td></tr>';
   return '<div class="toolbar" style="margin-bottom:14px"><div class="search">'+svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>')+'<input id="ccSearch" placeholder="Search name, plate or phone…" value="'+esc(CC.f.search)+'" autocomplete="off"></div><span style="flex:1"></span><button class="btn primary sm" data-act="ccadd">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add driver</button></div>'+
     '<div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>ERP employee</th><th>Phone (login)</th><th>Platforms</th><th>Status</th><th>Device</th><th>PIN</th><th>Lifetime</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
@@ -8623,6 +8636,51 @@ document.addEventListener("change",function(e){if(getRoute()!==PNL_ROUTE)return;
 });
 window.addEventListener("afterprint",function(){document.documentElement.classList.remove("pnlp");});
 (function(){var rz=null,lw=innerWidth;window.addEventListener("resize",function(){if(getRoute()!==PNL_ROUTE||Math.abs(innerWidth-lw)<40)return;lw=innerWidth;clearTimeout(rz);rz=setTimeout(function(){document.documentElement.classList.add("v3-calm");pagePnl();},200);});})();
+
+/* ===== Command → Driver Accounts: "Clear history" for one driver
+   Deletes that driver's shifts (= Shift Logs + KM Records), GPS trail points, fuel audits, SOS alerts
+   and vehicle checks from the Command Center. The driver account, PIN and ERP registers stay. Admin only. ===== */
+function ccHistCounts(id){
+  var s=String(id),by=function(a){return (a||[]).filter(function(x){return String(x.driver_id)===s;});};
+  var sh=by(CC.shifts);
+  return {shifts:sh.length,km:sh.filter(function(x){return x.end_odo!=null||x.distance!=null;}).length,fuel:by(CC.fuel).length,sos:by(CC.sos).length,checks:by(CC.checks).length,active:sh.some(function(x){return x.status==="ACTIVE";})};
+}
+function ccHistModal(id){
+  var d=ccDrv(id);if(!d)return;
+  if(!ccIsAdmin()){toast("Only an admin can clear history.","err");return;}
+  var c=ccHistCounts(id),tot=c.shifts+c.fuel+c.sos+c.checks;
+  var ex=document.getElementById("overlay");if(ex)ex.remove();
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  function row(l,n,sub){return '<div class="cch-r"><span>'+esc(l)+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><b class="mono">'+n+'</b></div>';}
+  ov.innerHTML='<div class="modal" style="max-width:460px"><div class="modal-h"><div><h3>Clear history — '+esc(d.name)+'</h3></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
+    '<div class="modal-b">'+
+      (c.active?'<div class="cch-warn">'+esc(d.name)+' is on duty right now. End the shift first, then clear the history.</div>':'')+
+      '<div class="cch-list">'+row("Shift Logs",c.shifts,"with their GPS route")+row("KM Records",c.km,"from those shifts")+row("Fuel Audits",c.fuel)+row("SOS alerts",c.sos)+row("Vehicle checks",c.checks)+'</div>'+
+      '<p class="cch-keep">Stays: the driver account, phone login and PIN, and everything in the ERP registers (Employees, Maintenance, Incidents).</p>'+
+      '<label class="cch-ok"><input type="checkbox" id="cchOk"'+(c.active||!tot?" disabled":"")+'> I understand this deletes '+esc(d.name.split(" ")[0])+'’s Command history for good. It can’t be undone.</label>'+
+    '</div><div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn danger" id="cchGo" data-id="'+esc(String(id))+'" disabled>'+svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>')+(tot?'Clear history':'Nothing to clear')+'</button></div></div>';
+  document.body.appendChild(ov);
+  var ok=ov.querySelector("#cchOk"),go=ov.querySelector("#cchGo");
+  ok.addEventListener("change",function(){go.disabled=!ok.checked;});
+  go.addEventListener("click",function(){if(!go.disabled)ccHistRun(id,go);});
+}
+function ccHistRun(id,btn){
+  var d=ccDrv(id),s=String(id),c=ccHistCounts(id);if(!d)return;
+  if(c.active){toast(d.name+" is on duty — end the shift first.","err");return;}
+  btn.disabled=true;btn.textContent="Clearing…";
+  var steps=[["shift_points","GPS route"],["sos_alerts","SOS alerts"],["vehicle_checks","vehicle checks"],["fuel_records","fuel audits"],["shifts","shift logs"]],done=[];
+  var chain=Promise.resolve();
+  steps.forEach(function(st){chain=chain.then(function(){return SB.from(st[0]).delete().eq("driver_id",s).then(function(r){if(r&&r.error)throw {step:st[1],msg:r.error.message};done.push(st[0]);});});});
+  chain.then(function(){
+    ["shifts","fuel","sos","checks"].forEach(function(k){if(CC[k])CC[k]=CC[k].filter(function(x){return String(x.driver_id)!==s;});});
+    try{logAudit("delete","ccdrivers",s,d.name,[{f:"history",l:"Command history",from:c.shifts+" shifts · "+c.fuel+" fuel · "+c.sos+" SOS · "+c.checks+" checks",to:"cleared"}]);}catch(e){}
+    closeForm();toast("History cleared for "+d.name+".","good");renderPage();
+  }).catch(function(err){
+    ["shifts","fuel","sos","checks"].forEach(function(k){var t={shifts:"shifts",fuel:"fuel_records",sos:"sos_alerts",checks:"vehicle_checks"}[k];if(done.indexOf(t)>=0&&CC[k])CC[k]=CC[k].filter(function(x){return String(x.driver_id)!==s;});});
+    closeForm();toast("Stopped while clearing "+((err&&err.step)||"history")+": "+((err&&err.msg)||"network error")+". Try again.","err");renderPage();
+  });
+}
+document.addEventListener("click",function(e){var a=e.target.closest('[data-act="cchist"]');if(!a)return;e.preventDefault();ccHistModal(a.getAttribute("data-id"));});
 
 /* ===== v3 redesign module ===== */
 /* ================================================================
