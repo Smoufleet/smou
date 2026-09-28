@@ -1541,6 +1541,109 @@ html[data-skin="night"] #authgate .lg-cloud{opacity:.15}
 @keyframes v3ldIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
 @keyframes v3ldFill{0%{stroke-dashoffset:330}70%,85%{stroke-dashoffset:40}100%{stroke-dashoffset:330}}
 @keyframes v3ldNeedle{0%{transform:rotate(-90deg)}70%{transform:rotate(68deg)}76%{transform:rotate(58deg)}85%{transform:rotate(64deg)}100%{transform:rotate(-90deg)}}
+
+/* ===== Flat tables: register tables run edge to edge (no rounded card, no side gaps).
+   Stat boxes above the tables, dashboards and forms keep their normal look. ===== */
+#page.flat{--pgx:24px}
+#page.flat .flat-tb{margin:0 calc(-1 * var(--pgx)) 0 !important;padding:10px var(--pgx);background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;gap:8px;align-items:center;box-shadow:none}
+#page.flat .flat-tb .search{flex:0 1 300px;min-width:200px}
+#page.flat .flat-tb .search input{height:34px;border-radius:7px}
+#page.flat .flat-tb .btn.sm{height:34px;border-radius:7px}
+#page.flat .flat-tbl{margin-left:calc(-1 * var(--pgx)) !important;margin-right:calc(-1 * var(--pgx)) !important;border-radius:0 !important;border-left:0 !important;border-right:0 !important;box-shadow:none !important;background:var(--panel) !important}
+#page.flat .flat-tb + .flat-tbl,#page.flat .flat-tb + .selbar + .flat-tbl,#page.flat .flat-tb + .selbar[hidden] + .flat-tbl{border-top:0 !important}
+#page.flat .selbar{margin:0 calc(-1 * var(--pgx)) !important;border-radius:0 !important;border-left:0;border-right:0;padding-left:var(--pgx);padding-right:var(--pgx)}
+#page.flat .flat-tbl + .tbl-foot,#page.flat .flat-foot{margin:0 calc(-1 * var(--pgx)) !important;padding:10px var(--pgx);background:var(--panel);border-bottom:1px solid var(--line);font-family:"Plus Jakarta Sans",sans-serif;font-size:12px}
+#page.flat .flat-tbl.card > .card-h{padding:14px var(--pgx) 10px !important;border-bottom:1px solid var(--line)}
+#page.flat .flat-tbl.card > .card-b{padding:0 !important}
+#page.flat .flat-tbl.card{margin-bottom:16px}
+#page.flat .flat-tbl table.dt{border-radius:0}
+#page.flat .flat-tbl table.dt thead th{position:sticky;top:0;z-index:2;background:var(--surface-2) !important;font:600 12px/1.2 "Plus Jakarta Sans",sans-serif !important;letter-spacing:0 !important;text-transform:none !important;color:var(--muted) !important;padding:10px 12px !important;border-bottom:1px solid var(--line);white-space:nowrap;user-select:none}
+#page.flat .flat-tbl table.dt thead th:first-child,#page.flat .flat-tbl table.dt tbody td:first-child{padding-left:var(--pgx) !important}
+#page.flat .flat-tbl table.dt thead th:last-child,#page.flat .flat-tbl table.dt tbody td:last-child{padding-right:var(--pgx) !important}
+#page.flat .flat-tbl table.dt tbody td{padding:11px 12px;border-bottom:1px solid var(--line)}
+#page.flat .flat-tbl table.dt tbody tr:last-child td{border-bottom:0}
+#page.flat .flat-tbl table.dt tbody tr:hover td{background:var(--surface-2)}
+/* sorting: no Excel-style arrows on every column — only the sorted one shows ↑ / ↓ */
+#page.flat table.dt thead th[data-sort],#page.flat table.dt thead th.fsort{cursor:pointer}
+#page.flat table.dt thead th[data-sort]:hover,#page.flat table.dt thead th.fsort:hover{color:var(--ink) !important}
+#page.flat table.dt thead th.fsort::after{content:"↑";display:inline-block;width:12px;margin-left:4px;opacity:0;color:var(--muted);transition:opacity .12s}
+#page.flat table.dt thead th.fsort:hover::after{opacity:.5}
+#page.flat table.dt thead th.fsorted::after{opacity:1;color:var(--acc)}
+#page.flat table.dt thead th.fdesc::after{content:"↓"}
+#page.flat table.dt thead th .sar{display:inline-block;width:12px;margin-left:4px;opacity:0 !important;color:var(--muted);font-family:"Plus Jakarta Sans",sans-serif;transition:opacity .12s}
+#page.flat table.dt thead th[data-sort]:hover .sar{opacity:.5 !important}
+#page.flat table.dt thead th.sorted,#page.flat table.dt thead th.fsorted{color:var(--ink) !important}
+#page.flat table.dt thead th.sorted .sar{opacity:1 !important;color:var(--acc) !important}
+/* Filter / Sort buttons, chips and menus */
+.fl-btn{height:34px;padding:0 11px;border-radius:7px;border:1px solid transparent;background:none;display:inline-flex;align-items:center;gap:7px;font:600 13px "Plus Jakarta Sans",sans-serif;color:var(--ink-2);white-space:nowrap;cursor:pointer}
+.fl-btn:hover,.fl-btn.on{background:var(--surface-3,var(--surface-2))}
+.fl-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.fl-btn b{color:var(--ink);font-weight:700}
+.fl-btn.box{border-color:var(--line-2);background:var(--panel)}
+.fl-btn.box:hover,.fl-btn.box.on{background:var(--surface-2)}
+.fl-btn .cv{width:13px;height:13px;color:var(--muted)}
+.fl-chip{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 3px 0 10px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line);font:600 12.5px "Plus Jakarta Sans",sans-serif;color:var(--ink-2);max-width:320px}
+.fl-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-chip em{font-style:normal;color:var(--muted);font-weight:500}
+.fl-chip button{width:24px;height:24px;border-radius:5px;display:grid;place-items:center;color:var(--muted);background:none;border:0;cursor:pointer;flex:none}
+.fl-chip button:hover{background:var(--line-2);color:var(--ink)}
+.fl-chip button svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.fl-grow{flex:1}
+.fl-pop{position:fixed;z-index:400;background:var(--panel);border:1px solid var(--line-2);border-radius:9px;box-shadow:0 18px 40px -14px rgba(0,0,0,.35);min-width:220px;max-width:320px;padding:5px;font:500 13px "Plus Jakarta Sans",sans-serif;color:var(--ink)}
+.fl-pop h6{font:600 10.5px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px 6px;margin:0}
+.fl-pop .it{display:flex;align-items:center;gap:8px;width:100%;padding:7px 8px;border-radius:6px;text-align:start;color:var(--ink-2);background:none;border:0;cursor:pointer;font:inherit}
+.fl-pop .it:hover{background:var(--surface-2)}
+.fl-pop .it .n{margin-left:auto;font:500 11px "JetBrains Mono",monospace;color:var(--muted);padding-left:10px}
+.fl-pop .it .ck{width:15px;height:15px;border:1.5px solid var(--line-2);border-radius:4px;display:grid;place-items:center;flex:none}
+.fl-pop .it.on .ck{background:var(--acc);border-color:var(--acc)}
+.fl-pop .it.on .ck::after{content:"";width:7px;height:4px;border:2px solid var(--acc-ink,#fff);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.fl-pop .it.cur{color:var(--ink);font-weight:700}
+.fl-pop .it .tick{width:15px;flex:none;color:var(--acc);font-weight:800}
+.fl-pop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.fl-pop input.q{width:100%;height:32px;border:1px solid var(--line-2);border-radius:6px;padding:0 9px;margin:2px 0 4px;background:var(--panel);color:var(--ink);outline:0;font:inherit;box-sizing:border-box}
+.fl-pop input.q:focus{border-color:var(--acc)}
+.fl-pop .lst{max-height:280px;overflow:auto}
+.fl-pop .zero{opacity:.5}
+/* nicer month / driver / platform pickers in place of the plain browser dropdowns */
+select.fl-hidden{position:absolute !important;opacity:0 !important;pointer-events:none !important;width:1px !important;height:1px !important}
+[dir="rtl"] .fl-pop .it .n{margin-left:0;margin-right:auto;padding-left:0;padding-right:10px}
+@media (max-width:860px){
+  #page.flat .flat-tb{padding:10px var(--pgx)}
+  #page.flat .flat-tb .search{flex:1 1 100%}
+  #page.flat .flat-tbl{background:transparent !important}
+  #page.flat .flat-tbl .dt tbody tr{border-radius:0 !important;border-left:0 !important;border-right:0 !important;margin:0 !important;box-shadow:none !important;border-top:0 !important;padding:10px var(--pgx) !important}
+  #page.flat .flat-tbl table.dt tbody td:first-child{padding-left:0 !important}
+  #page.flat .flat-tbl table.dt tbody td:last-child{padding-right:0 !important}
+}
+
+#page.flat .flat-in{margin:0 !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;background:transparent !important}
+/* New Expense */
+#page.flatform{--pgx:24px}
+#page.flatform .nx{margin:-4px calc(-1 * var(--pgx)) 0;background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#page.flatform .nx-row{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;padding:20px var(--pgx);border-bottom:1px solid var(--line)}
+#page.flatform .nx-row:last-child{border-bottom:0}
+#page.flatform .nx-l h4{margin:0;font:700 14px/1.3 "Plus Jakarta Sans",sans-serif;color:var(--ink)}
+#page.flatform .nx-l p{margin:4px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted)}
+#page.flatform .nx-hint{display:block;margin-top:4px;font:600 12px "JetBrains Mono",monospace;color:var(--muted)}
+#page.flatform .nx-f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;max-width:760px;align-content:start}
+#page.flatform .nx-f.nx-one{display:block;max-width:760px}
+#page.flatform .nx-f .field{margin:0}
+#page.flatform .nx-f .field.wide{grid-column:1/-1}
+#page.flatform .nx-f .field label{font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px;display:block}
+#page.flatform .nx-f .field input,#page.flatform .nx-f .field select,#page.flatform .nx-f .field textarea{height:38px;border-radius:7px;border:1px solid var(--line-2);background:var(--panel);font-size:13.5px}
+#page.flatform .nx-f .field textarea{height:80px}
+#page.flatform .nx-f .field input:focus,#page.flatform .nx-f .field select:focus,#page.flatform .nx-f .field textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent);outline:0}
+#page.flatform .nx-bar{position:sticky;bottom:0;z-index:5;display:flex;gap:10px;align-items:center;padding:12px var(--pgx);background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#page.flatform .nx-f #todayList .empty{padding:14px 0 !important;text-align:left}
+@media (max-width:860px){
+  #page.flatform .nx-row{grid-template-columns:1fr;gap:10px;padding:16px var(--pgx)}
+  #page.flatform .nx-f{grid-template-columns:1fr}
+  #page.flatform .nx-bar{bottom:calc(64px + env(safe-area-inset-bottom))}
+}
+#page.flatform .nx-bar .btn.amber{background:var(--acc);border-color:var(--acc);color:var(--acc-ink,#fff)}
+@media (min-width:861px){#page.flatform .nx-bar{padding-right:calc(var(--pgx) + 76px)}}
+
+.fl-btn.box.on-val{border-color:var(--acc);color:var(--ink);background:color-mix(in srgb,var(--acc) 8%,var(--panel))}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -6605,6 +6708,233 @@ msFilter=function(ent,f){
     '<div class="ms-actions"><a data-msall>Select all</a><a data-msclear>Clear</a></div>'+
     '<div class="ms-list">'+(opts.length?opts.map(function(o){var c=sel.some(function(s){return fNorm(s)===fNorm(o.v);});return '<label class="ms-opt'+(o.c?"":" zero")+'"><input type="checkbox" value="'+esc(o.v)+'"'+(c?" checked":"")+'><span>'+esc(o.v)+'</span><em class="ms-n">'+o.c+'</em></label>';}).join(""):'<div class="ms-empty">No options</div>')+'</div></div></div>';
 };
+
+/* ===== Flat tables: edge-to-edge register tables, clean Filter / Sort menus, nicer pickers.
+   Only on the pages that show a table (see flatActive). Dashboards, Live Map, forms and the
+   stat boxes above tables keep their normal look. Row click still opens the full record page. ===== */
+var FLAT={pop:null,sorts:{},off:false,t:null};
+var FLAT_ROUTES={"grd/drivers":1,"grd/sims":1,"grd/fuel":1,"grd/housing":1,"grd/compdocs":1,"grd/attendance":1,
+  "grd/vehicles":1,"grd/service":1,"fueltracker":1,"grd/maintenance":1,"grd/fines":1,"grd/incidents":1,
+  "finance/log":1,"grd/income":1,"grd/payroll":1,"grd/funds":1};
+function flatActive(){
+  if(FLAT.off)return false;
+  var r=getRoute(),p=r.split("/");
+  if(p[0]==="cc")return p.length===2&&p[1]!=="live";
+  if(r==="orders")return typeof ordersView!=="undefined"&&ordersView!=="dash";
+  if(r==="grd/hiring")return typeof hiringView!=="undefined"&&hiringView==="list";
+  return !!FLAT_ROUTES[r];
+}
+var FL_I={filter:'<path d="M3 5h18M6 12h12M10 19h4"/>',sort:'<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',cv:'<path d="M6 9l6 6 6-6"/>'};
+function flI(n,c){return '<svg viewBox="0 0 24 24" aria-hidden="true"'+(c?' class="'+c+'"':"")+'>'+FL_I[n]+'</svg>';}
+
+/* ---------- popover ---------- */
+function flClose(){if(FLAT.pop){FLAT.pop.remove();FLAT.pop=null;}$$(".fl-btn.on").forEach(function(b){b.classList.remove("on");});}
+function flOpen(anchor,html,after){
+  flClose();var d=document.createElement("div");d.className="fl-pop";d.innerHTML=html;document.body.appendChild(d);
+  if(document.documentElement.getAttribute("dir")==="rtl")d.setAttribute("dir","rtl");
+  var r=anchor.getBoundingClientRect(),x=Math.min(r.left,innerWidth-d.offsetWidth-10),y=r.bottom+6;
+  if(y+d.offsetHeight>innerHeight-10)y=Math.max(10,r.top-d.offsetHeight-6);
+  d.style.left=Math.max(10,x)+"px";d.style.top=y+"px";FLAT.pop=d;anchor.classList.add("on");d._anchor=anchor;if(after)after(d);return d;
+}
+function flSearchBox(d){var q=d.querySelector("input.q");if(!q)return;setTimeout(function(){try{q.focus();}catch(e){}},20);
+  q.addEventListener("input",function(){var s=q.value.toLowerCase();$$(".lst .it",d).forEach(function(b){b.style.display=b.textContent.toLowerCase().indexOf(s)>=0?"":"none";});});}
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&FLAT.pop)flClose();});
+addEventListener("resize",flClose);
+document.addEventListener("scroll",function(e){if(FLAT.pop&&!FLAT.pop.contains(e.target))flClose();},true);
+
+/* ---------- register pages: Filter + Sort in the toolbar ---------- */
+(function(){
+  var _msf=msFilter;
+  msFilter=function(ent,f){return flatActive()?"":_msf.apply(this,arguments);};   /* the old dropdown row is replaced by one Filter button */
+  var _pr=pageRegister;
+  pageRegister=function(pg,ent){
+    var r=_pr.apply(this,arguments);
+    try{if(flatActive())flRegToolbar(pg,ent);}catch(e){}
+    return r;
+  };
+  var _fr=fillRows;
+  fillRows=function(ent){var r=_fr.apply(this,arguments);try{if(flatActive())flPaintReg();}catch(e){}return r;};
+})();
+function flRegToolbar(pg,ent){
+  var tb=pg.querySelector(".toolbar");if(!tb||tb.querySelector("[data-flf]"))return;
+  var cfg=ENT[ent],srch=tb.querySelector(".search");
+  var html=((cfg.filters||[]).length?'<button type="button" class="fl-btn" data-flf>'+flI("filter")+'Filter</button><span class="fl-chips" style="display:contents"></span>':"")+
+    '<span class="fl-grow"></span><button type="button" class="fl-btn" data-fls>'+flI("sort")+'<span class="fl-sl">Sort</span></button>';
+  if(srch)srch.insertAdjacentHTML("afterend",html);else tb.insertAdjacentHTML("afterbegin",html);
+  flPaintReg();
+}
+function flFilterLab(f){return shortLab(f.lab);}
+function flPaintReg(){
+  var tb=document.querySelector("#page .toolbar [data-fls]");if(!tb||!curEnt||!ENT[curEnt])return;
+  var cfg=ENT[curEnt],box=document.querySelector("#page .toolbar .fl-chips");
+  if(box)box.innerHTML=(cfg.filters||[]).filter(function(f){return (view.filters[f.k]||[]).length;}).map(function(f){var v=view.filters[f.k];
+    return '<span class="fl-chip"><span>'+esc(flFilterLab(f))+' <em>is</em> '+esc(v.length>2?v.slice(0,2).join(", ")+" +"+(v.length-2):v.join(", "))+'</span><button type="button" data-flrm="'+f.k+'" aria-label="Remove filter">'+flI("x")+'</button></span>';}).join("");
+  var sl=tb.querySelector(".fl-sl"),c=view.sort!=null?cfg.columns[view.sort]:null;
+  sl.innerHTML=c?'Sorted by <b>'+esc(c.h)+'</b> '+(view.dir>0?"↑":"↓"):"Sort";
+  $$("#thead th[data-sort]").forEach(function(th){var i=+th.getAttribute("data-sort"),ar=th.querySelector(".sar");if(ar&&view.sort!==i)ar.textContent="↑";});
+}
+function flFilterMenu(btn,k){
+  var cfg=ENT[curEnt];if(!cfg)return;
+  if(!k){flOpen(btn,'<h6>Filter by</h6>'+(cfg.filters||[]).map(function(f){var n=(view.filters[f.k]||[]).length;return '<button type="button" class="it" data-flcol="'+f.k+'">'+esc(flFilterLab(f))+'<span class="n">'+(n?n+" on":"›")+'</span></button>';}).join(""));return;}
+  var f=(cfg.filters||[]).filter(function(x){return x.k===k;})[0];if(!f)return;
+  var opts=msOptions(curEnt,f),sel=view.filters[k]||[];
+  flOpen(btn,'<h6>'+esc(flFilterLab(f))+'</h6>'+(opts.length>7?'<input class="q" placeholder="Search…" autocomplete="off">':"")+
+    '<div class="lst">'+(opts.length?opts.map(function(o){var on=sel.some(function(s){return fNorm(s)===fNorm(o.v);});return '<button type="button" class="it'+(on?" on":"")+(o.c?"":" zero")+'" data-flv="'+esc(o.v)+'"><span class="ck"></span><span>'+esc(o.v)+'</span><span class="n">'+o.c+'</span></button>';}).join(""):'<div class="it" style="cursor:default">No values yet</div>')+'</div>'+
+    (sel.length?'<hr><button type="button" class="it" data-flclr="'+k+'">Clear '+esc(flFilterLab(f).toLowerCase())+'</button>':""),function(d){d.setAttribute("data-k",k);flSearchBox(d);});
+}
+function flSortMenu(btn){
+  var cfg=ENT[curEnt];if(!cfg)return;
+  flOpen(btn,'<h6>Sort by</h6>'+cfg.columns.map(function(c,i){var on=view.sort===i;return '<button type="button" class="it'+(on?" cur":"")+'" data-flsort="'+i+'"><span class="tick">'+(on?"✓":"")+'</span>'+esc(c.h)+'<span class="n">'+(on?(view.dir>0?"↑ low → high":"↓ high → low"):"")+'</span></button>';}).join("")+
+    (view.sort!=null?'<hr><button type="button" class="it" data-flsort="">Clear sort</button>':""));
+}
+
+/* ---------- other tables (Command, Orders, Payroll, Fuel Tracker): click a column to sort ---------- */
+function flCellKey(td){
+  var t=(td?td.textContent:"").replace(/\s+/g," ").trim();if(!t||t==="—")return {e:1,s:""};
+  var n=t.replace(/[,+%]|KWD|KD|km|\s/gi,"");if(/^-?\d+(\.\d+)?$/.test(n))return {n:parseFloat(n)};
+  var d=Date.parse(t.replace(/^(\d{1,2}) (\w{3}) (\d{2})\b.*/,"$1 $2 20$3"));if(/^\d{1,2} \w{3} \d{2}/.test(t)&&isFinite(d))return {n:d};
+  return {s:t.toLowerCase()};
+}
+function flSortTable(tbl,ci,dir){
+  var tb=tbl.tBodies[0];if(!tb)return;var rows=Array.prototype.slice.call(tb.rows).filter(function(r){return r.cells.length>ci&&!r.querySelector(".empty");});
+  if(rows.length<2)return;
+  rows.sort(function(a,b){var x=flCellKey(a.cells[ci]),y=flCellKey(b.cells[ci]);if(x.e&&!y.e)return 1;if(y.e&&!x.e)return -1;
+    if(x.n!=null&&y.n!=null)return (x.n-y.n)*dir;return String(x.s!=null?x.s:x.n).localeCompare(String(y.s!=null?y.s:y.n))*dir;});
+  var fr=document.createDocumentFragment();rows.forEach(function(r){fr.appendChild(r);});tb.appendChild(fr);
+  $$("thead th",tbl).forEach(function(th,i){th.classList.toggle("fsorted",i===ci);th.classList.toggle("fdesc",i===ci&&dir<0);});
+}
+function flSortKey(tbl){var all=$$("#page .flat-tbl table.dt");return getRoute()+"|"+(typeof ordersView!=="undefined"?ordersView:"")+"|"+all.indexOf(tbl);}
+
+/* ---------- nicer pickers: month, driver, platform, status ---------- */
+function flEnhanceSelect(s){
+  if(s.getAttribute("data-fl"))return;s.setAttribute("data-fl","1");
+  var b=document.createElement("button");b.type="button";b.className="fl-btn box";b.setAttribute("data-flsel","1");b._sel=s;
+  s.parentNode.insertBefore(b,s);s.classList.add("fl-hidden");s.tabIndex=-1;flPaintSel(b);
+}
+/* multi-choice pickers: Command (drivers / platforms / statuses) and the Orders month */
+var FLM={};
+function flMKey(s){var c=s.getAttribute("data-ccf");if(c)return "cc:"+c;if(s.id==="ordMonthSel")return "om";return "";}
+function flNoun(k){return {"cc:driver":"drivers","cc:platform":"platforms","cc:status":"statuses","om":"months"}[k]||"selected";}
+function flPaintSel(b){var s=b._sel,k=flMKey(s),v=FLM[k]||[],txt;
+  if(k&&v.length){var o1=Array.prototype.filter.call(s.options,function(o){return o.value===v[0];})[0];txt=v.length===1?(o1?o1.text:v[0]):v.length+" "+flNoun(k);}
+  else{var o=s.options[s.selectedIndex];txt=o?o.text:"";}
+  b.classList.toggle("on-val",!!(k&&v.length));b.innerHTML='<span>'+esc(txt)+'</span>'+flI("cv","cv");}
+function flMultiMenu(b){
+  var s=b._sel,k=flMKey(s),v=FLM[k]||[],opts=Array.prototype.slice.call(s.options).filter(function(o){return o.value!=="all";});
+  flOpen(b,(opts.length>8?'<input class="q" placeholder="Search…" autocomplete="off">':"")+'<div class="lst">'+opts.map(function(o){var on=v.indexOf(o.value)>=0;return '<button type="button" class="it'+(on?" on":"")+'" data-flmv="'+esc(o.value)+'"><span class="ck"></span><span>'+esc(o.text)+'</span></button>';}).join("")+'</div>'+
+    '<hr><div style="display:flex;gap:4px"><button type="button" class="it" data-flmall style="flex:1">Select all</button><button type="button" class="it" data-flmclr style="flex:1">Clear</button></div>',function(d){d._sel=s;d._btn=b;d._k=k;flSearchBox(d);});
+}
+function flMultiApply(k,s){
+  var v=FLM[k]||[];
+  if(k.indexOf("cc:")===0){CC.f[k.slice(3)]="all";renderPage();}
+  else if(k==="om"){ordersMonth="all";pageOrders($("#page"));}
+}
+(function(){
+  var _cp=ccPass;
+  ccPass=function(x){if(!_cp.apply(this,arguments))return false;
+    var d=FLM["cc:driver"],p=FLM["cc:platform"],st=FLM["cc:status"];
+    if(d&&d.length&&d.indexOf(String(x.driver_id))<0)return false;
+    if(p&&p.length&&p.indexOf(x.platform)<0)return false;
+    if(st&&st.length&&st.indexOf(x.status)<0)return false;return true;};
+  var _fp=ccFuelPage;
+  ccFuelPage=function(){var d=FLM["cc:driver"];if(!d||!d.length)return _fp.apply(this,arguments);var keep=CC.fuel;CC.fuel=keep.filter(function(r){return d.indexOf(String(r.driver_id))>=0;});try{return _fp.apply(this,arguments);}finally{CC.fuel=keep;}};
+  var _of=ordFilter;
+  ordFilter=function(P){var m=FLM.om,r=_of.apply(this,arguments);if(!m||!m.length)return r;return r.filter(function(x){return m.indexOf(perfMKey(x))>=0;});};
+  var _od=ordersDaily;
+  ordersDaily=function(){var m=FLM.om;if(!m||!m.length)return _od.apply(this,arguments);var keep=STATE.grd.orderlog;
+    STATE.grd.orderlog=(keep||[]).filter(function(e){var dd=parseD(e.date);return dd&&m.indexOf(dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0"))>=0;});
+    try{return _od.apply(this,arguments);}finally{STATE.grd.orderlog=keep;}};
+  /* a plain browser change on these pickers resets the multi choice */
+  document.addEventListener("change",function(e){var s=e.target;if(s&&s.tagName==="SELECT"&&!s._flMulti){var k=flMKey(s);if(k&&FLM[k])FLM[k]=[];}},true);
+})();
+function flSelMenu(b){
+  var s=b._sel,opts=Array.prototype.slice.call(s.options);
+  flOpen(b,(opts.length>8?'<input class="q" placeholder="Search…" autocomplete="off">':"")+'<div class="lst">'+opts.map(function(o,i){var on=i===s.selectedIndex;return '<button type="button" class="it'+(on?" cur":"")+'" data-flopt="'+i+'"><span class="tick">'+(on?"✓":"")+'</span>'+esc(o.text)+'</button>';}).join("")+'</div>',function(d){d._sel=s;d._btn=b;flSearchBox(d);});
+}
+
+/* ---------- apply after every page draw ---------- */
+function flApply(){
+  var pg=document.getElementById("page");if(!pg)return;
+  var r=getRoute(),on=flatActive();
+  if(pg.classList.contains("flat")!==on)pg.classList.toggle("flat",on);
+  var ff=r==="finance/new"&&!FLAT.off&&!!pg.querySelector(".nx");if(pg.classList.contains("flatform")!==ff)pg.classList.toggle("flatform",ff);
+  if(r==="orders")$$("#ordMonthSel",pg).forEach(flEnhanceSelect);          /* month picker fixed on every Orders view */
+  if(!on)return;
+  var px=parseFloat(getComputedStyle(pg).paddingLeft)||24;if(pg.style.getPropertyValue("--pgx")!==px+"px")pg.style.setProperty("--pgx",px+"px");
+  $$(".card",pg).forEach(function(c){if(!c.classList.contains("flat-tbl")&&!c.classList.contains("stat")&&c.querySelector("table.dt")&&!c.querySelector(":scope .card table.dt"))c.classList.add("flat-tbl");});
+  $$(".tbl-wrap",pg).forEach(function(w){var inCard=w.parentElement&&w.parentElement.closest(".flat-tbl");   /* a table box inside a flattened card only loses its frame */
+    if(inCard){if(!w.classList.contains("flat-in"))w.classList.add("flat-in");w.classList.remove("flat-tbl");}
+    else if(!w.classList.contains("flat-tbl"))w.classList.add("flat-tbl");});
+  $$(".toolbar",pg).forEach(function(t){if(!t.classList.contains("flat-tb"))t.classList.add("flat-tb");});
+  $$("select.cc-sel, .flat-tb select, #payMonthSel",pg).forEach(flEnhanceSelect);
+  $$(".flat-tbl table.dt",pg).forEach(function(tbl){
+    if(tbl.querySelector("#thead")||tbl.querySelector("thead#thead"))return;                  /* register tables sort on their own */
+    if(tbl.getAttribute("data-fsort"))return;tbl.setAttribute("data-fsort","1");
+    $$("thead th",tbl).forEach(function(th,i){if(!th.textContent.trim()||th.classList.contains("selcol")||th.classList.contains("actcol"))return;th.classList.add("fsort");th.setAttribute("data-ci",i);});
+    var sv=FLAT.sorts[flSortKey(tbl)];if(sv)flSortTable(tbl,sv.ci,sv.dir);
+  });
+}
+function flSchedule(){if(FLAT.t)return;FLAT.t=requestAnimationFrame(function(){FLAT.t=null;try{flApply();}catch(e){}});}
+(function(){
+  var root=document.getElementById("root")||document.body;
+  new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var t=ms[i].target;if(t.id==="page"||(t.closest&&t.closest("#page"))||t===root){flSchedule();return;}}}).observe(root,{childList:true,subtree:true});
+  window.addEventListener("hashchange",function(){flClose();flSchedule();});
+})();
+window.flatSetOff=function(v){FLAT.off=!!v;flClose();try{renderPage();}catch(e){}flSchedule();};
+
+/* ---------- clicks ---------- */
+document.addEventListener("click",function(e){
+  var t=e.target,b;
+  if(FLAT.pop&&FLAT.pop.contains(t)){
+    if((b=t.closest("[data-flcol]"))){flFilterMenu(document.querySelector("#page [data-flf]"),b.getAttribute("data-flcol"));return;}
+    if((b=t.closest("[data-flv]"))){var k=FLAT.pop.getAttribute("data-k"),v=b.getAttribute("data-flv"),a=(view.filters[k]||[]).slice(),ix=-1;
+      a.forEach(function(x,i){if(fNorm(x)===fNorm(v))ix=i;});if(ix>=0)a.splice(ix,1);else a.push(v);view.filters[k]=a;b.classList.toggle("on",ix<0);fillRows(curEnt);return;}
+    if((b=t.closest("[data-flclr]"))){view.filters[b.getAttribute("data-flclr")]=[];flClose();fillRows(curEnt);return;}
+    if((b=t.closest("[data-flsort]"))){var sv=b.getAttribute("data-flsort");if(sv==="")view.sort=null;else{var i2=+sv;if(view.sort===i2)view.dir*=-1;else{view.sort=i2;view.dir=1;}}flClose();fillRows(curEnt);return;}
+    if((b=t.closest("[data-flmv]"))||t.closest("[data-flmall]")||t.closest("[data-flmclr]")){var P2=FLAT.pop,k2=P2._k,sel2=P2._sel,v2=(FLM[k2]||[]).slice();
+      if(t.closest("[data-flmall]"))v2=$$("[data-flmv]",P2).filter(function(x){return x.style.display!=="none";}).map(function(x){return x.getAttribute("data-flmv");}).concat(v2).filter(function(x,i,a){return a.indexOf(x)===i;});
+      else if(t.closest("[data-flmclr]"))v2=[];
+      else{var val=b.getAttribute("data-flmv"),ix2=v2.indexOf(val);if(ix2>=0)v2.splice(ix2,1);else v2.push(val);}
+      FLM[k2]=v2;$$("[data-flmv]",P2).forEach(function(x){x.classList.toggle("on",v2.indexOf(x.getAttribute("data-flmv"))>=0);});
+      var btn2=P2._btn;flPaintSel(btn2);clearTimeout(FLAT.mt);FLAT.mt=setTimeout(function(){var keepPop=FLAT.pop;FLAT.pop=null;flMultiApply(k2,sel2);FLAT.pop=keepPop;try{flApply();}catch(e){}
+        var nb=document.querySelector('#page [data-flsel]');var ns=null;$$("#page select").forEach(function(x){if(flMKey(x)===k2)ns=x;});
+        if(keepPop&&ns){var nb2=ns.previousElementSibling;if(nb2&&nb2.getAttribute("data-flsel")){keepPop._btn=nb2;keepPop._sel=ns;nb2.classList.add("on");}}},250);return;}
+    if((b=t.closest("[data-flopt]"))){var s=FLAT.pop._sel,btn=FLAT.pop._btn;s.selectedIndex=+b.getAttribute("data-flopt");flClose();flPaintSel(btn);s.dispatchEvent(new Event("change",{bubbles:true}));return;}
+    return;
+  }
+  if((b=t.closest("[data-flf]"))){e.preventDefault();if(b.classList.contains("on")){flClose();return;}flFilterMenu(b);return;}
+  if((b=t.closest("[data-fls]"))){e.preventDefault();if(b.classList.contains("on")){flClose();return;}flSortMenu(b);return;}
+  if((b=t.closest("[data-flsel]"))){e.preventDefault();if(b.classList.contains("on")){flClose();return;}if(flMKey(b._sel))flMultiMenu(b);else flSelMenu(b);return;}
+  if((b=t.closest("[data-flrm]"))){e.preventDefault();view.filters[b.getAttribute("data-flrm")]=[];fillRows(curEnt);return;}
+  if(FLAT.pop)flClose();
+  if((b=t.closest("#page.flat th.fsort"))){var tbl=b.closest("table"),ci=+b.getAttribute("data-ci"),key=flSortKey(tbl),cur=FLAT.sorts[key],dir=cur&&cur.ci===ci?-cur.dir:1;
+    FLAT.sorts[key]={ci:ci,dir:dir};flSortTable(tbl,ci,dir);return;}
+});
+
+/* Command Center: two callers asking for data at the same moment share one load (no busy loop) */
+(function(){if(typeof ccLoad!=="function")return;var _cl=ccLoad,pend=null;
+  ccLoad=function(){if(pend)return pend;var p=_cl.apply(this,arguments);if(p&&p.then){pend=p;p.then(function(){pend=null;},function(){pend=null;});}return p;};})();
+
+/* ===== New Expense: calm sectioned form (label on the left, fields on the right, save bar at the bottom) ===== */
+var NX_DESC={"Entry":"What was paid, when, and how much.","Tags":"Who and what it is for — this makes the reports work.","Accounting":"Fixed or variable cost, and whether a driver pays it back.","Notes":"Anything the office should know."};
+function nxDesc(g){if(NX_DESC[g])return NX_DESC[g];if(/salary|wage/i.test(g))return "Only for salaries — the month this payment belongs to.";return "";}
+function nxRestyle(pg){
+  var grid=pg.querySelector("#formGrid");if(!grid||pg.querySelector(".nx"))return;
+  var nx=document.createElement("div");nx.className="nx";var cur=null;
+  function sec(title,desc){var r=document.createElement("div");r.className="nx-row";r.innerHTML='<div class="nx-l"><h4>'+esc(title)+'</h4>'+(desc?'<p>'+esc(desc)+'</p>':"")+'</div><div class="nx-f"></div>';nx.appendChild(r);return r.querySelector(".nx-f");}
+  Array.prototype.slice.call(grid.children).forEach(function(el){
+    if(el.classList.contains("fieldset-lab")){var g=el.textContent.trim();cur=sec(/salary|wage/i.test(g)?"Salary month":g,nxDesc(g));return;}
+    if(!cur)cur=sec("Entry",nxDesc("Entry"));cur.appendChild(el);});
+  var rw=pg.querySelector("#rcpWrap");if(rw){var rf=sec("Receipt","Photo or PDF of the bill (optional).");rf.appendChild(rw);}
+  var save=pg.querySelector('[data-act="saveExp"]'),clr=pg.querySelector('[data-act="clearExp"]');
+  var bar=document.createElement("div");bar.className="nx-bar";if(save)bar.appendChild(save);if(clr)bar.appendChild(clr);
+  bar.insertAdjacentHTML("beforeend",'<span style="flex:1"></span><a class="btn ghost" data-route="finance/log">Open expense log</a>');
+  var tl=pg.querySelector("#todayList"),th=pg.querySelector("#todayHint");
+  if(tl){var tf=sec("Logged today","");var l=tf.parentNode.querySelector(".nx-l");if(th){th.className="nx-hint";l.appendChild(th);}tf.classList.add("nx-one");tf.appendChild(tl);}
+  var old=pg.firstElementChild;pg.insertBefore(nx,old);nx.insertBefore(bar,nx.querySelector(".nx-row:last-child"));if(old)old.remove();
+  pg.classList.add("flatform");var px=parseFloat(getComputedStyle(pg).paddingLeft)||24;pg.style.setProperty("--pgx",px+"px");
+}
+(function(){var _pne=pageNewExpense;pageNewExpense=function(pg){var r=_pne.apply(this,arguments);try{if(!FLAT.off)nxRestyle(pg);}catch(e){}return r;};})();
 
 /* ===== v3 redesign module ===== */
 /* ================================================================
