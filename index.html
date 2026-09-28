@@ -8343,6 +8343,7 @@ var PNL_COA=[
  {k:"fuel",n:"Fuel",src:"Fuel › Petrol, Diesel",g:"cos"},
  {k:"mnt",n:"Vehicle & bike maintenance",src:"Vehicle/Bike Maintenance (all)",g:"cos"},
  {k:"lease",n:"Vehicle lease",src:"Vehicle/Bike Acquisition › Lease Payment",g:"cos"},
+ {k:"vinst",n:"Vehicle installments",src:"Vehicle/Bike Acquisition › Monthly Installment",g:"cos"},
  {k:"vins",n:"Vehicle & bike insurance",src:"Insurance › Vehicle, Bike",g:"cos"},
  {k:"house",n:"Rider accommodation",src:"Rent › Accommodation",g:"cos"},
  {k:"data",n:"Rider SIM, data & GPS",src:"Communication › Mobile/Data Plan, GPS",g:"cos"},
@@ -8360,7 +8361,7 @@ var PNL_COA=[
  {k:"adm",n:"Office supplies & other admin",src:"Miscellaneous/Admin › Office Supplies, Other Admin · any unmapped category",g:"opx"},
  {tot:"opx",n:"Total operating expenses",ref:"3"},
  {key:"ebitda",n:"Operating profit before depreciation (EBITDA)"},{mg:"ebitda",n:"EBITDA margin"},
- {k:"dep",n:"Depreciation — vehicles & bikes",src:"Vehicle/Bike Acquisition › Full Purchase, Monthly Installment ÷ 36 months",g:"dep",ref:"4"},
+ {k:"dep",n:"Depreciation — vehicles & bikes",src:"Vehicle/Bike Acquisition › Full Purchase ÷ 36 months",g:"dep",ref:"4"},
  {net:1,n:"Net profit for the month",ref:"5"},{mg:"net",n:"Net margin"}
 ];
 var PNL_LINES=PNL_COA.filter(function(x){return x.k;});
@@ -8368,7 +8369,7 @@ var PNL_LINES=PNL_COA.filter(function(x){return x.k;});
 function pnlKeyOf(e){var c=(e.category||"").toLowerCase(),s=(e.sub||"").toLowerCase();
   if(/salar|wage/.test(c))return /incentive/.test(s)?"rinc":/food/.test(s)?"food":"SAL";
   if(/fuel/.test(c))return "fuel";if(/mainten|repair/.test(c))return "mnt";
-  if(/acqui|purchase/.test(c))return /lease/.test(s)?"lease":"CAP";
+  if(/acqui|purchase/.test(c))return /lease/.test(s)?"lease":/install|emi/.test(s)?"vinst":/full|purchase|buy/.test(s)?"CAP":"vinst";
   if(/insur/.test(c))return /health|staff|medical/.test(s)?"hins":"vins";
   if(/rent/.test(c))return /accom/.test(s)?"house":"orent";
   if(/communic/.test(c))return /app|subscr/.test(s)?"soft":"data";
@@ -8455,7 +8456,7 @@ function pnlStatement(X){
   PNL_COA.forEach(function(x){
     if(x.sec){h+='<tr class="sec"><td colspan="8">'+esc(x.sec)+'</td></tr>';return;}
     if(x.k){var cost=x.g!=="rev",sgn=x.contra?-1:1,v=L[x.k]*sgn,cv=C[x.k]*sgn,yv=Y[x.k]*sgn,subs=L.sub[x.k]?Object.keys(L.sub[x.k]).sort(function(a,b){return L.sub[x.k][b]-L.sub[x.k][a];}):[],canOpen=subs.length>1,o=canOpen&&!!PNL.open[x.k];
-      if(!v&&!cv&&!yv&&x.k!=="dep")return;               /* hide lines with nothing in them */
+      if(Math.abs(v)<0.0005&&Math.abs(cv)<0.0005&&Math.abs(yv)<0.0005)return;               /* hide lines with nothing in them */
       h+='<tr class="ln'+(x.contra?" contra":"")+(canOpen?" x"+(o?" open":""):"")+'"'+(canOpen?' data-plopen="'+x.k+'"':"")+' title="From: '+esc(x.src)+'"><td>'+(canOpen?'<span class="car">▶</span>':"")+esc(x.n)+(x.ref?'<span class="ref">note '+x.ref+'</span>':"")+'</td><td class="cur">'+pl3(v)+'</td><td class="pc">'+plP1(plPc(Math.abs(v),r.rev))+'</td><td>'+pl3(cv)+'</td><td>'+plVar(v,cv,cost&&!x.contra)+'</td><td>'+plVarP(v,cv,cost&&!x.contra)+'</td><td>'+pl3(yv)+'</td><td class="pc">'+plP1(plPc(Math.abs(yv),ry.rev))+'</td></tr>';
       if(o)subs.forEach(function(s){h+='<tr class="sub"><td>'+esc(s)+'</td><td>'+pl3(L.sub[x.k][s]*sgn)+'</td><td class="pc">'+plP1(plPc(L.sub[x.k][s],r.rev))+'</td><td></td><td></td><td></td><td></td><td></td></tr>';});
       return;}
@@ -8480,7 +8481,7 @@ function pnlStatement(X){
 }
 function pnlRail(X){
   var L=X.L,r=L.r,rev=r.rev;
-  var grp=[{s:"Rider pay",v:L.rsal+L.rinc+L.food,c:"--c-pay"},{s:"Fuel",v:L.fuel,c:"--c-fuel"},{s:"Vehicles",v:L.mnt+L.lease+L.vins+L.dep,c:"--c-mnt"},{s:"Housing & rent",v:L.house+L.orent,c:"--c-rent"}];
+  var grp=[{s:"Rider pay",v:L.rsal+L.rinc+L.food,c:"--c-pay"},{s:"Fuel",v:L.fuel,c:"--c-fuel"},{s:"Vehicles",v:L.mnt+L.lease+L.vinst+L.vins+L.dep,c:"--c-mnt"},{s:"Housing & rent",v:L.house+L.orent,c:"--c-rent"}];
   var rest=r.cos+r.opx+L.dep-grp.reduce(function(s,g){return s+g.v;},0);grp.push({s:"Admin & other",v:rest,c:"--c-doc"});grp.push({s:r.net>=0?"Net profit":"Net loss",v:r.net,c:"--ink"});
   var kd=rev>0?'<div class="kd" role="img" aria-label="Each 1 KWD of revenue">'+grp.filter(function(g){return g.v>0;}).map(function(g){return '<span title="'+esc(g.s)+'" style="flex:'+g.v.toFixed(2)+' 1 0;background:var('+g.c+')"></span>';}).join("")+'</div><div class="kl">'+grp.map(function(g){return '<div class="r"><i style="background:var('+g.c+')"></i><span>'+esc(g.s)+'</span><b>'+(g.v/rev).toFixed(3)+'</b><em>'+plP1(plPc(g.v,rev))+'</em></div>';}).join("")+'</div>':'<div class="pl-empty">No revenue this month.</div>';
   var cl=X.closed||{},isC=cl.status==="closed",adm=pnlIsAdmin(),pay=X.mk>=PAYROLL_START_MK&&X.mk<=mKeyOf(TODAY);
@@ -8534,7 +8535,7 @@ function pnlNotes(){
    '<li><b>Revenue</b> comes from the Income register, by platform, in the month of the entry date. Platform fines and cancellations reduce revenue — they are not an expense.</li>'+
    '<li><b>Cost of services</b> holds every cost that grows with riders and vehicles: rider pay, fuel, repairs, lease, vehicle insurance, rider housing, SIM/GPS and company-paid traffic fines. <b>Gross profit</b> is what the riders earn for the company before office costs.</li>'+
    '<li><b>Operating expenses</b> are office and admin costs that don’t change with the number of orders. Any category that isn’t in the map below is shown under “Office supplies & other admin” and flagged in the month-end checklist.</li>'+
-   '<li><b>Vehicle purchases are not an expense in the month they are paid.</b> Full purchases and monthly instalments go to the fleet and are charged as depreciation over 36 months. Lease payments are an expense of the month.</li>'+
+   '<li><b>Vehicle lease and monthly installments are an expense of the month they are paid.</b> Only a “Full Purchase” entry is treated as buying a vehicle: it goes to the fleet and is charged as depreciation over 36 months instead of all in one month.</li>'+
    '<li><b>Salaries belong to the month they are for.</b> From '+esc(plLab(PAYROLL_START_MK,true))+' the P&amp;L uses Payroll: every Active/Office employee’s basic salary is counted for the month, paid or not yet paid. Incentives and food allowance come from the Expense Log. Salary advances are part of that salary, so they are not counted again. Before '+esc(plLab(PAYROLL_START_MK,true))+' the salary entries in the Expense Log are used. Net profit is before any tax or Zakat — ask your accountant if a provision is needed.</li>'+
    '<li><b>Anything marked “Recoverable from driver” is not an expense</b> — the money comes back through salary. It is tracked below the line: opening balance, given this month, taken back from salary, still to collect.</li>'+
    '<li><b>Closing a month</b> locks it: entries dated in a closed month can’t be added, changed or deleted until an admin reopens it.</li>'+
