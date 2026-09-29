@@ -2309,6 +2309,11 @@ html[data-skin="night"] .pnl .kpi.hero .fav{color:#0B5D3B}html[data-skin="night"
 .rowmenu-btn.od2-arm svg{color:#fff!important}
 @media (max-width:600px){.od2-stats{grid-template-columns:repeat(2,1fr)}.od2-err>div{flex-direction:column;gap:2px}}
 .od2-sec p.sub{font-size:12.5px;color:var(--muted);line-height:1.45}
+.od2-dup h4{color:var(--crit)}
+.od2-dup .od2-err{border-color:var(--crit);background:var(--crit-bg)}
+.od2-dup .od2-err>div{border-top-color:rgba(0,0,0,.06)}
+.od2-bad{border-color:var(--crit)!important;box-shadow:0 0 0 3px var(--crit-bg)!important;animation:od2Shake .35s ease}
+@keyframes od2Shake{25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -8847,19 +8852,24 @@ function od2Parse(wb){
     }
   });
   if(!any)return null;
-  /* same driver + date + platform twice in the file: last one wins; differing values are flagged */
-  var map={},order=[],clash=0;
-  got.forEach(function(g){var k=od2Key(g);if(map[k]){if(map[k].orders!==g.orders){clash++;errs.push([g.at,"Also entered at "+map[k].at+" with "+map[k].orders+" orders — using "+g.orders]);}}else order.push(k);map[k]=g;});
+  /* duplicates are never imported:
+     - the same driver + date + platform twice in this file → both rows blocked (unless they are identical)
+     - already in the Daily Log with a different number → blocked (change it with ✎ instead)
+     - already in the Daily Log with the same number → simply "already saved" */
+  var map={},order=[],fileDup=[],bad={};
+  got.forEach(function(g){var k=od2Key(g);
+    if(map[k]){if(map[k].orders!==g.orders){if(!bad[k]){bad[k]=1;fileDup.push({g:map[k],why:"Entered twice in this file ("+map[k].at+" = "+map[k].orders+", "+g.at+" = "+g.orders+")"});}}return;}
+    order.push(k);map[k]=g;});
   var cur={};(STATE.grd.orderlog||[]).forEach(function(e){var k=od2Key(e);if(!cur[k])cur[k]=e;});
-  var add=[],upd=[],same=[];
-  order.forEach(function(k){var g=map[k],e=cur[k];
+  var add=[],same=[],dup=fileDup.slice();
+  order.forEach(function(k){if(bad[k])return;var g=map[k],e=cur[k];
     if(!e){add.push(g);return;}
-    var nv=g.grid?(e.vehicle||g.vehicle||""):(g.vehicle||e.vehicle||""),nn=g.hasNote&&g.note?g.note:(e.note||"");
-    if(num(e.orders)===g.orders&&(e.vehicle||"")===nv&&(e.note||"")===nn)same.push(g);else upd.push({g:g,e:e,vehicle:nv,note:nn});});
+    if(num(e.orders)===g.orders)same.push(g);
+    else dup.push({g:g,why:"Already in the Daily Log with "+e.orders+" orders (file says "+g.orders+")"});});
   var known={};(STATE.grd.drivers||[]).forEach(function(d){if(d.name)known[normDriver(d.name)]=1;});(STATE.grd.orderlog||[]).forEach(function(e){known[normDriver(e.driver)]=1;});(STATE.grd.perf||[]).forEach(function(e){known[normDriver(e.driver)]=1;});
-  var unk={};order.forEach(function(k){var d=map[k].driver;if(!known[d])unk[d]=1;});
+  var unk={};add.forEach(function(g){var d=g.driver;if(!known[d])unk[d]=1;});
   var months={};order.forEach(function(k){months[map[k].date.slice(0,7)]=1;});
-  return {add:add,upd:upd,same:same,errs:errs,unknown:Object.keys(unk).sort(),months:Object.keys(months).sort(),total:order.length};
+  return {add:add,dup:dup,same:same,errs:errs,unknown:Object.keys(unk).sort(),months:Object.keys(months).sort(),total:order.length};
 }
 var _od2ParseWB=parseOrdersWB;
 parseOrdersWB=function(buf){
@@ -8877,10 +8887,10 @@ function od2Preview(res){
   var chip=function(n,l,c){return '<div class="od2-st '+c+'"><b class="mono">'+n+'</b><span>'+l+'</span></div>';};
   var eh=res.errs.length?'<div class="od2-sec"><h4>'+res.errs.length+' row'+(res.errs.length===1?"":"s")+' skipped</h4><div class="od2-err">'+res.errs.slice(0,40).map(function(e){return '<div><span class="mono">'+esc(e[0])+'</span>'+esc(e[1])+'</div>';}).join("")+(res.errs.length>40?'<div class="sub">…and '+(res.errs.length-40)+' more</div>':"")+'</div></div>':"";
   var uh=res.unknown.length?'<div class="od2-sec"><h4>Not in the employee list</h4><p class="sub">These names are imported as typed. Check the spelling if they should match an existing driver.</p><div class="od2-names">'+res.unknown.map(function(n){return '<span class="chip">'+esc(n)+'</span>';}).join("")+'</div></div>':"";
-  var ch=res.upd.length?'<div class="od2-sec"><h4>Entries that will change</h4><div class="od2-err">'+res.upd.slice(0,20).map(function(u){return '<div><span class="mono">'+esc(od2Lbl(u.g.date))+'</span>'+esc(u.g.driver)+' · '+esc(u.g.platform)+' — <b class="mono">'+esc(String(u.e.orders))+' → '+u.g.orders+'</b></div>';}).join("")+(res.upd.length>20?'<div class="sub">…and '+(res.upd.length-20)+' more</div>':"")+'</div></div>':"";
-  var n=res.add.length+res.upd.length;
+  var ch=res.dup.length?'<div class="od2-sec od2-dup"><h4>'+res.dup.length+' duplicate entr'+(res.dup.length===1?"y":"ies")+' — NOT imported</h4><p class="sub">The same driver + date + platform is already in the Daily Log, or appears twice in this file. Nothing is saved for these. To correct a saved number, use ✎ on that entry in the Daily Log.</p><div class="od2-err">'+res.dup.slice(0,40).map(function(u){return '<div><span class="mono">'+esc(od2Lbl(u.g.date))+'</span><span><b>'+esc(u.g.driver)+'</b> · '+esc(u.g.platform)+' — '+esc(u.why)+'</span></div>';}).join("")+(res.dup.length>40?'<div class="sub">…and '+(res.dup.length-40)+' more</div>':"")+'</div></div>':"";
+  var n=res.add.length;
   ov.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-h"><div><h3>Import daily log</h3><div class="sub">'+esc(res.months.map(perfMLabel).join(", ")||"—")+'</div></div><button class="icon-btn" id="od2X" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
-    '<div class="modal-b"><div class="od2-stats">'+chip(res.add.length,"new","good")+chip(res.upd.length,"will change","warn")+chip(res.same.length,"already saved","neutral")+chip(res.errs.length,"skipped",res.errs.length?"crit":"neutral")+'</div>'+ch+eh+uh+'</div>'+
+    '<div class="modal-b"><div class="od2-stats">'+chip(res.add.length,"new","good")+chip(res.dup.length,"duplicates blocked",res.dup.length?"crit":"neutral")+chip(res.same.length,"already saved","neutral")+chip(res.errs.length,"rows with errors",res.errs.length?"warn":"neutral")+'</div>'+ch+eh+uh+'</div>'+
     '<div class="modal-f"><button class="btn ghost" id="od2No">Cancel</button><button class="btn primary" id="od2Go"'+(n?"":" disabled")+'>'+(n?"Import "+n+" entr"+(n===1?"y":"ies"):"Nothing new to import")+'</button></div></div>';
   document.body.appendChild(ov);
   var close=function(){ORD2.pending=null;ov.remove();};
@@ -8890,11 +8900,10 @@ function od2Preview(res){
 function od2Apply(res){
   if(!STATE.grd.orderlog)STATE.grd.orderlog=[];
   res.add.forEach(function(g){STATE.grd.orderlog.unshift({id:uid("dl"),date:g.date,driver:g.driver,platform:g.platform,vehicle:g.vehicle||"",orders:g.orders,note:g.note||""});});
-  res.upd.forEach(function(u){u.e.orders=u.g.orders;u.e.vehicle=u.vehicle;u.e.note=u.note;});
   ORD2.pending=null;persist();
-  try{logAudit("import","orderlog","bulk-"+isoToday(),"Daily log import",[{f:"rows",l:"Rows",from:"",to:res.add.length+" new · "+res.upd.length+" changed · "+res.errs.length+" skipped"}]);}catch(e){}
+  try{logAudit("import","orderlog","bulk-"+isoToday(),"Daily log import",[{f:"rows",l:"Rows",from:"",to:res.add.length+" new · "+res.dup.length+" duplicates blocked · "+res.errs.length+" errors"}]);}catch(e){}
   ordersView="daily";if(res.months.length===1)ordersMonth=res.months[0];if(typeof FLM!=="undefined")FLM.om=[];
-  renderApp();toast("Imported "+res.add.length+" new and updated "+res.upd.length+" daily entries.","good");
+  renderApp();toast("Imported "+res.add.length+" new daily entr"+(res.add.length===1?"y":"ies")+(res.dup.length?" · "+res.dup.length+" duplicate"+(res.dup.length===1?"":"s")+" blocked":"")+".","good");
 }
 
 /* ---------- Import / Export menu ---------- */
@@ -8942,7 +8951,8 @@ saveDailyEntry=function(){
   if(!STATE.grd.orderlog)STATE.grd.orderlog=[];
   var key=od2Key({date:date,driver:driver,platform:plat});
   var dup=STATE.grd.orderlog.filter(function(x){return x.id!==dailyEdit&&od2Key(x)===key;})[0];
-  if(dup){toast(driver+" already has "+dup.orders+" orders on "+od2Lbl(date)+" ("+plat+"). Use ✎ on that row to change it.","err");return;}
+  if(dup){["dlDate","dlDriver","dlPlat"].forEach(function(id){var el=document.getElementById(id);if(el){el.classList.remove("od2-bad");void el.offsetWidth;el.classList.add("od2-bad");setTimeout(function(){el.classList.remove("od2-bad");},2600);}});
+    toast("Duplicate — not saved. "+driver+" already has "+dup.orders+" orders on "+od2Lbl(date)+" ("+plat+"). Use ✎ on that entry to change it.","err");return;}
   var wasEdit=!!dailyEdit;
   if(wasEdit){var r=STATE.grd.orderlog.filter(function(x){return x.id===dailyEdit;})[0];
     if(r){var ch=[];[["date","Date",date],["driver","Driver",driver],["platform","Platform",plat],["vehicle","Vehicle",veh],["orders","Orders",orders],["note","Note",note]].forEach(function(f){if(String(r[f[0]]==null?"":r[f[0]])!==String(f[2]))ch.push({f:f[0],l:f[1],from:String(r[f[0]]==null?"":r[f[0]]),to:String(f[2])});});
