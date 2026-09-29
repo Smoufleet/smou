@@ -8909,6 +8909,7 @@ function od2Apply(res){
 
 /* ---------- Import / Export menu ---------- */
 openOrdMenu=function(btn){
+  if(document.querySelector("#rowmenu.od2-menu")){closeRowMenu();return;}
   closeRowMenu();
   var sc=od2Scope(),s=sc?" ("+esc(sc)+")":"",dl=svg('<path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/>');
   var items='<div class="menu-lab">Daily log · date-wise</div>'+
@@ -8924,6 +8925,15 @@ openOrdMenu=function(btn){
   var top=r.bottom+6;if(top+mh>innerHeight-8)top=r.top-mh-6;if(top<8)top=8;
   m.style.left=left+"px";m.style.top=top+"px";
 };
+/* closing: tap / click anywhere outside, pick an item, press Esc, or scroll — and the button toggles it */
+document.addEventListener("click",function(e){
+  var m=document.querySelector("#rowmenu.od2-menu");if(!m)return;
+  if(e.target.closest('[data-act="ordmenu"]'))return;
+  if(m.contains(e.target)&&!e.target.closest(".menu-item"))return;
+  m.remove();
+});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&document.querySelector("#rowmenu.od2-menu"))closeRowMenu();});
+window.addEventListener("scroll",function(){var m=document.querySelector("#rowmenu.od2-menu");if(m&&innerWidth>600)m.remove();},true);
 document.addEventListener("click",function(e){
   var a=e.target.closest('[data-act="orddtpl"],[data-act="orddexp"]');if(!a)return;
   e.preventDefault();e.stopPropagation();closeRowMenu();
