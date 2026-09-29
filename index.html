@@ -8779,34 +8779,24 @@ exportOrdersXLSX=function(){
 function ordDailyTemplateXLSX(){
   if(!xlsxReady()){toast("Excel engine still loading — try again in a moment.","err");return;}
   var ym=ordersMonth!=="all"?ordersMonth:(TODAY.getFullYear()+"-"+od2Pad(TODAY.getMonth()+1));
-  var wb=XLSX.utils.book_new();
-  var ws=XLSX.utils.aoa_to_sheet([OD2_HDR]);ws["!cols"]=[{wch:13},{wch:36},{wch:10},{wch:10},{wch:8},{wch:28}];
-  XLSX.utils.book_append_sheet(wb,ws,"Daily Log");
-  /* month grid pre-filled with the drivers already in the log (latest platform/vehicle each), days left blank */
-  var seen={},list=[];(STATE.grd.orderlog||[]).slice().sort(function(a,b){return a.date<b.date?1:-1;}).forEach(function(e){var k=e.driver+"|"+e.platform;if(seen[k])return;seen[k]=1;list.push({driver:e.driver,platform:e.platform,vehicle:e.vehicle||"",date:ym+"-01",orders:null});});
-  var gws=od2GridSheet([],ym),y=+ym.split("-")[0],mo=+ym.split("-")[1];
-  var gaoa=XLSX.utils.sheet_to_json(gws,{header:1});list.sort(function(a,b){return a.driver<b.driver?-1:1;}).forEach(function(g){gaoa.push([g.driver,g.platform,g.vehicle,MONS[mo-1],y]);});
-  gaoa[0]=gaoa[0].slice(0,36);
-  var g2=XLSX.utils.aoa_to_sheet(gaoa);g2["!cols"]=gws["!cols"];XLSX.utils.book_append_sheet(wb,g2,"Month Grid");
-  var names=perfDrvList().map(function(x){return [x.v];});
-  var dws=XLSX.utils.aoa_to_sheet([["Driver names as saved in the ERP (copy from here)"]].concat(names));dws["!cols"]=[{wch:48}];XLSX.utils.book_append_sheet(wb,dws,"Drivers");
-  var notes=[["SMOU — Daily Log import template"],[""],
-    ["Fill ONE of the two sheets (or both) and import it from Orders → Import / Export → Import from Excel."],[""],
-    ["Sheet 'Daily Log' — one row per driver per day"],
-    ["  Date      e.g. 17-Sep-2026, 17/09/2026 or 2026-09-17 (day first)"],
-    ["  Driver    name as in the 'Drivers' sheet"],
-    ["  Platform  Talabat or Keeta"],
-    ["  Vehicle   optional — CAR, BIKE, REPORTER, SCOOTER, VAN, BICYCLE"],
-    ["  Orders    number of orders that day (0 is allowed)"],
-    ["  Note      optional"],[""],
-    ["Sheet 'Month Grid' — one row per driver, one column per day of the month"],
-    ["  Your drivers are already listed. Type the orders under each day number. Leave a day blank if the driver didn't work."],
-    ["  Month and Year are already filled for "+perfMLabel(ym)+" — change them for another month."],[""],
-    ["Before anything is saved you'll see a preview: new entries, changed entries and any rows with a problem."],
-    ["If a driver already has an entry for the same date and platform, the import updates it — it never creates a duplicate."]];
-  var wn=XLSX.utils.aoa_to_sheet(notes);wn["!cols"]=[{wch:110}];XLSX.utils.book_append_sheet(wb,wn,"How to use");
-  dlFile(new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"})),"SMOU-Daily-Log-Template-"+perfMLabel(ym).replace(/\s+/g,"")+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  toast("Daily template downloaded — fill it in, then Import from Excel.","good");
+  var y=+ym.split("-")[0],mo=+ym.split("-")[1],dim=new Date(y,mo,0).getDate();
+  /* every active driver from Employees (their site = platform), plus anyone already logged this month */
+  var rows={},key=function(n,p){return n+"|"+p;};
+  (STATE.grd.drivers||[]).forEach(function(d){if(String(d.status||"").toUpperCase()!=="ACTIVE"||!d.name)return;var pl=normPlat(d.site||"");if(pl!=="Talabat"&&pl!=="Keeta")return;
+    var n=normDriver(d.name);rows[key(n,pl)]={driver:n,platform:pl,vehicle:String(d.veh||d.vehicle||"").toUpperCase(),d:{}};});
+  (STATE.grd.orderlog||[]).forEach(function(e){var dt=parseD(e.date);if(!dt||dt.getFullYear()!==y||dt.getMonth()+1!==mo)return;var n=normDriver(e.driver),k=key(n,e.platform);
+    if(!rows[k])rows[k]={driver:n,platform:e.platform,vehicle:e.vehicle||"",d:{}};if(e.vehicle&&!rows[k].vehicle)rows[k].vehicle=e.vehicle;
+    if(rows[k].d[dt.getDate()]==null)rows[k].d[dt.getDate()]=num(e.orders)||0;});
+  var list=Object.keys(rows).map(function(k){return rows[k];}).sort(function(a,b){return a.platform!==b.platform?(a.platform==="Talabat"?-1:1):(a.driver<b.driver?-1:1);});
+  var hdr=["Driver","Platform","Vehicle","Month","Year"];for(var i=1;i<=dim;i++)hdr.push(i);hdr.push("Total");
+  var aoa=[hdr];list.forEach(function(g){var r=[g.driver,g.platform,g.vehicle,MONS[mo-1],y];for(var i=1;i<=dim;i++)r.push(g.d[i]!=null?g.d[i]:"");r.push("");aoa.push(r);});
+  var ws=XLSX.utils.aoa_to_sheet(aoa),tc=5+dim,first=XLSX.utils.encode_col(5),last=XLSX.utils.encode_col(4+dim);
+  for(var r=1;r<=list.length;r++)ws[XLSX.utils.encode_cell({r:r,c:tc})]={t:"n",v:aoa[r].slice(5,5+dim).reduce(function(a,x){return a+(+x||0);},0),f:"SUM("+first+(r+1)+":"+last+(r+1)+")"};
+  ws["!cols"]=[{wch:40},{wch:9},{wch:9},{wch:6},{wch:6}].concat(Array(dim).fill({wch:4.5})).concat([{wch:7}]);
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,("Orders "+perfMLabel(ym)).slice(0,31));
+  wb.Workbook={Views:[{RTL:false}]};
+  dlFile(new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"})),"SMOU-Daily-Orders-"+perfMLabel(ym).replace(/\s+/g,"")+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  toast("Template for "+perfMLabel(ym)+" downloaded — "+list.length+" drivers. Type orders under each day, then Import from Excel.","good");
 }
 
 /* ---------- import: read the workbook ---------- */
@@ -8850,7 +8840,7 @@ function od2Parse(wb){
           vals.forEach(function(ci){var v=num(rw[ci]),day=dayCols[ci],iso=od2Iso(yr,mo,day);
             if(!iso){errs.push([at2,"Day "+day+" doesn’t exist in "+MONS[mo-1]+" "+yr]);return;}
             if(v==null||v<0||Math.round(v)!==v){errs.push([at2,"Day "+day+": orders must be a whole number (found “"+String(rw[ci])+"”)"]);return;}
-            got.push({date:iso,driver:dr,platform:pl2,vehicle:up(cVeh>=0?rw[cVeh]:""),orders:v,note:"",hasNote:false,at:at2+" · day "+day});});
+            got.push({date:iso,driver:dr,platform:pl2,vehicle:up(cVeh>=0?rw[cVeh]:""),orders:v,note:"",hasNote:false,grid:true,at:at2+" · day "+day});});
         }
         break;
       }
@@ -8864,7 +8854,7 @@ function od2Parse(wb){
   var add=[],upd=[],same=[];
   order.forEach(function(k){var g=map[k],e=cur[k];
     if(!e){add.push(g);return;}
-    var nv=g.vehicle||e.vehicle||"",nn=g.hasNote&&g.note?g.note:(e.note||"");
+    var nv=g.grid?(e.vehicle||g.vehicle||""):(g.vehicle||e.vehicle||""),nn=g.hasNote&&g.note?g.note:(e.note||"");
     if(num(e.orders)===g.orders&&(e.vehicle||"")===nv&&(e.note||"")===nn)same.push(g);else upd.push({g:g,e:e,vehicle:nv,note:nn});});
   var known={};(STATE.grd.drivers||[]).forEach(function(d){if(d.name)known[normDriver(d.name)]=1;});(STATE.grd.orderlog||[]).forEach(function(e){known[normDriver(e.driver)]=1;});(STATE.grd.perf||[]).forEach(function(e){known[normDriver(e.driver)]=1;});
   var unk={};order.forEach(function(k){var d=map[k].driver;if(!known[d])unk[d]=1;});
