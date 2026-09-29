@@ -8445,12 +8445,12 @@ function pnlBook(mk,cache){
     if(k==="adm?"){L.unmapped[e.category||"(no category)"]=1;k="adm";sub=e.category||"(no category)";}
     if((k==="fuel"||k==="mnt")&&!(e.plate||"").trim())L.noPlate++;
     add(k,v,sub);});
-  if(payOn)payEmployees().forEach(function(d){var b=num(d.salary)||0;if(!b)return;add(/office/i.test(d.status||"")?"osal":"rsal",b,/office/i.test(d.status||"")?"Office staff":(/bike/i.test(d.veh||"")?"Bike riders":/car/i.test(d.veh||"")?"Car riders":"Other riders"));});
+  if(payOn)payEmployees(mk).forEach(function(d){var b=payBase(d,mk);if(!b.base)return;add(b.prof==="Office"?"osal":"rsal",b.base,b.prof==="Office"?"Office staff (fixed salary)":"Drivers (orders × "+PAY_RATE.toFixed(3)+")");});
   (STATE.finance.payroll||[]).forEach(function(r){if(payMK(r)!==mk)return;var v=netPay(r);if(v)add("rsal",v,"Payroll (older records)");});
   L.dep=pnlDep(mk);
   var r={};r.rev=L.tal+L.kee+L.oth-L.pfine;r.cos=0;r.opx=0;PNL_LINES.forEach(function(x){if(x.g==="cos")r.cos+=L[x.k];if(x.g==="opx")r.opx+=L[x.k];});
   r.gp=r.rev-r.cos;r.ebitda=r.gp-r.opx;r.net=r.ebitda-L.dep;L.r=r;
-  L.orders=(STATE.grd.perf||[]).filter(function(p){return perfMKey(p)===mk;}).reduce(function(s,p){return s+(num(p.orders)||0);},0);
+  L.orders=effectivePerf().filter(function(p){return perfMKey(p)===mk;}).reduce(function(s,p){return s+(num(p.orders)||0);},0);
   if(cache)cache[mk]=L;return L;
 }
 function pnlSum(list){var o={sub:{},cap:0,orders:0};PNL_LINES.forEach(function(x){o[x.k]=0;});list.forEach(function(L){PNL_LINES.forEach(function(x){o[x.k]+=L[x.k];});o.cap+=L.cap;o.orders+=L.orders;});
@@ -8515,7 +8515,7 @@ function pnlStatement(X){
     if(x.net)h+='<tr class="net"><td>'+esc(x.n)+'<span class="ref">note 5</span></td><td class="cur'+(r.net<0?" neg":"")+'">'+pl3(r.net)+'</td><td>'+(r.rev?plP1(plPc(r.net,r.rev)):"—")+'</td><td>'+pl3(rc.net)+'</td><td>'+plVar(r.net,rc.net)+'</td><td>'+plVarP(r.net,rc.net)+'</td><td>'+pl3(ry.net)+'</td><td>'+(ry.rev?plP1(plPc(ry.net,ry.rev)):"—")+'</td></tr>';
   });
   h+='</tbody></table>';
-  var R=pnlRecov(X.mk),riders=payEmployees().filter(function(d){return !/office/i.test(d.status||"");}).length,ord=L.orders,cost=r.cos+r.opx+L.dep;
+  var R=pnlRecov(X.mk),riders=payEmployees(X.mk).filter(function(d){return profOf(d)==="Driver";}).length,ord=L.orders,cost=r.cos+r.opx+L.dep;
   function mb(l,v,s){return '<div class="mbox"><div class="l">'+esc(l)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s)+'</div></div>';}
   var memo='<div class="memo"><h4>Below the line · not part of profit</h4><div class="mgrid">'+
     mb("Orders delivered",ord?Math.round(ord).toLocaleString("en-US"):"—",ord&&C.orders?((ord>=C.orders?"▲ ":"▼ ")+Math.abs(plPc(ord-C.orders,C.orders)).toFixed(1)+"% vs "+X.cl):"from Orders › Records")+
@@ -8537,7 +8537,7 @@ function pnlRail(X){
   var chk=[];
   var plats=Object.keys(L.incPlat).filter(function(p){return L.incPlat[p]>0;});
   chk.push(L.nInc?{s:"ok",t:"Platform income entered",d:L.nInc+" entries · "+plats.slice(0,3).join(", ")}:{s:"x",t:"No income entered for "+plLab(X.mk,true),d:'<a data-route="grd/income">Add income →</a>'});
-  if(pay){var emps=payEmployees(),paid=emps.filter(function(d){try{return payslipFor(d,X.mk).paid;}catch(e){return false;}}).length;
+  if(pay){var emps=payEmployees(X.mk),paid=emps.filter(function(d){try{return payslipFor(d,X.mk).paid;}catch(e){return false;}}).length;
     chk.push(paid>=emps.length?{s:"ok",t:"Salaries paid for "+plLab(X.mk,true),d:emps.length+" employees"}:{s:"w",t:(emps.length-paid)+" of "+emps.length+" salaries not paid yet",d:'counted as salary owed · <a data-route="grd/payroll">Payroll →</a>'});}
   else chk.push({s:"ok",t:"Salaries from Expense Log",d:"payroll starts "+plLab(PAYROLL_START_MK,true)});
   var um=Object.keys(L.unmapped);
@@ -8585,7 +8585,7 @@ function pnlNotes(){
    '<li><b>Cost of services</b> holds every cost that grows with riders and vehicles: rider pay, fuel, repairs, lease, vehicle insurance, rider housing, SIM/GPS and company-paid traffic fines. <b>Gross profit</b> is what the riders earn for the company before office costs.</li>'+
    '<li><b>Operating expenses</b> are office and admin costs that don’t change with the number of orders. Any category that isn’t in the map below is shown under “Office supplies & other admin” and flagged in the month-end checklist.</li>'+
    '<li><b>Vehicle lease and monthly installments are an expense of the month they are paid.</b> Only a “Full Purchase” entry is treated as buying a vehicle: it goes to the fleet and is charged as depreciation over 36 months instead of all in one month.</li>'+
-   '<li><b>Salaries belong to the month they are for.</b> From '+esc(plLab(PAYROLL_START_MK,true))+' the P&amp;L uses Payroll: every Active/Office employee’s basic salary is counted for the month, paid or not yet paid. Incentives and food allowance come from the Expense Log. Salary advances are part of that salary, so they are not counted again. Before '+esc(plLab(PAYROLL_START_MK,true))+' the salary entries in the Expense Log are used. Net profit is before any tax or Zakat — ask your accountant if a provision is needed.</li>'+
+   '<li><b>Salaries belong to the month they are for.</b> From '+esc(plLab(PAYROLL_START_MK,true))+' the P&amp;L uses Payroll: drivers earn their Daily Log orders × '+PAY_RATE.toFixed(3)+' KWD, office staff their fixed basic salary — counted for the month, paid or not yet paid. Incentives and food allowance come from the Expense Log. Salary advances are part of that salary, so they are not counted again. Before '+esc(plLab(PAYROLL_START_MK,true))+' the salary entries in the Expense Log are used. Net profit is before any tax or Zakat — ask your accountant if a provision is needed.</li>'+
    '<li><b>Anything marked “Recoverable from driver” is not an expense</b> — the money comes back through salary. It is tracked below the line: opening balance, given this month, taken back from salary, still to collect.</li>'+
    '<li><b>Closing a month</b> locks it: entries dated in a closed month can’t be added, changed or deleted until an admin reopens it.</li>'+
    '</ol></section>'+
@@ -9045,6 +9045,138 @@ try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
     PENDING=PENDING.filter(function(p){if(p.collection!=="orderlog"||!p.data)return true;var k=od2Key(p.data);return !(have[k]&&have[k]!==p.id);});
     if(PENDING.length!==n0)savePending();}}catch(e){}
   return _fp.apply(this,arguments);};})();
+
+/* ===== Payroll v2 — by Profession Type (Employees → Profession Type: Driver / Office / None)
+   Driver : orders in the Daily Log for that month × 0.400 KWD
+   Office : the Basic Salary saved on the employee
+   None   : not on payroll at all
+   Nothing dated before the payroll start month (Sep 2026) is counted. ===== */
+var PAY_RATE=0.4;
+var PROF_LIST=["Driver","Office","None"];
+function profOf(d){var p=String((d&&d.prof)||"").trim();if(!p)return "Driver";var u=p.toLowerCase();return u==="office"?"Office":u==="none"?"None":"Driver";}
+
+/* ---- Employees register: Profession Type field, column and filter ---- */
+(function(){
+  var cfg=ENT.drivers;
+  if(!cfg.fields.some(function(f){return f.k==="prof";})){
+    var i=cfg.fields.findIndex(function(f){return f.k==="status";});
+    cfg.fields.splice(i+1,0,{k:"prof",l:"Profession Type",t:"select",optsFn:function(){return PROF_LIST;},req:true});
+  }
+  if(!cfg.filters.some(function(f){return f.k==="prof";}))cfg.filters.splice(1,0,{k:"prof",lab:"All professions"});
+  if(!cfg.columns.some(function(c){return c.h==="Profession";})){
+    var si=cfg.columns.findIndex(function(c){return c.h==="Status";});
+    cfg.columns.splice(si+1,0,{h:"Profession",v:function(r){var p=profOf(r);return '<span class="pill '+(p==="Driver"?"info":p==="Office"?"neutral":"warn")+'">'+p+'</span>';},s:function(r){return profOf(r);}});
+  }
+})();
+/* the form always shows a value — new employees start as Driver */
+(function(){var _of=openForm;openForm=function(ent,id){var r=_of.apply(this,arguments);
+  if(ent==="drivers"){var s=document.querySelector('#overlay select[name="prof"]');if(s&&!s.value){var rec=id?(STATE.grd.drivers||[]).filter(function(x){return x.id===id;})[0]:null;s.value=profOf(rec||{});}}
+  return r;};})();
+
+/* ---- the money ---- */
+function payOrdersFor(d,mk){
+  var n=normDriver(d&&d.name),o=0,by={},days={};
+  if(!n||!mk)return {orders:0,by:by,days:0};
+  (STATE.grd.orderlog||[]).forEach(function(e){if(String(e.date||"").slice(0,7)!==mk)return;if(normDriver(e.driver)!==n)return;
+    var v=num(e.orders)||0;o+=v;var p=e.platform||"—";by[p]=(by[p]||0)+v;days[e.date]=1;});
+  return {orders:o,by:by,days:Object.keys(days).length};
+}
+function payBase(d,mk){
+  var prof=profOf(d),z={prof:prof,base:0,orders:0,by:{},days:0};
+  if(prof==="None"||!mk||mk<PAYROLL_START_MK)return z;
+  if(prof==="Office"){z.base=num(d.salary)||0;return z;}
+  var o=payOrdersFor(d,mk);z.orders=o.orders;z.by=o.by;z.days=o.days;z.base=Math.round(o.orders*PAY_RATE*1000)/1000;return z;
+}
+/* who is on payroll for a month: Office always; Driver when Active or when they have orders that month; None never */
+payEmployees=function(mk){
+  mk=mk||payMK_sel||mKeyOf(TODAY);
+  return (STATE.grd.drivers||[]).filter(function(d){
+    if(!d.name)return false;var p=profOf(d);
+    if(p==="None")return false;if(p==="Office")return true;
+    return String(d.status||"").trim().toUpperCase()==="ACTIVE"||payOrdersFor(d,mk).orders>0;
+  });
+};
+var _paySlip=payslipFor;
+payslipFor=function(d,mk){
+  var r=_paySlip(d,mk),b=payBase(d,mk),start=PAYROLL_START_MK+"-01";
+  var keep=function(x){return !x.date||String(x.date)>=start;};  /* nothing dated before payroll started */
+  r.sal=r.sal.filter(keep);r.adv=r.adv.filter(keep);r.inc=r.inc.filter(keep);r.food=r.food.filter(keep);r.recov=r.recov.filter(keep);
+  var sum=function(a){return a.reduce(function(s,x){return s+x.amount;},0);};
+  r.salaryPaid=sum(r.sal);r.incentive=sum(r.inc);r.foodT=sum(r.food);r.advance=sum(r.adv);r.recovT=sum(r.recov);
+  r.prof=b.prof;r.orders=b.orders;r.byPlat=b.by;r.days=b.days;r.rate=PAY_RATE;r.basic=b.base;
+  r.additions=r.incentive+r.foodT;r.deductions=r.advance+r.recovT;r.gross=r.basic+r.additions;r.net=r.gross-r.deductions;r.paid=r.salaryPaid>0;
+  return r;
+};
+/* Daily Log names that don't match any employee → their orders can't be paid */
+function payUnmatched(mk){
+  var emp={};(STATE.grd.drivers||[]).forEach(function(d){if(d.name&&profOf(d)==="Driver")emp[normDriver(d.name)]=1;});
+  var miss={};(STATE.grd.orderlog||[]).forEach(function(e){if(String(e.date||"").slice(0,7)!==mk)return;var n=normDriver(e.driver);if(!n||emp[n])return;miss[n]=(miss[n]||0)+(num(e.orders)||0);});
+  return Object.keys(miss).sort().map(function(n){return {name:n,orders:miss[n]};});
+}
+
+/* ---- Payroll list ---- */
+pagePayroll=function(pg){
+  if(!payMK_sel)payMK_sel=mKeyOf(TODAY);
+  payClampMonth();
+  var mk=payMK_sel;
+  var emps=payEmployees(mk).slice().sort(function(a,b){var pa=profOf(a),pb=profOf(b);if(pa!==pb)return pa==="Driver"?-1:1;return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1;});
+  var rows=emps.map(function(d){return payslipFor(d,mk);});
+  var nD=rows.filter(function(r){return r.prof==="Driver";}).length,nO=rows.length-nD;
+  var totOrd=rows.reduce(function(a,r){return a+r.orders;},0);
+  var totBase=rows.reduce(function(a,r){return a+r.basic;},0),totAdd=rows.reduce(function(a,r){return a+r.additions;},0);
+  var totDed=rows.reduce(function(a,r){return a+r.deductions;},0),totNet=rows.reduce(function(a,r){return a+r.net;},0);
+  var paidCount=rows.filter(function(r){return r.paid;}).length;
+  var search='<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:280px;max-width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="paySearch" placeholder="Search employee…" autocomplete="off" style="border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:13px;width:100%"></div>';
+  var head='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+search+
+    '<div style="display:flex;align-items:center;gap:10px"><span class="hint">Payroll month</span>'+payMonthSelHTML()+'</div></div>';
+  var kpis='<div class="grid g4" style="margin-bottom:16px">'+
+    payStat({l:"On payroll",v:rows.length,c:"var(--indigo)",s:nD+" drivers · "+nO+" office"})+
+    payStat({l:"Driver orders",v:fmtN(totOrd),c:"var(--amber)",s:"× "+PAY_RATE.toFixed(3)+" KWD per order"})+
+    payStat({l:"Earnings",v:money(totBase+totAdd)+" KD",c:"var(--teal)",s:"orders pay + office salary"+(totAdd>0?" + allowances":"")})+
+    payStat({l:"Net Payable",v:money(totNet)+" KD",c:"var(--good)",s:(totDed>0?"after "+money(totDed)+" deductions · ":"")+paidCount+" of "+rows.length+" paid"})+
+  '</div>';
+  var um=payUnmatched(mk);
+  var warn=um.length?'<div class="banner amber" style="margin-bottom:16px"><div><b>'+um.length+' name'+(um.length===1?"":"s")+' in the Daily Log '+(um.length===1?"doesn’t":"don’t")+' match a Driver in Employees</b> — '+um.reduce(function(a,x){return a+x.orders;},0)+' orders not in anyone’s pay: '+um.slice(0,8).map(function(x){return esc(x.name)+" ("+x.orders+")";}).join(", ")+(um.length>8?" …":"")+'</div></div>':"";
+  var list=rows.length?'<div class="card"><div class="card-b" style="padding:6px 6px;overflow-x:auto"><table class="dt" style="min-width:760px"><thead><tr><th>Employee</th><th>Type</th><th style="text-align:right">Orders</th><th style="text-align:right">Base pay</th><th style="text-align:right">Additions</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net Payable</th><th>Salary</th><th></th></tr></thead><tbody>'+
+    rows.map(function(r){var d=r.d,dr=r.prof==="Driver";
+      return '<tr data-route="grd/payroll/'+esc(d.id)+'" data-search="'+esc(((d.name||"")+" "+r.prof+" "+(d.status||"")+" "+(d.veh||"")+" "+(d.no||"")).toLowerCase())+'" style="cursor:pointer">'+
+        '<td><div style="display:flex;align-items:center;gap:10px">'+avatarHTML(d,30)+'<div><span class="nm">'+esc(d.name)+'</span><div class="sub">'+esc(cap(d.status||""))+(d.site?" · "+esc(d.site):"")+'</div></div></div></td>'+
+        '<td><span class="pill '+(dr?"info":"neutral")+'">'+r.prof+'</span></td>'+
+        '<td class="mono" style="text-align:right">'+(dr?fmtN(r.orders)+(r.days?'<div class="sub">'+r.days+' days</div>':''):'<span style="color:var(--muted)">—</span>')+'</td>'+
+        '<td class="mono" style="text-align:right">'+money(r.basic)+'<div class="sub">'+(dr?"orders × "+PAY_RATE.toFixed(3):"fixed salary")+'</div></td>'+
+        '<td class="mono" style="text-align:right;color:'+(r.additions>0?"var(--good)":"var(--muted)")+'">'+(r.additions>0?"+"+money(r.additions):"—")+'</td>'+
+        '<td class="mono" style="text-align:right;color:'+(r.deductions>0?"var(--crit)":"var(--muted)")+'">'+(r.deductions>0?"−"+money(r.deductions):"—")+'</td>'+
+        '<td class="mono nm" style="text-align:right;color:var(--good)">'+money(r.net)+'</td>'+
+        '<td>'+(r.paid?'<span class="pill good">Paid</span>':'<span class="pill warn">Unpaid</span>')+'</td>'+
+        '<td style="text-align:right;color:var(--muted)">'+svg('<path d="M9 6l6 6-6 6"/>')+'</td></tr>';
+    }).join("")+'</tbody><tfoot><tr><td class="nm">Total</td><td></td><td class="mono nm" style="text-align:right">'+fmtN(totOrd)+'</td><td class="mono nm" style="text-align:right">'+money(totBase)+'</td><td class="mono" style="text-align:right">'+(totAdd>0?"+"+money(totAdd):"—")+'</td><td class="mono" style="text-align:right">'+(totDed>0?"−"+money(totDed):"—")+'</td><td class="mono nm" style="text-align:right;color:var(--good)">'+money(totNet)+'</td><td colspan="2"></td></tr></tfoot></table></div></div>'
+    :'<div class="empty" style="padding:40px">'+svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')+'<h4>Nobody on payroll for '+esc(prettyMonth(mk))+'</h4><p>Set each employee’s Profession Type to Driver or Office in Employees.</p></div>';
+  pg.innerHTML=head+kpis+warn+list;
+  var sel=$("#payMonthSel",pg);if(sel)sel.addEventListener("change",function(){payMK_sel=this.value;pagePayroll($("#page"));});
+  var srch=$("#paySearch",pg);
+  if(srch)srch.addEventListener("input",function(){
+    var q=this.value.trim().toLowerCase(),trs=$$("#page table.dt tbody tr"),shown=0;
+    trs.forEach(function(tr){var m=!q||(tr.getAttribute("data-search")||"").indexOf(q)>=0;tr.style.display=m?"":"none";if(m)shown++;});
+    var body=$("#page table.dt tbody");var er=$("#payNoRes",pg);
+    if(body&&shown===0&&q){if(!er){er=document.createElement("tr");er.id="payNoRes";er.innerHTML='<td colspan="9" style="text-align:center;color:var(--muted);padding:22px">No employee matches "'+esc(q)+'"</td>';body.appendChild(er);}}
+    else if(er)er.remove();
+  });
+};
+/* ---- Payslip: the first earnings line explains itself ---- */
+var _payDet=pagePayrollDetail;
+pagePayrollDetail=function(pg,id){
+  _payDet.apply(this,arguments);
+  var d=(STATE.grd.drivers||[]).filter(function(x){return String(x.id)===String(id);})[0];if(!d)return;
+  var r=payslipFor(d,payMK_sel);
+  var card=pg.querySelector(".card:nth-of-type(2)")||null;
+  var first=null;Array.prototype.some.call(pg.querySelectorAll(".card .card-b > div"),function(el){var s=el.querySelector("span");if(s&&s.textContent.trim()==="Basic Salary"){first=s;return true;}return false;});
+  if(first){
+    if(r.prof==="Driver"){var plats=Object.keys(r.byPlat).map(function(p){return esc(p)+" "+r.byPlat[p];}).join(" · ");
+      first.innerHTML='Orders pay <span style="color:var(--muted)">· '+fmtN(r.orders)+' orders × '+PAY_RATE.toFixed(3)+' KWD'+(plats?" · "+plats:"")+(r.days?" · "+r.days+" days":"")+'</span>';}
+    else first.innerHTML='Basic Salary <span style="color:var(--muted)">· Office · fixed</span>';
+  }
+  var sub=pg.querySelector(".card .sub");if(sub&&sub.textContent.indexOf(r.prof)<0)sub.textContent=r.prof+" · "+sub.textContent;
+};
 
 /* ===== v3 redesign module ===== */
 /* ================================================================
