@@ -2332,6 +2332,12 @@ html[data-skin="night"] .pnl .kpi.hero .fav{color:#0B5D3B}html[data-skin="night"
 .fd .td-foot a{cursor:pointer;color:var(--ink);font-weight:700}
 .fd .pod .p[data-route],.fd .td-lb .r[data-route]{cursor:pointer}
 .fd .td-lb .r{padding:7px 0}
+
+.cc-delb{width:30px;height:30px;display:inline-grid;place-items:center;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;vertical-align:middle}
+.cc-delb svg{width:15px;height:15px}
+.cc-delb:hover{color:var(--crit);border-color:var(--crit);background:var(--crit-bg)}
+td.cc-act{text-align:right;white-space:nowrap}
+html.m2 #page table.dt.m-list tbody tr > td.m-a.cc-act{justify-content:flex-end !important}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -6539,7 +6545,7 @@ function ccShiftsPage(){
       '<td><div class="mono">'+esc(s.logout_time||"—")+'</div><div class="sub">'+esc(s.logout_place||"")+'</div></td>'+
       '<td class="mono">'+(s.status==="COMPLETED"?"+"+(s.distance||0)+" km":"—")+'</td><td class="mono">'+(s.orders_done||0)+' / '+(s.orders_cancelled||0)+'</td>'+
       '<td class="mono">'+esc(s.duration||"—")+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td>'+
-      '<td>'+(s.status==="ACTIVE"?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End</button>':'')+'</td></tr>';}).join("")
+      '<td class="cc-act">'+(s.status==="ACTIVE"?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End</button>':ccDelBtn("shifts",s.id))+'</td></tr>';}).join("")
     :'<tr><td colspan="11"><div class="empty" style="padding:24px"><h4>No shifts match</h4><p>Try clearing the filters.</p></div></td></tr>';
   return ccFilters(true)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     '<div class="tbl-foot"><span>'+rows.length+' shifts</span><button class="btn sm" data-act="ccexport" data-what="shifts">Export CSV</button></div>';
@@ -6549,9 +6555,9 @@ function ccKmPage(){
   var rows=ccDone().filter(ccPass).slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"")||ccMs(b)-ccMs(a);});
   var tot=rows.reduce(function(a,s){return a+(s.distance||0);},0);
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Distance (filtered)",fmtKm(tot)+" km",rows.length+" completed shifts","var(--teal)")+ccKpi("Today",fmtKm(ccKmDay(ccToday()))+" km","all drivers","var(--good)")+ccKpi("Last 7 days",fmtKm([0,1,2,3,4,5,6].reduce(function(a,i){return a+ccKmDay(ccDay(i));},0))+" km","all drivers","var(--indigo)")+ccKpi("Flagged",rows.filter(ccFlag).length,"over "+CC_KM_FLAG+" km or negative","var(--crit)")+'</div>';
-  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td></tr>';}).join("")
-    :'<tr><td colspan="8"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
-  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>Photos</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td><td class="cc-act">'+ccDelBtn("km",s.id)+'</td></tr>';}).join("")
+    :'<tr><td colspan="9"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
+  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="km">Export CSV</button></div>';
 }
 /* ---------- FUEL ---------- */
@@ -6561,9 +6567,9 @@ function ccFuelPage(){
     .slice().sort(function(a,b){return (Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0);});
   var tot=rows.reduce(function(a,r){return a+(r.cost||0);},0),rec=rows.filter(function(r){return r.receipt_photo;}).length;
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Fuel spend",money(tot)+" KWD",rows.length+" refills","var(--amber)")+ccKpi("With receipt",rows.length?Math.round(rec/rows.length*100)+"%":"—",rec+" of "+rows.length,"var(--good)")+ccKpi("Today",money(CC.fuel.filter(function(x){return x.date===ccToday();}).reduce(function(a,x){return a+(x.cost||0);},0))+" KWD","all drivers","var(--teal)")+ccKpi("Drivers refilling",Object.keys(rows.reduce(function(a,r){a[r.driver_id]=1;return a;},{})).length,"in this list","var(--indigo)")+'</div>';
-  var tb=rows.length?rows.map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(r.receipt_photo?'<a href="'+esc(r.receipt_photo)+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(r.receipt_photo)+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td></tr>';}).join("")
-    :'<tr><td colspan="5"><div class="empty" style="padding:24px"><h4>No fuel entries yet</h4><p>Drivers log fuel from the app with a receipt photo.</p></div></td></tr>';
-  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  var tb=rows.length?rows.map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(r.receipt_photo?'<a href="'+esc(r.receipt_photo)+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(r.receipt_photo)+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td><td class="cc-act">'+ccDelBtn("fuel",r.id)+'</td></tr>';}).join("")
+    :'<tr><td colspan="6"><div class="empty" style="padding:24px"><h4>No fuel entries yet</h4><p>Drivers log fuel from the app with a receipt photo.</p></div></td></tr>';
+  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="fuel">Export CSV</button></div>';
 }
 /* ---------- DRIVER ACCOUNTS ---------- */
@@ -8010,9 +8016,9 @@ document.addEventListener("click",function(e){
 var MOB={q:null,on:false,off:false,t:null};
 /* per-table layout: t = title, r = value on the right, b = status badge, m = details (in order), a = action buttons row */
 var MOB_TABLES=[
- {h:["Clock in","Clock out"],t:"Driver",r:"Distance",b:"Status",m:["Date","Clock in","Clock out","Orders / cancel"]},
- {h:["Start ODO","End ODO"],t:"Driver",r:"Distance",m:["Date","Platform","Orders"]},
- {h:["Station","Receipt"],t:"Driver",r:"Amount (KWD)",m:["Date","Station","Receipt"]},
+ {h:["Clock in","Clock out"],t:"Driver",r:"Distance",b:"Status",m:["Date","Clock in","Clock out","Orders / cancel"],a:true},
+ {h:["Start ODO","End ODO"],t:"Driver",r:"Distance",m:["Date","Platform","Orders"],a:true},
+ {h:["Station","Receipt"],t:"Driver",r:"Amount (KWD)",m:["Date","Station","Receipt"],a:true},
  {h:["ERP employee","Phone (login)"],t:"Driver",r:"Lifetime",b:"Status",m:["Phone (login)","Platforms","Device"],a:true},
  {h:["Type","When","Where"],t:"Driver",b:"Type",m:["When","Where","Note"],a:true},
  {h:["Result","Photo"],t:"Driver",b:"Result",m:["Date","Plate","Note","Photo"]},
@@ -9230,6 +9236,45 @@ function tdHTML(rows){
     var sec=pg.querySelector("#fd-pod");if(!sec)return;var h=sec.querySelector(".hint");if(h)h.textContent="most orders · "+P.l;
     var b=sec.querySelector(".body");if(b)b.innerHTML=tdHTML(tdRows(keys));}catch(e){}
 };})();
+
+/* ===== Command → Shift Logs / KM Records / Fuel Audits: delete one entry (admin only) ===== */
+function ccDelBtn(kind,id){
+  if(!ccIsAdmin())return "";
+  return '<button class="cc-delb" data-act="ccdelrow" data-k="'+kind+'" data-id="'+esc(String(id))+'" title="Delete" aria-label="Delete">'+svg(IC_del)+'</button>';
+}
+function ccDelModal(kind,id){
+  if(!ccIsAdmin()){toast("Only an admin can delete Command entries.","err");return;}
+  var isFuel=kind==="fuel",rec=(isFuel?CC.fuel:CC.shifts).filter(function(x){return String(x.id)===String(id);})[0];
+  if(!rec){toast("That entry is already gone.","err");renderPage();return;}
+  var d=ccDrv(rec.driver_id),who=(d&&d.name)||"Driver";
+  if(!isFuel&&rec.status==="ACTIVE"){toast(who+" is still on duty — end the shift first.","err");return;}
+  var title=isFuel?"Delete fuel entry?":kind==="km"?"Delete KM record?":"Delete shift log?";
+  function row(l,v){return '<div class="cch-r"><span>'+esc(l)+'</span><b class="mono">'+esc(v)+'</b></div>';}
+  var info=isFuel?row("Driver",who)+row("Date",fmtD(rec.date)+(rec.time?" · "+rec.time:""))+row("Station",rec.station||"—")+row("Amount",money(rec.cost)+" KWD")
+    :row("Driver",who)+row("Date",fmtD(rec.date)+" · "+(rec.platform||""))+row("KM",fmtKm(rec.start_odo)+" → "+(rec.end_odo!=null?fmtKm(rec.end_odo):"—")+" (+"+(rec.distance||0)+")")+row("Orders",(rec.orders_done||0)+" done · "+(rec.orders_cancelled||0)+" cancelled");
+  var note=isFuel?"The fuel entry and its receipt link are removed. Nothing else changes."
+    :(kind==="km"?"A KM record is the shift itself, so this removes the whole shift — it also disappears from Shift Logs. ":"")+"Its GPS route goes too. Fuel entries of that shift stay in Fuel Audits.";
+  var ex=document.getElementById("overlay");if(ex)ex.remove();
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal" style="max-width:440px"><div class="modal-h"><div><h3>'+esc(title)+'</h3></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
+    '<div class="modal-b"><div class="cch-list">'+info+'</div><p class="cch-keep">'+esc(note)+' This can’t be undone.</p></div>'+
+    '<div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn danger" id="ccDelGo">'+svg(IC_del)+'Delete</button></div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector("#ccDelGo").addEventListener("click",function(){var b=this;if(b.disabled)return;b.disabled=true;b.textContent="Deleting…";ccDelRun(kind,rec,who,b);});
+}
+function ccDelRun(kind,rec,who,btn){
+  var isFuel=kind==="fuel",sid=String(rec.id);
+  var p=isFuel?SB.from("fuel_records").delete().eq("id",sid)
+    :SB.from("shift_points").delete().eq("shift_id",sid).then(function(r){if(r&&r.error)throw r.error;return SB.from("shifts").delete().eq("id",sid);});
+  Promise.resolve(p).then(function(r){
+    if(r&&r.error)throw r.error;
+    if(isFuel)CC.fuel=CC.fuel.filter(function(x){return String(x.id)!==sid;});
+    else CC.shifts=CC.shifts.filter(function(x){return String(x.id)!==sid;});
+    try{logAudit("delete",isFuel?"ccfuel":"ccshifts",sid,who+" · "+fmtD(rec.date),isFuel?[{f:"cost",l:"Fuel",from:money(rec.cost)+" KWD · "+(rec.station||""),to:""}]:[{f:"shift",l:"Shift",from:(rec.platform||"")+" · +"+(rec.distance||0)+" km · "+(rec.orders_done||0)+" orders",to:""}]);}catch(e){}
+    closeForm();toast((isFuel?"Fuel entry":"Shift")+" deleted.","good");renderPage();
+  }).catch(function(e){if(btn){btn.disabled=false;btn.innerHTML=svg(IC_del)+"Delete";}toast("Could not delete: "+((e&&e.message)||"network error"),"err");});
+}
+document.addEventListener("click",function(e){var a=e.target.closest('[data-act="ccdelrow"]');if(!a)return;e.preventDefault();e.stopPropagation();ccDelModal(a.getAttribute("data-k"),a.getAttribute("data-id"));},true);
 
 /* ===== v3 redesign module ===== */
 /* ================================================================
