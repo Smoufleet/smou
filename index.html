@@ -2579,7 +2579,7 @@ var READONLY=false;
 /* ---- roles / auth state ---- */
 var ROLE="viewer";
 function can(a){if(ROLE==="admin")return true;if(ROLE==="dataentry")return a==="edit";return false;}
-function roleLabel(r){return r==="admin"?"Admin":r==="dataentry"?"Data Entry":"View-only";}
+function roleLabel(r){return r==="admin"?"Admin":r==="dataentry"?"Data Entry":r==="pending"?"Waiting for approval":"View-only";}
 function applyRole(){READONLY=!can("edit");}
 
 /* ============ SUPABASE DATA LAYER ============ */
@@ -2900,7 +2900,7 @@ function ensureProfile(user){
   return SB.from("profiles").select("id,role,name").eq("id",user.id).then(function(res){
     if(res.error)throw res.error;
     if(res.data&&res.data.length)return res.data[0].role||"viewer";
-    return SB.from("profiles").insert({id:user.id,email:user.email,name:(user.email||"").split("@")[0],role:"dataentry"}).then(function(){return "dataentry";}).catch(function(){return "viewer";});
+    return SB.from("profiles").insert({id:user.id,email:user.email,name:(user.email||"").split("@")[0],role:"pending"}).then(function(){return "pending";}).catch(function(){return "viewer";});
   });
 }
 function onAuthed(user){
@@ -4275,7 +4275,7 @@ function pageUsers(pg){
     var rows=res.data||[];
     var info='';
     var tbl='<div class="tbl-wrap"><table class="dt"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>'+
-      (rows.length?rows.map(function(u){var self=USER&&u.id===USER.id;return '<tr><td><span class="nm">'+esc(u.name||"—")+'</span>'+(self?' <span class="sub">(you)</span>':'')+'</td><td class="mono">'+esc(u.email||"")+'</td><td><select class="urole" data-urole data-uid="'+u.id+'"'+(self?' disabled':'')+'>'+["admin","dataentry","viewer"].map(function(r){return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+roleLabel(r)+'</option>';}).join("")+'</select></td></tr>';}).join(""):'<tr><td colspan="3"><div class="empty" style="padding:22px"><h4>No users yet</h4><p>Create staff accounts in Supabase dashboard.</p></div></td></tr>')+
+      (rows.length?rows.map(function(u){var self=USER&&u.id===USER.id;return '<tr><td><span class="nm">'+esc(u.name||"—")+'</span>'+(self?' <span class="sub">(you)</span>':'')+'</td><td class="mono">'+esc(u.email||"")+'</td><td><select class="urole" data-urole data-uid="'+u.id+'"'+(self?' disabled':'')+'>'+["admin","dataentry","viewer","pending"].map(function(r){return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+roleLabel(r)+'</option>';}).join("")+'</select></td></tr>';}).join(""):'<tr><td colspan="3"><div class="empty" style="padding:22px"><h4>No users yet</h4><p>Create staff accounts in Supabase dashboard.</p></div></td></tr>')+
     '</tbody></table></div>';
     box.innerHTML=info+tbl;
     if(LANG==="ar")transEl(box);
@@ -9059,7 +9059,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.10 · 29 Sep 2026 · no-limit sync";
+var ERP_BUILD="v3.11 · 30 Sep 2026 · day-1 security";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -9069,6 +9069,13 @@ try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
     PENDING=PENDING.filter(function(p){if(p.collection!=="orderlog"||!p.data)return true;var k=od2Key(p.data);return !(have[k]&&have[k]!==p.id);});
     if(PENDING.length!==n0)savePending();}}catch(e){}
   return _fp.apply(this,arguments);};})();
+/* a new login account waits for an admin to give it a role — show that instead of an empty ERP */
+(function(){var _rp=renderPage;renderPage=function(){
+  if(SB_ON&&ROLE==="pending"){var pg=document.getElementById("page");if(pg){try{setTitle("Waiting for approval","Account");}catch(e){}
+    var nb=document.getElementById("newBtn");if(nb)nb.hidden=true;
+    pg.innerHTML='<div class="card" style="max-width:520px;margin:40px auto"><div class="card-b" style="text-align:center;padding:34px 26px"><div style="font-size:34px;margin-bottom:8px">🔒</div><h3 style="margin:0 0 8px">Your account is waiting for approval</h3><p class="sub" style="margin:0 0 18px">'+esc((USER&&USER.email)||"")+' is signed in, but an admin still has to give it a role (Admin, Data Entry or View-only) in Users &amp; Roles. Nothing is shown until then.</p><button class="btn" data-act="logout">Sign out</button></div></div>';}
+    return;}
+  return _rp.apply(this,arguments);};})();
 
 /* ===== Payroll v2 — by Profession Type (Employees → Profession Type: Driver / Office / None)
    Driver : orders in the Daily Log for that month × 0.400 KWD
