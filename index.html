@@ -2314,6 +2314,24 @@ html[data-skin="night"] .pnl .kpi.hero .fav{color:#0B5D3B}html[data-skin="night"
 .od2-dup .od2-err>div{border-top-color:rgba(0,0,0,.06)}
 .od2-bad{border-color:var(--crit)!important;box-shadow:0 0 0 3px var(--crit-bg)!important;animation:od2Shake .35s ease}
 @keyframes od2Shake{25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+
+.fd .pod .td-pay{font:800 13px "JetBrains Mono",monospace;color:var(--good);margin-top:2px}
+.fd .pod .td-pay small{font-size:10px;font-weight:700;color:var(--muted)}
+.fd .pod .vl{display:flex;align-items:center;justify-content:center;gap:5px}
+.fd .td-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none}
+.fd .td-lb .r{gap:10px}
+.fd .td-lb .td-nm{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
+.fd .td-lb .td-l{display:flex;align-items:center;gap:6px;min-width:0}
+.fd .td-lb .td-l .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fd .td-bar{display:block;height:4px;border-radius:4px;background:var(--s3,rgba(0,0,0,.06));overflow:hidden}
+.fd .td-bar b{display:block;height:100%;border-radius:4px;background:var(--ink);opacity:.55}
+.fd .td-lb .td-o{font-size:12px;color:var(--muted);width:44px;text-align:right;flex:none}
+.fd .td-lb .v{width:74px;text-align:right;color:var(--good)}
+.fd .td-foot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.fd .td-foot .sp{flex:1}
+.fd .td-foot a{cursor:pointer;color:var(--ink);font-weight:700}
+.fd .pod .p[data-route],.fd .td-lb .r[data-route]{cursor:pointer}
+.fd .td-lb .r{padding:7px 0}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -9177,6 +9195,41 @@ pagePayrollDetail=function(pg,id){
   }
   var sub=pg.querySelector(".card .sub");if(sub&&sub.textContent.indexOf(r.prof)<0)sub.textContent=r.prof+" · "+sub.textContent;
 };
+
+/* ===== Finance dashboard → Top drivers: ranked by Daily Log orders, with what each is earning on payroll ===== */
+function tdRows(keys){
+  var want={};keys.forEach(function(k){want[k]=1;});
+  var emp={};(STATE.grd.drivers||[]).forEach(function(d){if(d.name)emp[normDriver(d.name)]=d;});
+  var by={};
+  (STATE.grd.orderlog||[]).forEach(function(e){var mk=String(e.date||"").slice(0,7);if(!want[mk])return;var n=normDriver(e.driver);if(!n)return;
+    var r=by[n]=by[n]||{name:n,orders:0,plat:{},days:{},mks:{}};var v=num(e.orders)||0;r.orders+=v;r.plat[e.platform||"—"]=(r.plat[e.platform||"—"]||0)+v;r.days[e.date]=1;r.mks[mk]=1;});
+  return Object.keys(by).map(function(n){var r=by[n],d=emp[n]||null,pay=0;
+    Object.keys(r.mks).forEach(function(mk){if(mk<PAYROLL_START_MK)return;if(d&&profOf(d)==="None")return;
+      var o=0;(STATE.grd.orderlog||[]).forEach(function(e){if(String(e.date||"").slice(0,7)===mk&&normDriver(e.driver)===n)o+=num(e.orders)||0;});pay+=o*PAY_RATE;});
+    var main=Object.keys(r.plat).sort(function(a,b){return r.plat[b]-r.plat[a];})[0]||"";
+    return {name:r.name,d:d,orders:r.orders,pay:Math.round(pay*1000)/1000,plat:main,days:Object.keys(r.days).length};
+  }).filter(function(r){return r.orders>0;}).sort(function(a,b){return b.orders-a.orders||a.name.localeCompare(b.name);});
+}
+function tdHTML(rows){
+  if(!rows.length)return fdEmpty("No Daily Log orders for this period yet.");
+  var cols=["#C2410C","#0B9488","#4F5BD5","#B7871A","#7C3AED","#0F766E"];
+  function ini(n){return n.split(/\s+/).map(function(w){return w[0]||"";}).join("").slice(0,2).toUpperCase();}
+  function short(n){var w=n.split(/\s+/);return w.slice(0,2).join(" ");}
+  function go(r){return r.d?' data-route="grd/payroll/'+esc(r.d.id)+'"':"";}
+  function av(r,i){return '<div class="av" style="background:'+cols[i%cols.length]+'">'+esc(ini(r.name))+(r.d&&r.d.photo?'<img src="'+esc(r.d.photo)+'" alt="" onerror="this.remove()" style="position:absolute;inset:0">':'')+'</div>';}
+  function dot(p){return '<i class="td-dot" style="background:'+(/keeta/i.test(p)?"var(--good)":"var(--amber,#C2410C)")+'"></i>';}
+  function pod(r,cls,rk,i){if(!r)return '<div class="p '+cls+'"><div class="av ghost"></div><div class="nm">—</div><div class="vl">&nbsp;</div><div class="blk">'+rk+'</div></div>';
+    return '<div class="p '+cls+'"'+go(r)+' title="'+esc(r.name)+'">'+av(r,i)+'<div class="nm">'+esc(short(r.name))+'</div><div class="vl">'+dot(r.plat)+fmtN(r.orders)+' orders</div><div class="td-pay">'+money(r.pay)+' <small>KWD</small></div><div class="blk">'+rk+'</div></div>';}
+  var max=rows[0].orders||1,tot=rows.reduce(function(a,r){return a+r.orders;},0),totPay=rows.reduce(function(a,r){return a+r.pay;},0);
+  return '<div class="pod">'+pod(rows[1],"p2",2,1)+pod(rows[0],"p1",1,0)+pod(rows[2],"p3",3,2)+'</div>'+
+    (rows.length>3?'<div class="lb td-lb">'+rows.slice(3,7).map(function(r,i){return '<div class="r"'+go(r)+'><span class="n">'+(i+4)+'</span><span class="td-nm"><span class="td-l">'+dot(r.plat)+'<span class="t">'+esc(r.name)+'</span></span><span class="td-bar"><b style="width:'+(r.orders/max*100).toFixed(1)+'%"></b></span></span><span class="td-o mono">'+fmtN(r.orders)+'</span><span class="v">'+money(r.pay)+'</span></div>';}).join("")+'</div>':"")+
+    '<div class="td-foot"><span><b class="mono">'+fmtN(tot)+'</b> orders · <b class="mono">'+rows.length+'</b> drivers</span><span class="sp"></span><a data-route="grd/payroll">Payroll <b class="mono">'+money(totPay)+'</b> KWD →</a></div>';
+}
+(function(){var _r=fdRender;fdRender=function(pg){_r.apply(this,arguments);
+  try{pg=pg||document.getElementById("page");var D=fdBuild(),PER=fdPeriods(D),P=PER[FD.per]||PER.this,keys=P.idx.map(function(i){return D.K[i];});
+    var sec=pg.querySelector("#fd-pod");if(!sec)return;var h=sec.querySelector(".hint");if(h)h.textContent="most orders · "+P.l;
+    var b=sec.querySelector(".body");if(b)b.innerHTML=tdHTML(tdRows(keys));}catch(e){}
+};})();
 
 /* ===== v3 redesign module ===== */
 /* ================================================================
