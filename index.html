@@ -2371,6 +2371,28 @@ html.m2 #page table.dt.m-list tbody tr > td.m-a.cc-act{justify-content:flex-end 
   .tb-row{flex-direction:column;align-items:stretch;gap:10px}
   .tb-row .btn{width:100%;justify-content:center}
 }
+
+/* ===== new-version notice ===== */
+#erpNew{position:fixed;top:14px;left:50%;translate:-50% 0;z-index:9500;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:16px;background:var(--ink);color:var(--panel);box-shadow:0 18px 40px rgba(0,0,0,.28);width:max-content;max-width:calc(100vw - 24px);animation:enIn .35s cubic-bezier(.2,.8,.2,1.2) both}
+#erpNew .en-dot{width:10px;height:10px;border-radius:50%;background:var(--acc);flex:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 30%,transparent)}
+#erpNew .en-t{display:flex;flex-direction:column;min-width:0;font-size:13px;line-height:1.3}
+#erpNew .en-t b{font-weight:800}
+#erpNew .en-t span{opacity:.75;font-size:12px}
+#erpNew .btn{height:32px;flex:none}
+#erpNew .btn:not(.primary){background:transparent!important;color:inherit!important;border-color:color-mix(in srgb,currentColor 30%,transparent)!important}
+@keyframes enIn{from{opacity:0;translate:-50% -14px}}
+@media (max-width:640px){#erpNew{top:auto;bottom:calc(92px + env(safe-area-inset-bottom));flex-wrap:wrap;width:calc(100vw - 24px)}#erpNew .en-t{flex:1 1 60%}}
+
+@media (prefers-reduced-motion:reduce){#erpNew{animation:none}}
+
+/* ===== Full backup card ===== */
+.bk-card{border:1.5px solid var(--acc)!important}
+.bk-meta{margin-top:8px;font-size:12px;color:var(--muted)}
+.bk-meta b{color:var(--ink)}
+.bk-meta.old b{color:var(--crit)}
+.bk-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.bk-list span{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--neutral-bg);color:var(--neutral)}
+.bk-prog{margin-top:10px;font-size:12px;font-weight:700;color:var(--acc-text,var(--acc))}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -9092,7 +9114,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.12 · 30 Sep 2026 · day-2 recycle bin";
+var ERP_BUILD="v3.14 · 30 Sep 2026 · day-3 backup";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -9403,6 +9425,150 @@ document.addEventListener("input",function(e){if(e.target&&e.target.id==="tbQ"){
     var pg=document.getElementById("page");setTitle("Recycle Bin","Admin · deleted & changed records");var nb=document.getElementById("newBtn");if(nb)nb.hidden=true;
     if(pg)pageTrash(pg);return;}
   return _rp.apply(this,arguments);};})();
+
+/* ===== Full Backup: read fresh from the database (not from what this screen has loaded) —
+   every ERP register + Daily Log + Command tables. Excel for people, JSON for an exact restore. ===== */
+var BK_TABLES=[["drivers","Driver accounts"],["shifts","Shift logs"],["fuel_records","Fuel audits"],["sos_alerts","SOS alerts"],["vehicle_checks","Vehicle checks"],["announcements","Announcements"],["profiles","ERP users"]];
+var BK_NAMES={orderlog:"Daily Log (orders)",perf:"Monthly orders",expenses:"Expenses",pnlclose:"P&L month close",usernotes:"Notes",__audit__:"Activity log"};
+var BK_ORDER=["drivers","vehicles","orderlog","perf","expenses","income","payroll","funds","fuel","sims","housing","compdocs","attendance","hiring","service","maintenance","fines","incidents","pnlclose"];
+var BK={busy:false};
+function bkLastKey(){return "smou-last-backup";}
+function bkLast(){try{return +localStorage.getItem(bkLastKey())||0;}catch(e){return 0;}}
+function bkSetLast(){try{localStorage.setItem(bkLastKey(),String(Date.now()));}catch(e){}}
+function bkProg(t){var el=document.getElementById("bkProg");if(el){el.hidden=!t;el.textContent=t||"";}}
+function bkFetch(withAudit){
+  if(!SB_ON||!SB)return Promise.reject(new Error("Not connected to the database"));
+  var jobs=[["records",sbPaged(function(){return SB.from("records").select("collection,id,data").neq("collection","__audit__").order("collection",{ascending:true}).order("id",{ascending:true});})]];
+  if(withAudit)jobs.push(["__audit__",sbPaged(function(){return SB.from("records").select("collection,id,data").eq("collection","__audit__").order("id",{ascending:true});})]);
+  BK_TABLES.forEach(function(t){jobs.push([t[0],sbPaged(function(){return SB.from(t[0]).select("*").order("id",{ascending:true});})]);});
+  var done=0;bkProg("Reading the database… 0/"+jobs.length);
+  return Promise.all(jobs.map(function(j){return j[1].then(function(r){done++;bkProg("Reading the database… "+done+"/"+jobs.length);return [j[0],r];});})).then(function(res){
+    var out={records:[],audit:[],tables:{},errors:[]};
+    res.forEach(function(x){var k=x[0],r=x[1];
+      if(r.error){out.errors.push(k+": "+r.error.message);return;}
+      var d=r.data||[];
+      if(k==="records")out.records=d;else if(k==="__audit__")out.audit=d;
+      else{if(k==="drivers")d=d.map(function(o){var c=Object.assign({},o);delete c.pin;return c;});   /* PINs are never exported */
+        out.tables[k]=d;}
+    });
+    if(out.errors.length&&!out.records.length)throw new Error(out.errors[0]);
+    return out;
+  });
+}
+function bkCell(v){
+  if(v==null)return "";
+  if(typeof v==="object"){if(v.url&&!Array.isArray(v))return String(v.url);v=JSON.stringify(v);}
+  if(typeof v==="string"&&v.length>32000)v=v.slice(0,32000)+"…";
+  return v;
+}
+function bkSheetName(t,used){var nm=String(t).replace(/\s*[\\\/\?\*\[\]:]\s*/g," - ").replace(/\s+/g," ").trim().slice(0,31)||"Sheet",base=nm,i=2;while(used[nm.toLowerCase()]){nm=base.slice(0,27)+" "+i;i++;}used[nm.toLowerCase()]=1;return nm;}
+function bkAOA(rows,labels){
+  var keys=[];rows.forEach(function(r){Object.keys(r||{}).forEach(function(k){if(keys.indexOf(k)<0)keys.push(k);});});
+  var known=(labels||[]).map(function(f){return f.k;});   /* register fields first, in form order */
+  var cols=["id"].concat(known.filter(function(k){return k!=="id";})).concat(keys.filter(function(k){return k!=="id"&&known.indexOf(k)<0;}));
+  var lab={driver_name:"Driver",date:"Date",driver:"Driver",platform:"Platform",vehicle:"Vehicle",orders:"Orders",month:"Month",year:"Year",company:"Company",created_at:"Created at",updated_at:"Updated at"};(labels||[]).forEach(function(f){lab[f.k]=f.l;});
+  var aoa=[cols.map(function(k){return k==="id"?"Reference ID":(lab[k]||k);})];
+  rows.forEach(function(r){aoa.push(cols.map(function(k){return bkCell(r[k]);}));});
+  return aoa;
+}
+function bkName(c){return BK_NAMES[c]||(ENT[c]?ENT[c].title:c);}
+function bkExcel(){
+  if(BK.busy)return;
+  if(!xlsxReady()){toast("Excel engine still loading — try again in a moment.","err");return;}
+  BK.busy=true;var btn=document.querySelector('[data-act="rptexcel"]');if(btn)btn.disabled=true;
+  bkFetch(true).then(function(B){
+    bkProg("Building the Excel file…");
+    var wb=XLSX.utils.book_new(),used={},by={},sum=[];
+    B.records.forEach(function(r){(by[r.collection]=by[r.collection]||[]).push(Object.assign({id:r.id},r.data||{}));});
+    var cols=Object.keys(by).sort(function(a,b){var ia=BK_ORDER.indexOf(a),ib=BK_ORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b);});
+    var sheets=[];
+    cols.forEach(function(c){var labels=null;try{labels=ENT[c]?regFields(c):null;}catch(e){}
+      sheets.push([bkName(c),bkAOA(by[c],labels)]);sum.push([bkName(c),"ERP register",by[c].length]);});
+    var dn={};(B.tables.drivers||[]).forEach(function(d){dn[String(d.id)]=d.name;});
+    BK_TABLES.forEach(function(t){var rows=B.tables[t[0]];if(!rows)return;if(t[0]!=="drivers")rows=rows.map(function(r){if(r.driver_id==null)return r;var o={id:r.id,driver_name:dn[String(r.driver_id)]||""};Object.keys(r).forEach(function(k){if(k!=="id")o[k]=r[k];});return o;});sheets.push([t[1],bkAOA(rows)]);sum.push([t[1],"Command / system",rows.length]);});
+    if(B.audit.length){var al=B.audit.map(function(r){return Object.assign({id:r.id},r.data||{});});sheets.push(["Activity log",bkAOA(al)]);sum.push(["Activity log","History",al.length]);}
+    var who=(USER&&typeof USER==="object"?USER.email:USER)||"";
+    var about=[["SMOU Fleet ERP — full backup"],[],["Made",new Date().toLocaleString("en-GB",{timeZone:"Asia/Kuwait"})+" (Kuwait)"],["By",who],["ERP version",typeof ERP_BUILD!=="undefined"?ERP_BUILD:""],[],
+      ["Sheet","Type","Rows"]].concat(sum).concat([[],["Not included: GPS route points (kept 60 days in the database) and driver PINs (encrypted)."],["Photos and documents are links — they stay in cloud storage."]]);
+    if(B.errors.length)about.push([],["Could not read: "+B.errors.join(" · ")]);
+    var ws0=XLSX.utils.aoa_to_sheet(about);ws0["!cols"]=[{wch:30},{wch:22},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,ws0,bkSheetName("About this backup",used));
+    sheets.forEach(function(s){var ws=XLSX.utils.aoa_to_sheet(s[1]);ws["!cols"]=s[1][0].map(function(h){return {wch:Math.min(40,Math.max(10,String(h).length+2))};});XLSX.utils.book_append_sheet(wb,ws,bkSheetName(s[0],used));});
+    var buf=XLSX.write(wb,{bookType:"xlsx",type:"array",compression:true});
+    var total=sum.reduce(function(a,x){return a+x[2];},0);
+    dlFile(new Uint8Array(buf),"SMOU-Fleet-FullBackup_"+isoToday()+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    bkSetLast();try{logAudit("export","backup","full-"+isoToday(),"Full backup (Excel)",[{f:"rows",l:"Rows",from:"",to:String(total)}]);}catch(e){}
+    toast("Full backup downloaded — "+total.toLocaleString("en-US")+" rows in "+(sheets.length)+" sheets."+(B.errors.length?" Some tables could not be read.":""),B.errors.length?"err":"good");
+  }).catch(function(e){toast("Backup failed: "+((e&&e.message)||"network error")+". Nothing was changed — try again.","err");})
+  .then(function(){BK.busy=false;if(btn)btn.disabled=false;bkProg("");bkMeta();});
+}
+function bkJSON(){
+  if(BK.busy)return;BK.busy=true;var btn=document.querySelector('[data-act="rptbackup"]');if(btn)btn.disabled=true;
+  bkFetch(true).then(function(B){
+    var who=(USER&&typeof USER==="object"?USER.email:USER)||"";
+    var data=JSON.stringify({app:"SMOU Fleet ERP",kind:"full-backup",version:typeof ERP_BUILD!=="undefined"?ERP_BUILD:"",exportedAt:new Date().toISOString(),by:who,
+      note:"records = every ERP register row exactly as stored (collection, id, data). tables = Command Center tables. PINs and GPS points are not included.",
+      records:B.records.concat(B.audit),tables:B.tables,errors:B.errors});
+    dlFile(data,"SMOU-Fleet-FullBackup_"+isoToday()+".json","application/json");
+    bkSetLast();try{logAudit("export","backup","json-"+isoToday(),"Full backup (JSON)",[]);}catch(e){}
+    toast("Backup file downloaded — keep it somewhere safe (Google Drive, email to yourself).","good");
+  }).catch(function(e){toast("Backup failed: "+((e&&e.message)||"network error")+". Nothing was changed — try again.","err");})
+  .then(function(){BK.busy=false;if(btn)btn.disabled=false;bkProg("");bkMeta();});
+}
+function bkMeta(){var el=document.getElementById("bkMeta");if(!el)return;var t=bkLast(),d=t?Math.floor((Date.now()-t)/864e5):null;
+  el.className="bk-meta"+(d==null||d>=7?" old":"");
+  el.innerHTML=t?'Last backup from this computer: <b>'+(d===0?"today":d===1?"yesterday":d+" days ago")+'</b>'+(d>=7?" — time for a new one":""):'<b>No backup downloaded from this computer yet.</b> Take one every week.';}
+exportAllExcel=bkExcel;backupJSON=bkJSON;
+pageReports=function(pg){
+  setTitle("Reports & Export","Download reports and backups");var nb=$("#newBtn");if(nb)nb.hidden=true;
+  function ic(p){return '<span style="width:40px;height:40px;border-radius:11px;background:var(--teal-bg);color:var(--teal-ink);display:grid;place-items:center;flex:none">'+svg(p)+'</span>';}
+  function rc(icon,title,desc,act,btn,extra,cls){return '<div class="card'+(cls?" "+cls:"")+'"><div class="card-b" style="display:flex;gap:14px;align-items:flex-start">'+ic(icon)+'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+title+'</div><div class="sub" style="font-size:12.5px;color:var(--muted);margin:3px 0 12px">'+desc+'</div><button class="btn sm primary" data-act="'+act+'">'+btn+'</button>'+(extra||"")+'</div></div></div>';}
+  var regs=["Employees","Vehicles","Daily Log","Expenses","Income","Payroll data","Fuel cards","SIMs","Housing","Documents","Service","Fines","Accidents","Command shifts","Fuel audits","SOS","Activity log"];
+  pg.innerHTML='<div class="grid g2" style="align-items:start">'+
+    rc('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',"Full Backup (Excel)","Everything, read fresh from the database — one sheet per register. Open it in Excel any time, even without the ERP.","rptexcel","Download full backup",
+      '<div class="bk-list">'+regs.map(function(r){return '<span>'+r+'</span>';}).join("")+'</div><div id="bkMeta" class="bk-meta"></div><div id="bkProg" class="bk-prog" hidden></div>',"bk-card")+
+    rc('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>',"Full Backup (JSON)","Exact copy of every record, for restoring the system if it is ever needed. Keep it with the Excel file.","rptbackup","Download JSON")+
+    rc('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 18h4"/>',"Monthly Report (PDF)","This month’s workforce, alerts, finance P&amp;L and hiring — in one PDF.","rptmonthly","Download PDF")+
+    rc('<path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',"Document Expiry Report (PDF)","Every expired document + everything expiring within 30 days.","rptexpiry","Download PDF")+
+  '</div>';
+  bkMeta();
+};
+
+/* ===== New-version notice: when a newer ERP is published, every open ERP tab offers “Refresh to update”.
+   Cheap: a HEAD request every few minutes; the full page is only read when it has changed. ===== */
+(function(){
+  var TAG=null,SHOWN=false,last=0,later=0;
+  var RX=new RegExp("var ERP"+"_BUILD=\"([^\"]+)\"");
+  function vnum(v){var m=/v?(\d+)\.(\d+)/.exec(String(v||""));return m?(+m[1])*10000+(+m[2]):0;}
+  function url(){return location.pathname+"?vc="+Date.now();}
+  function tagOf(r){return r.headers.get("etag")||r.headers.get("last-modified")||"";}
+  function full(){
+    return fetch(url(),{cache:"no-store"}).then(function(r){if(!r.ok)return;TAG=tagOf(r)||TAG||"x";
+      return r.text().then(function(t){var m=RX.exec(t);if(m&&vnum(m[1])>vnum(ERP_BUILD))show(m[1]);});});
+  }
+  function check(force){
+    if(SHOWN||Date.now()<later||!navigator.onLine||!/^https?:$/.test(location.protocol))return;
+    if(!force&&Date.now()-last<60000)return;last=Date.now();
+    if(!TAG){full().catch(function(){});return;}
+    fetch(url(),{method:"HEAD",cache:"no-store"}).then(function(r){var t=tagOf(r);if(!t||t!==TAG)return full();}).catch(function(){});
+  }
+  function show(v){
+    SHOWN=true;var el=document.getElementById("erpNew");if(el)el.remove();
+    el=document.createElement("div");el.id="erpNew";el.setAttribute("role","status");
+    el.innerHTML='<span class="en-dot"></span><div class="en-t"><b>New ERP version ready</b><span>'+esc(String(v).split("·")[0].trim())+' · refresh to get the latest fixes</span></div>'+
+      '<button class="btn sm" data-act="erpnewlater">Later</button><button class="btn sm primary" data-act="erpnewgo">Refresh now</button>';
+    document.body.appendChild(el);
+  }
+  document.addEventListener("click",function(e){var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
+    if(act==="erpnewgo"){a.disabled=true;a.textContent="Refreshing…";location.reload();}
+    else if(act==="erpnewlater"){var el=document.getElementById("erpNew");if(el)el.remove();SHOWN=false;later=Date.now()+30*60000;}
+  });
+  setTimeout(function(){check(true);},15000);
+  setInterval(function(){check(false);},3*60000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)check(false);});
+  window.addEventListener("online",function(){check(true);});
+  window.__erpVerShow=show;   /* used by the test page */
+})();
 
 /* ===== v3 redesign module ===== */
 /* ================================================================
