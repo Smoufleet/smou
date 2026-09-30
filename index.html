@@ -2509,7 +2509,9 @@ try {
 (function(){
 "use strict";
 var FONTLINK='<link rel="stylesheet" href="'+(function(){try{return new URL("fonts/fonts.css",location.href).href;}catch(e){return "fonts/fonts.css";}})()+'">';
-var TODAY=(function(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());})();
+function kuwaitDateKey(){var p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kuwait",year:"numeric",month:"2-digit",day:"2-digit",calendar:"gregory",numberingSystem:"latn"}).formatToParts(new Date()),v={};p.forEach(function(x){v[x.type]=x.value;});return v.year+"-"+v.month+"-"+v.day;}
+function updateToday(){var p=kuwaitDateKey().split("-");TODAY=new Date(+p[0],+p[1]-1,+p[2]);return TODAY;}
+var TODAY;updateToday();
 var MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 var MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -2642,7 +2644,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return
 function num(v){var n=parseFloat(v);return isNaN(n)?null:n;}
 function money(n){return (n||0).toLocaleString("en-US",{minimumFractionDigits:3,maximumFractionDigits:3});}
 function parseD(s){if(!s)return null;var m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;}
-function daysTo(d){return Math.round((d-TODAY)/86400000);}
+function daysTo(d){return Math.round((d-updateToday())/86400000);}
 function fmtD(s){var d=parseD(s);if(!d)return s?esc(s):"—";return d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2);}
 function L(k){return (STATE.lookups[k]||[]);}
 function fmtKm(n){n=num(n);return n==null?"—":Math.round(n).toLocaleString("en-US");}
@@ -2727,10 +2729,124 @@ var COLLS=[["drivers",function(){return STATE.grd.drivers;}],["vehicles",functio
 var COLLSET={drivers:["grd","drivers"],vehicles:["grd","vehicles"],fuel:["grd","fuel"],sims:["grd","sims"],housing:["grd","housing"],compdocs:["grd","compdocs"],service:["grd","service"],hiring:["grd","hiring"],fines:["grd","fines"],incidents:["grd","incidents"],maintenance:["grd","maintenance"],attendance:["grd","attendance"],perf:["grd","perf"],orderlog:["grd","orderlog"],payroll:["finance","payroll"],income:["finance","income"],budgets:["finance","budgets"],funds:["finance","funds"],pnlclose:["finance","pnlclose"],expenses:["finance","expenses"]};
 var shadow={};
 /* ---- offline-safe outbox: rows that failed to sync are remembered across refreshes and auto-retried ---- */
+/* Durable field patches retain the original edit baseline across reloads. */
 var PENDING=(function(){try{return JSON.parse(localStorage.getItem("smou-pending")||"[]")||[];}catch(e){return [];}})();
-function savePending(){try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));}catch(e){}}
-function queuePending(rows){rows.forEach(function(u){var k=u.collection+"/"+u.id;PENDING=PENDING.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING.push({collection:u.collection,id:u.id,data:u.data});});savePending();}
-function clearPending(rows){if(!PENDING.length)return;var ok={};rows.forEach(function(u){ok[u.collection+"/"+u.id]=1;});PENDING=PENDING.filter(function(p){return !ok[p.collection+"/"+p.id];});savePending();}
+var _pendingRun=null;
+var _pendingStorageOK=true;
+function savePending(){try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));_pendingStorageOK=true;return true;}catch(e){_pendingStorageOK=false;setSave("err","Device storage full — keep this tab open");return false;}}
+function pendingOwner(){return USER&&typeof USER==="object"?USER.id:null;}
+function jsonSame(a,b){function ordered(v){if(Array.isArray(v))return v.map(ordered);if(v&&typeof v==="object"){var o={};Object.keys(v).sort().forEach(function(k){o[k]=ordered(v[k]);});return o;}return v;}return JSON.stringify(ordered(a))===JSON.stringify(ordered(b));}
+function fieldDiff(localObj,base){var out={};base=base||{};Object.keys(localObj||{}).forEach(function(k){if(k!=="id"&&!jsonSame(localObj[k],base[k]))out[k]=localObj[k]===undefined?undefined:clone(localObj[k]);});return out;}
+function pendingPatch(base,p){var v=Object.assign({},base||{},p.patch||{});(p.unset||[]).forEach(function(k){delete v[k];});v.id=p.id;return v;}
+function queuePending(rows){rows.forEach(function(u){
+  var key=u.collection+"/"+u.id,owner=pendingOwner(),old=PENDING.find(function(p){return p.collection+"/"+p.id===key&&(!p.owner||p.owner===owner);}),base=null;
+  if(old&&old.v!==2){old.error="Older offline edit: review its fields before syncing.";return;}
+  try{if(shadow[key])base=JSON.parse(shadow[key]);}catch(e){}
+  var explicit=Object.prototype.hasOwnProperty.call(u,"patch");if(explicit)base=clone(u.base);
+  var patch=explicit?clone(u.patch):fieldDiff(u.data,base),unset=explicit?(u.unset||[]).slice():base?Object.keys(base).filter(function(k){return k!=="id"&&!Object.prototype.hasOwnProperty.call(u.data,k);}):[];
+  if(old&&old.v===2){
+    var before=pendingPatch(base,old),delta=explicit?patch:fieldDiff(u.data,before),removed=explicit?unset:Object.keys(before).filter(function(k){return k!=="id"&&!Object.prototype.hasOwnProperty.call(u.data,k);});
+    if(explicit&&!old.isNew){Object.keys(delta).concat(removed).forEach(function(k){if(!Object.prototype.hasOwnProperty.call(old.patch,k)&&(old.unset||[]).indexOf(k)<0){old.base=old.base||{};if(Object.prototype.hasOwnProperty.call(base||{},k))old.base[k]=clone(base[k]);else delete old.base[k];}});}
+    Object.keys(delta).forEach(function(k){old.patch[k]=delta[k];old.unset=(old.unset||[]).filter(function(x){return x!==k;});});
+    removed.forEach(function(k){delete old.patch[k];if(old.unset.indexOf(k)<0)old.unset.push(k);});old.data=clone(u.data);old.rev=uid("pending");old.error="";
+  }else{
+    var p={v:2,collection:u.collection,id:u.id,data:clone(u.data),base:base,patch:patch,unset:unset,isNew:!base,owner:pendingOwner(),rev:uid("pending"),error:""};
+    PENDING=PENDING.filter(function(x){return x.collection+"/"+x.id!==key||(x.owner&&x.owner!==owner);});PENDING.push(p);
+  }
+});savePending();}
+/* Only fields changed in the open form are edits; a realtime update can change other fields meanwhile. */
+function mergeFormEdit(ent,id,record,data,cfg,context){
+  var base=context?context.base:clone(record),inputs=context?context.inputs:{},patch={},unset=[],next=clone(record);
+  cfg.fields.forEach(function(f){
+    if(f.g||!Object.prototype.hasOwnProperty.call(data,f.k))return;
+    var changed=f.t==="file"?!jsonSame(data[f.k],base[f.k]):context?!jsonSame(data[f.k],inputs[f.k]):!jsonSame(data[f.k],base[f.k]);
+    if(!changed)return;
+    if(f.t==="file"&&data[f.k]===null){delete next[f.k];unset.push(f.k);}else{next[f.k]=clone(data[f.k]);patch[f.k]=clone(data[f.k]);}
+  });
+  if(SB_ON&&(Object.keys(patch).length||unset.length))queuePending([{collection:ent,id:id,data:next,base:base,patch:patch,unset:unset}]);
+  return next;
+}
+function clearPending(rows){PENDING=PENDING.filter(function(p){return !rows.some(function(r){return r.collection===p.collection&&r.id===p.id&&r.rev===p.rev;});});savePending();}
+function applyPendingView(){PENDING.forEach(function(p){
+  if(p.owner&&p.owner!==pendingOwner())return;
+  var dest=COLLSET[p.collection];if(!dest)return;var a=STATE[dest[0]][dest[1]],i=a.findIndex(function(r){return r.id===p.id;});
+  if(p.v===2){if(i>=0)a[i]=pendingPatch(a[i],p);else if(p.isNew)a.push(clone(p.data));}
+});}
+function pendingError(msg){var e=new Error(msg);e.pending=true;return e;}
+async function writePendingRow(p){
+  function guard(){if(p.owner&&p.owner!==pendingOwner())throw pendingError("Sign in to the account that made this edit.");}guard();
+  if(p.v!==2)throw pendingError("Older offline edit: review its fields before syncing.");
+  for(var attempt=0;attempt<4;attempt++){
+    var res=await SB.from("records").select("collection,id,data").eq("collection",p.collection).eq("id",p.id).maybeSingle();
+    guard();if(res.error)throw res.error;var row=res.data,srv=row&&row.data;
+    if(!row){
+      if(!p.isNew)throw pendingError("This record was removed in the office. Review before restoring it.");
+      var added=await SB.from("records").insert({collection:p.collection,id:p.id,data:p.data}).select("collection,id,data");
+      if(added.error){if(added.error.code==="23505")continue;throw added.error;}
+      if(!added.data||!added.data.length)throw pendingError("Save was not confirmed. Check access and retry.");return added.data[0].data;
+    }
+    if(p.isNew){if(jsonSame(srv,p.data))return srv;throw pendingError("A record with this ID already exists. Review before syncing.");}
+    var conflict=Object.keys(p.patch||{}).concat(p.unset||[]).filter(function(k){
+      var wanted=(p.unset||[]).indexOf(k)>=0?undefined:p.patch[k];
+      return !jsonSame(srv[k],(p.base||{})[k])&&!jsonSame(srv[k],wanted);
+    });
+    if(conflict.length)throw pendingError("Office also changed: "+conflict.join(", ")+". Choose which values to keep.");
+    var data=pendingPatch(srv,p);
+    if(jsonSame(data,srv))return srv;
+    // The database accepts the patch only while its JSON still matches the copy just read.
+    var saved=await SB.from("records").update({data:data}).eq("collection",p.collection).eq("id",p.id).eq("data",JSON.stringify(srv)).select("collection,id,data");
+    if(saved.error)throw saved.error;if(saved.data&&saved.data.length)return saved.data[0].data;
+  }
+  throw pendingError("Record is changing on another device. Retry shortly.");
+}
+function acceptPending(p,data){
+  if(p.owner&&p.owner!==pendingOwner()){clearPending([p]);return;}
+  var key=p.collection+"/"+p.id;shadow[key]=JSON.stringify(data);
+  var dest=COLLSET[p.collection],a=dest&&STATE[dest[0]][dest[1]],i=a?a.findIndex(function(r){return r.id===p.id;}):-1;
+  if(a){if(i>=0)a[i]=clone(data);else a.push(clone(data));}
+  var current=PENDING.find(function(x){return x.collection===p.collection&&x.id===p.id&&x.owner===p.owner;});
+  if(current&&current.rev!==p.rev){
+    var patch={},unset=[];Object.keys(current.patch||{}).concat(current.unset||[]).forEach(function(k){
+      var removed=(current.unset||[]).indexOf(k)>=0,wanted=removed?undefined:current.patch[k];
+      if(!jsonSame(data[k],wanted)){if(removed)unset.push(k);else patch[k]=clone(wanted);}
+    });
+    current.base=clone(data);current.isNew=false;current.patch=patch;current.unset=unset;current.data=pendingPatch(data,current);
+  }
+  else clearPending([p]);
+  applyPendingView();savePending();cacheSave();broadcastChange(p.collection,p.id,data,"UPDATE");
+}
+function flushPending(){
+  if(_pendingRun)return _pendingRun;
+  if(!SB||!USER||!PENDING.length)return Promise.resolve();
+  _pendingRun=(async function(){
+    var rows=PENDING.filter(function(p){return !p.owner||p.owner===pendingOwner();}).map(clone),at=0;
+    async function worker(){while(at<rows.length){var p=rows[at++];try{var data=await writePendingRow(p);acceptPending(p,data);}catch(e){
+      var cur=PENDING.find(function(x){return x.rev===p.rev;});if(cur)cur.error=(e&&e.message)||"Could not sync. Retry when connected.";savePending();
+    }}}
+    await Promise.all([worker(),worker(),worker(),worker()]);
+    if(!_pendingStorageOK)setSave("err","Device storage full — keep this tab open");
+    else if(PENDING.length)setSave("err",PENDING.some(function(p){return p.error;})?"Pending edits · review / retry":"Saved on device · pending sync");
+    else setSave("","Saved & synced");calmRefresh();
+  })().finally(function(){_pendingRun=null;});return _pendingRun;
+}
+async function reviewPending(){
+  var p=PENDING.find(function(x){return !x.owner||x.owner===pendingOwner();});if(!p){toast("No pending edits on this device.","good");return;}
+  var r=await SB.from("records").select("data").eq("collection",p.collection).eq("id",p.id).maybeSingle();
+  if(r.error){toast("Connect to review pending edits: "+r.error.message,"err");return;}
+  var srv=r.data&&r.data.data,keys=p.v===2?Object.keys(p.patch||{}).concat(p.unset||[]):Object.keys(p.data||{}).filter(function(k){return k!=="id"&&JSON.stringify((srv||{})[k])!==JSON.stringify(p.data[k]);});
+  closeForm();var ov=document.createElement("div");ov.id="overlay";ov.className="overlay";
+  ov.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="Review pending edit" style="max-width:640px"><div class="modal-h"><h3>Review pending edit</h3><button class="btn" data-act="close">Close</button></div><div class="modal-b"><p>'+esc(p.collection+' · '+p.id)+'</p><p>'+esc(p.error||"Choose the changes to send. Unselected fields keep the office value.")+'</p>'+keys.map(function(k,i){return '<label style="display:block;padding:12px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-pfield="'+i+'" '+(p.v===2?'checked':'')+'> <b>'+esc(k)+'</b><div class="sub">Office: '+esc(JSON.stringify((srv||{})[k])||"empty")+'<br>Your edit: '+esc(JSON.stringify((p.data||{})[k])||"empty")+'</div></label>';}).join('')+'</div><div class="modal-f"><button class="btn" id="pendingKeep">Keep office version</button><button class="btn primary" id="pendingApply">Apply selected changes</button></div></div>';
+  document.body.appendChild(ov);
+  function resolve(keep){
+    var current=PENDING.find(function(x){return x.rev===p.rev;});if(!current){closeForm();toast("This edit changed. Open the review again.","err");return;}
+    var chosen=keep?[]:Array.prototype.map.call(ov.querySelectorAll('[data-pfield]:checked'),function(el){return keys[+el.getAttribute("data-pfield")];});
+    if(!chosen.length){clearPending([p]);var dest=COLLSET[p.collection],a=STATE[dest[0]][dest[1]],i=a.findIndex(function(x){return x.id===p.id;});if(srv){if(i>=0)a[i]=clone(srv);else a.push(clone(srv));shadow[p.collection+"/"+p.id]=JSON.stringify(srv);}else if(i>=0)a.splice(i,1);}
+    else{current.v=2;current.base=clone(srv||null);current.isNew=!srv;current.patch={};current.unset=[];chosen.forEach(function(k){if(Object.prototype.hasOwnProperty.call(p.data,k))current.patch[k]=clone(p.data[k]);else current.unset.push(k);});current.owner=pendingOwner();current.rev=uid("pending");current.error="";current.data=pendingPatch(srv,current);savePending();}
+    closeForm();applyPendingView();saveLocal();cacheSave();flushPending();calmRefresh();
+  }
+  ov.querySelector("#pendingKeep").onclick=function(){resolve(true);};ov.querySelector("#pendingApply").onclick=function(){resolve(false);};
+}
+
 /* ---- delete outbox: failed deletes are remembered + retried, and never allowed to resurrect ---- */
 var PENDING_DEL=(function(){try{return JSON.parse(localStorage.getItem("smou-pending-del")||"[]")||[];}catch(e){return [];}})();
 function savePendingDel(){try{localStorage.setItem("smou-pending-del",JSON.stringify(PENDING_DEL));}catch(e){}}
@@ -2750,39 +2866,7 @@ function flushPendingDel(){
     // if it still errors (e.g. missing DELETE permission), keep them queued and keep them stripped locally
   }).catch(function(){});
 }
-/* ---- conflict-safe field-level merge: never overwrite another device's change ---- */
-function fieldDiff(localObj,shadowObj){var d={};shadowObj=shadowObj||{};Object.keys(localObj||{}).forEach(function(k){var lv=localObj[k],sv=shadowObj[k];if(JSON.stringify(lv)===JSON.stringify(sv))return;var lB=(lv===""||lv==null),sB=(sv===""||sv==null);if(lB&&sB)return;/* blank-vs-missing is not a real edit — don't let it wipe another device's value */d[k]=lv;});return d;}
-function mergeUps(ups){
-  if(!ups.length)return Promise.resolve([]);
-  // bulk operations (imports/seed) skip the per-row merge fetch — conflicts there are unlikely
-  if(ups.length>50)return Promise.resolve(ups.map(function(u){return {collection:u.collection,id:u.id,data:u.data,merged:false};}));
-  var ids=ups.map(function(u){return u.id;});
-  return SB.from("records").select("collection,id,data").in("id",ids).then(function(res){
-    var srv={};if(!res.error&&res.data)res.data.forEach(function(r){srv[r.collection+"/"+r.id]=r.data;});
-    return ups.map(function(u){
-      var key=u.collection+"/"+u.id;var srvData=srv[key];var shJSON=shadow[key];
-      // server changed since we last synced AND it's not simply equal to what we're writing → merge my field-changes onto the server copy
-      if(srvData&&shJSON&&JSON.stringify(srvData)!==shJSON&&JSON.stringify(srvData)!==JSON.stringify(u.data)){
-        var shObj;try{shObj=JSON.parse(shJSON);}catch(e){shObj={};}
-        var myDiff=fieldDiff(u.data,shObj);
-        var mm=Object.assign({},srvData,myDiff);mm.id=u.id;
-        var dest=COLLSET[u.collection];if(dest){var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(arr){var i=arr.findIndex(function(x){return x&&x.id===u.id;});if(i>=0)arr[i]=mm;}}
-        return {collection:u.collection,id:u.id,data:mm,merged:true};
-      }
-      return {collection:u.collection,id:u.id,data:u.data,merged:false};
-    });
-  }).catch(function(){return ups.map(function(u){return {collection:u.collection,id:u.id,data:u.data,merged:false};});});
-}
-function flushPending(){
-  if(!PENDING||!PENDING.length)return Promise.resolve();
-  PENDING.forEach(function(p){var dest=COLLSET[p.collection];if(!dest)return;var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===p.id;});if(i>=0)arr[i]=p.data;else arr.push(p.data);});
-  var ups=PENDING.map(function(p){return {collection:p.collection,id:p.id,data:p.data};});
-  return mergeUps(ups).then(function(mups){
-    return SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}).then(function(res){
-      if(!res.error){mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});PENDING=[];savePending();if(mups.some(function(m){return m.merged;}))calmRefresh();}
-    });
-  }).catch(function(){});
-}
+
 /* ===== Phase 2: audit trail — stored as __audit__ rows, excluded from the main sync/diff ===== */
 var AUDITQ=(function(){try{return JSON.parse(localStorage.getItem("smou-audit-q")||"[]")||[];}catch(e){return [];}})();
 function saveAuditQ(){try{localStorage.setItem("smou-audit-q",JSON.stringify(AUDITQ));}catch(e){}}
@@ -2813,7 +2897,7 @@ function applyRows(rows){
   var buckets={drivers:[],vehicles:[],fuel:[],sims:[],housing:[],compdocs:[],service:[],hiring:[],fines:[],incidents:[],maintenance:[],attendance:[],perf:[],orderlog:[],payroll:[],income:[],budgets:[],funds:[],pnlclose:[],expenses:[]};
   rows.forEach(function(row){if(buckets[row.collection])buckets[row.collection].push(row.data);});
   STATE.grd.drivers=buckets.drivers;STATE.grd.vehicles=buckets.vehicles;STATE.grd.fuel=buckets.fuel;STATE.grd.sims=buckets.sims;STATE.grd.housing=buckets.housing;STATE.grd.compdocs=buckets.compdocs;STATE.grd.service=buckets.service;STATE.grd.hiring=buckets.hiring;STATE.grd.fines=buckets.fines;STATE.grd.incidents=buckets.incidents;STATE.grd.maintenance=buckets.maintenance;STATE.grd.attendance=buckets.attendance;STATE.grd.perf=buckets.perf;STATE.grd.orderlog=buckets.orderlog;STATE.finance.payroll=buckets.payroll;STATE.finance.income=buckets.income;STATE.finance.budgets=buckets.budgets;STATE.finance.funds=buckets.funds;STATE.finance.pnlclose=buckets.pnlclose;STATE.finance.expenses=buckets.expenses;
-  snapshotShadow();stripPendingDel();_lastSig=dataSig(rows);cacheSave();
+  snapshotShadow();stripPendingDel();applyPendingView();_lastSig=dataSig(rows);cacheSave();
 }
 var _lastSig="";
 function dataSig(rows){var a=[];for(var i=0;i<rows.length;i++){a.push(rows[i].collection+"/"+rows[i].id+"="+JSON.stringify(rows[i].data));}return a.sort().join("|");}
@@ -2826,7 +2910,7 @@ function bumpLastSync(rows){var mx=lastSync;for(var i=0;i<rows.length;i++){var u
 function applyDelta(rows){
   // MERGE ONLY — add/update rows that changed; never remove or clear anything (data-safety guarantee)
   rows.forEach(function(row){var dest=COLLSET[row.collection];if(!dest)return;var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(!arr)return;var i=arr.findIndex(function(x){return x&&x.id===row.id;});if(i>=0)arr[i]=row.data;else arr.push(row.data);shadow[row.collection+"/"+row.id]=JSON.stringify(row.data);});
-  stripPendingDel();cacheSave();
+  stripPendingDel();applyPendingView();cacheSave();
 }
 /* Supabase returns at most 1000 rows per request — fetch every page so no record is ever silently left out */
 function sbPaged(mk,max){var P=1000,out=[],seen={};max=max||Infinity;
@@ -2859,48 +2943,16 @@ function sbSeed(){
 var sbBusy=false;
 function persistSB(){
   SB=sbClient();if(!SB){setSave("err","Not connected");return;}
-  setSave("saving","Saving…");
   var ups=[],delOps=[];
-  COLLS.forEach(function(c){var coll=c[0];var cur={};
-    c[1]().forEach(function(r){cur[r.id]=1;var js=JSON.stringify(r);if(shadow[coll+"/"+r.id]!==js){ups.push({collection:coll,id:r.id,data:r});}});
-    Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0){var id=k.slice(coll.length+1);if(!cur[id]){delOps.push([coll,id]);}}});
-  });
-  if(ups.length){var _seen={},_uniq=[];for(var _i=ups.length-1;_i>=0;_i--){var _k=ups[_i].collection+"/"+ups[_i].id;if(_seen[_k])continue;_seen[_k]=1;_uniq.push(ups[_i]);}ups=_uniq.reverse();}
-  if(!ups.length&&!delOps.length){setSave("","Saved & synced");return;}
-
-  // ALWAYS run the conflict-safe field-level merge — never blind-overwrite another device's edit.
-  // (Previously small edits skipped this, which could silently lose a concurrent change.)
-  mergeUps(ups).then(function(mups){
-    var tasks=[];
-    if(mups.length)tasks.push(SB.from("records").upsert(mups.map(function(m){return {collection:m.collection,id:m.id,data:m.data};}),{onConflict:"collection,id"}));
-    delOps.forEach(function(d){tasks.push(SB.from("records").delete().eq("collection",d[0]).eq("id",d[1]));});
-    return Promise.all(tasks).then(function(rs){
-      var err=rs.filter(function(r){return r&&r.error;})[0];
-      if(err){
-        if(ups.length)queuePending(ups);
-        if(delOps.length)queuePendingDel(delOps);
-        setSave("err","Saved on device · will sync");
-        toast("Sync issue: "+((err.error&&err.error.message)||"check connection")+" — saved on device, will retry automatically.","err");
-        return;
-      }
-      mups.forEach(function(m){shadow[m.collection+"/"+m.id]=JSON.stringify(m.data);});
-      delOps.forEach(function(d){delete shadow[d[0]+"/"+d[1]];});
-      if(ups.length)clearPending(ups);
-      if(delOps.length)clearPendingDel(delOps);
-      cacheSave();
-      // Broadcast ONLY after a confirmed DB write, and send the MERGED data (mups) — not the raw pre-merge copy.
-      mups.forEach(function(m){ broadcastChange(m.collection,m.id,m.data,"UPDATE"); });
-      delOps.forEach(function(d){ broadcastChange(d[0],d[1],null,"DELETE"); });
-      if(mups.some(function(m){return m.merged;})){calmRefresh();toast("Merged with changes from another device — nothing lost.","good");}
-      setSave("","Saved & synced");
-    });
-  }).catch(function(e){
-    if(ups.length)queuePending(ups);
-    if(delOps.length)queuePendingDel(delOps);
-    setSave("err","Saved on device · will sync");
-    toast("Sync issue: "+((e&&e.message)||"check connection")+" — saved on device, will retry automatically.","err");
-  });
+  COLLS.forEach(function(c){var coll=c[0],cur={};c[1]().forEach(function(r){cur[r.id]=1;if(shadow[coll+"/"+r.id]!==JSON.stringify(r))ups.push({collection:coll,id:r.id,data:r});});Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0&&!cur[k.slice(coll.length+1)])delOps.push([coll,k.slice(coll.length+1)]);});});
+  if(ups.length)queuePending(ups);if(delOps.length)queuePendingDel(delOps);
+  setSave("saving","Saving…");
+  Promise.all([flushPending(),flushPendingDel()]).then(function(){
+    if(PENDING.length||PENDING_DEL.length)setSave("err","Saved on device · review / retry pending edits");else setSave("","Saved & synced");
+    cacheSave();
+  }).catch(function(e){setSave("err","Saved on device · will retry");toast((e&&e.message)||"Connection unavailable — changes remain on this device.","err");});
 }
+
 function sbUpload(path,blob,ct){
   return SB.storage.from("files").upload(path,blob,{upsert:true,contentType:ct}).then(function(res){
     if(res.error)throw res.error;
@@ -2976,7 +3028,7 @@ function applyRealtimeRecord(coll,id,data,eventType){
     else arr.push(data);
     shadow[coll+"/"+id]=JSON.stringify(data);
   }
-  cacheSave();
+  applyPendingView();cacheSave();
   calmRefresh();
 }
 function sbSubscribe(){
@@ -4098,7 +4150,7 @@ function openForm(ent,id){
     return '<div class="fcard"><div class="fsec"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+secIcon(gr.g)+'</svg></span><h3>'+esc(gr.g)+'</h3></div>'+
       '<div class="form-grid">'+gr.items.map(function(f){return fieldHTML(f,data);}).join("")+'</div></div>';
   }).join("");
-  var ov=document.createElement("div");ov.className="overlay formfull";ov.id="overlay";
+  var ov=document.createElement("div");ov.className="overlay formfull";ov.id="overlay";ov._editContext=editing?{base:clone(data),inputs:{},owner:pendingOwner()}:null;
   ov.innerHTML='<div class="ff">'+
     '<div class="ff-top"><div class="in"><button class="ff-back" data-act="close" title="Cancel">'+svg(IC_back)+'</button>'+
       '<div class="ff-ttl"><div class="crumb">'+esc(cfg.title)+' · '+(editing?"Edit record":"New record")+'</div><h2>'+(editing?"Edit ":"Add ")+esc(cfg.singular)+'</h2></div></div></div>'+
@@ -4124,6 +4176,7 @@ function openForm(ent,id){
   if(ent==="expenses"||ent==="income"){var ds=$('[name="date"]',ov);if(ds)ds.addEventListener("change",function(){var d=parseD(this.value);if(!d)return;var ms=$('[name="month"]',ov);if(ms)ms.value=MON[d.getMonth()];var ws=$('[name="wmonth"]',ov);if(ws&&!ws.value)ws.value=MON[d.getMonth()];});}
   // payroll: auto-fill basic salary + year from chosen employee
   if(ent==="payroll"){var ye=$('[name="year"]',ov);if(ye&&!ye.value)ye.value=TODAY.getFullYear();var pe=$('[name="employee"]',ov);if(pe)pe.addEventListener("change",function(){var dr=STATE.grd.drivers.filter(function(x){return x.name===pe.value;})[0];var bs=$('[name="basic"]',ov);if(dr&&bs&&!bs.value)bs.value=dr.salary||"";});}
+  if(ov._editContext)cfg.fields.forEach(function(f){if(f.g)return;var el=$('[name="'+f.k+'"]',ov);if(el)ov._editContext.inputs[f.k]=(el.value||"").trim();});
   setTimeout(function(){var fi=$('.ff-fields input,.ff-fields select,.ff-fields textarea',ov);if(fi)fi.focus();},50);
 }
 function refreshDep(ov,cfg,depKey){
@@ -4191,7 +4244,7 @@ function processFormFiles(ent,cfg,ov){
   return Promise.all(jobs).then(function(){return result;});
 }
 function saveForm(ent,id){
-  var cfg=ENT[ent],ov=$("#overlay");
+  var cfg=ENT[ent],ov=$("#overlay"),context=ov&&ov._editContext;
   var data=collectForm(ov,cfg);
   if(!data){toast("Please fill the required fields.","err");return;}
   var hasFile=cfg.fields.some(function(f){return f.t==="file";});
@@ -4200,18 +4253,20 @@ function saveForm(ent,id){
     if(anyFile&&SB_ON)showLoader("Uploading document…");
     processFormFiles(ent,cfg,ov).then(function(fileVals){
       Object.keys(fileVals).forEach(function(k){data[k]=(fileVals[k]===null?null:fileVals[k]);});
-      hideLoader();_finishSaveForm(ent,id,cfg,data);
-    }).catch(function(){hideLoader();_finishSaveForm(ent,id,cfg,data);});
+      hideLoader();_finishSaveForm(ent,id,cfg,data,context);
+    }).catch(function(){hideLoader();_finishSaveForm(ent,id,cfg,data,context);});
     return;
   }
-  _finishSaveForm(ent,id,cfg,data);
+  _finishSaveForm(ent,id,cfg,data,context);
 }
-function _finishSaveForm(ent,id,cfg,data){
+function _finishSaveForm(ent,id,cfg,data,context){
+  if(context&&context.owner!==pendingOwner()){toast("Account changed. Reopen this form in your account.","err");return;}
   var arr=store(ent);
   var termCheck=null;
   if(id){var rec=arr.filter(function(r){return r.id===id;})[0];if(rec){
-    var wasTerm=/terminat/i.test(rec.status||"");var nowTerm=/terminat/i.test(data.status||"");
-    var chg=diffRec(cfg,rec,data);Object.assign(rec,data);cfg.fields.forEach(function(f){if(f.t==="file"&&data[f.k]===null)delete rec[f.k];});logAudit("edit",ent,id,recLabel(ent,rec),chg);
+    var next=mergeFormEdit(ent,id,rec,data,cfg,context);
+    var wasTerm=/terminat/i.test(rec.status||"");var nowTerm=/terminat/i.test(next.status||"");
+    var chg=diffRec(cfg,rec,next);Object.keys(rec).forEach(function(k){if(!Object.prototype.hasOwnProperty.call(next,k))delete rec[k];});Object.assign(rec,next);logAudit("edit",ent,id,recLabel(ent,rec),chg);
     if(ent==="drivers"&&nowTerm&&!wasTerm&&(rec.kit||[]).some(function(x){return !x.collected;}))termCheck=id;
   }}
   else{data.id=uid(cfg.idp);cfg.fields.forEach(function(f){if(f.t==="file"&&data[f.k]===null)delete data[f.k];});arr.unshift(data);logAudit("add",ent,data.id,recLabel(ent,data),[]);}
@@ -4341,7 +4396,7 @@ function renderToday(pg){
   box.innerHTML=todays.slice(0,8).map(function(e){return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div class="nm" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(e.category)+(e.sub?' · '+esc(e.sub):"")+'</div><div class="sub" style="font-size:11px;color:var(--muted)">'+esc(e.platform||"")+(e.driver?" · "+esc(e.driver):"")+'</div></div><div class="mono" style="font-weight:600;color:var(--amber-2)">'+money(num(e.amount))+'</div></div>';}).join("")+
     '<div style="text-align:center;margin-top:10px"><a class="btn ghost sm" data-route="finance/log">View full log ('+all.length+')</a></div>';
 }
-function isoToday(){var d=TODAY;return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function isoToday(){updateToday();return kuwaitDateKey();}
 function readReceipt(file,cb){
   var reader=new FileReader();
   if(/^image\//.test(file.type)){reader.onload=function(){var img=new Image();img.onload=function(){var mx=1300,sc=Math.min(1,mx/Math.max(img.width,img.height));var cw=Math.max(1,Math.round(img.width*sc)),ch=Math.max(1,Math.round(img.height*sc));var cv=document.createElement("canvas");cv.width=cw;cv.height=ch;cv.getContext("2d").drawImage(img,0,0,cw,ch);var data;try{data=cv.toDataURL("image/jpeg",0.82);}catch(e){data=reader.result;}cb(data);};img.onerror=function(){toast("Couldn't read that image.","err");};img.src=reader.result;};reader.readAsDataURL(file);}
@@ -6806,6 +6861,12 @@ document.addEventListener("change",function(e){var s=e.target.closest("[data-ccf
 var _ccS=null;document.addEventListener("input",function(e){if(e.target&&e.target.id==="ccSearch"){var v=e.target.value;clearTimeout(_ccS);_ccS=setTimeout(function(){CC.f.search=v;var pos=v.length;renderPage();var i=document.getElementById("ccSearch");if(i){i.focus();i.setSelectionRange(pos,pos);}},350);}});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="ccBanner")go("cc/live");});
 
+/* Current Kuwait date also updates while the ERP stays open overnight. */
+(function(){var last=kuwaitDateKey(),waiting=false;
+  function tick(){var key=kuwaitDateKey();updateToday();if(key!==last){last=key;waiting=true;}if(waiting&&!_rtBusy()){waiting=false;calmRefresh();}}
+  setInterval(tick,30000);document.addEventListener("visibilitychange",function(){if(!document.hidden)tick();});
+  document.addEventListener("click",function(e){if(e.target.closest('[data-act="pendingreview"]')){e.preventDefault();reviewPending().catch(function(err){toast(err.message||"Could not open pending edits.","err");});}});
+})();
 /* ============ INIT ============ */
 /* ===== Command Center v2: SOS alerts, vehicle checks, breaks, announcements (from driver app v2) ===== */
 (function(){
@@ -9188,9 +9249,9 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.15 · 1 Oct 2026 · day-6 logins";
+var ERP_BUILD="v3.16 · 30 Sep 2026 · sync and account fixes";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
-(function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);}};})();
+(function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
    so drop them from the retry queue instead of retrying (and warning) forever */
 (function(){var _fp=flushPending;flushPending=function(){
@@ -9835,6 +9896,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&(e
     }
     return S.filter(function(s){return s.show!==false;});
   }
+  window.smouMobileSections=function(){return sections().map(function(s){return {k:s.k,t:s.t,items:s.items.map(function(it){return {r:it[0],t:LANG==="ar"?transToken(it[1]):it[1]};})};});};
   var FULL={home:"Home",cc:"Command Center",orders:"Performance",ops:"Operations",fleet:"Fleet",fin:"Finance",admin:"Admin"};
   function tabbarHTML(S,cur){
     return S.filter(function(s){return s.k!=="admin";}).map(function(s){
@@ -10252,7 +10314,7 @@ if(SB_ON){
       {t:"Maintenance",r:"grd/maintenance"},{t:"Traffic Fines",r:"grd/fines"},{t:"Accident / Incident",r:"grd/incidents"}]},
     {t:"Finance",group:1,ic:'<path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/>',items:[
       {t:"Dashboard",r:"finance"},{t:"Expense Log",r:"finance/log"},{t:"New Expense",r:"finance/new"},
-      {t:"Income / Revenue",r:"grd/income"},{t:"Payroll",r:"grd/payroll"},{t:"Company Wallet",r:"grd/funds"}]}
+      {t:"Income / Revenue",r:"grd/income"},{t:"Payroll",r:"grd/payroll"},{t:"P&L Report",r:"finance/pnl"}]}
   ];
   function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
   function curRoute(){return (location.hash||"").replace(/^#\/?/,"")||"overview";}
@@ -10317,14 +10379,24 @@ if(SB_ON){
   sheetBg.addEventListener("click",closeSheet);
   bar.addEventListener("click",function(e){
     var btn=e.target.closest("[data-mi]"); if(!btn)return;
-    var n=NAV[+btn.getAttribute("data-mi")];
+    syncMobileMenu();var n=NAV[+btn.getAttribute("data-mi")];
     if(n.items)openSheet(n); else {closeSheet();location.hash="#/"+n.r;}
   });
   sheet.addEventListener("click",function(e){
     var b=e.target.closest("[data-go]"); if(!b)return;
     closeSheet();location.hash="#/"+b.getAttribute("data-go");
   });
+  var navSignature="";
+  function syncMobileMenu(){
+    if(typeof window.smouMobileSections!=="function")return;
+    var ss=window.smouMobileSections(),get=function(k){var s=ss.find(function(x){return x.k===k;});return s?s.items:[];};
+    NAV[2].items=get("ops").concat(get("home").filter(function(x){return x.r!=="overview";}),get("admin"));
+    NAV[3].items=get("cc").concat(get("fleet"));NAV[4].items=get("fin");
+    var sig=JSON.stringify(NAV.map(function(n){return n.items||[];}));
+    if(sig!==navSignature){navSignature=sig;closeSheet();}
+  }
   function updateBar(){
+    syncMobileMenu();
     bar.querySelectorAll("button").forEach(function(btn,i){btn.classList.toggle("active",navItemActive(NAV[i]));});
   }
 
