@@ -2506,6 +2506,24 @@ html.m2 #page table.dt.m-list tbody tr > td.m-a.cc-act{justify-content:flex-end 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style id="smooth-navigation-style">
+
+/* Approved smooth navigation: animate content only; keep the existing shell and colors. */
+html.smou-smooth #page > *,html.smou-smooth #page .grid.g4 > .stat,
+html.smou-smooth #page .fd .c,html.smou-smooth #page .fd .pod .blk,
+html.smou-smooth #page .fd .hero .plat span{animation:none !important}
+html.smou-smooth-active{view-transition-name:none}
+html.smou-smooth-active::view-transition{pointer-events:none}
+html.smou-smooth-active::view-transition-group(smou-page){animation-duration:260ms;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+html.smou-smooth-active::view-transition-image-pair(smou-page){isolation:isolate}
+html.smou-smooth-active::view-transition-old(smou-page){animation:smouPageOut 260ms cubic-bezier(.2,.8,.2,1) both;mix-blend-mode:normal}
+@keyframes smouPageOut{from{opacity:1}to{opacity:0}}
+@media(prefers-reduced-motion:reduce){
+ html.smou-smooth-active::view-transition-group(smou-page),
+ html.smou-smooth-active::view-transition-old(smou-page),
+ html.smou-smooth-active::view-transition-new(smou-page){animation:none !important}
+}
+</style>
 </head>
 <body>
 <div id="root"></div>
@@ -3842,7 +3860,7 @@ function aiAsk(q){
 /* ============ ROUTER ============ */
 function getRoute(){var h=(location.hash||"").replace(/^#\/?/,"");if(!h){try{h=localStorage.getItem("smou-route")||"overview";}catch(e){h="overview";}}return h||"overview";}
 function go(r){try{localStorage.setItem("smou-route",r);}catch(e){}NAVGROUPS.forEach(function(g){if(!g.collapsible)return;g.items.forEach(function(it){if(navItemHasRoute(it,r)){NAVOPEN[g.key]=true;if(it.sub)NAVOPEN[it.key]=true;}});});saveNavOpen();location.hash="#/"+r;}
-window.addEventListener("hashchange",renderApp);
+window.addEventListener("hashchange",function(){renderApp();});
 
 var view={search:"",sort:null,dir:1,filters:{},sel:{},_visIds:[]};
 function renderPage(){
@@ -5485,8 +5503,8 @@ function showImage(src,title,sub){var ov=document.createElement("div");ov.classN
   document.body.appendChild(ov);}
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
-  if(act==="hireview"){hiringView=a.getAttribute("data-v");pageHiring($("#page"));return;}
-  if(act==="ordview"){ordersView=a.getAttribute("data-v");pageOrders($("#page"));return;}
+  if(act==="hireview"){var hv=a.getAttribute("data-v");if(hv!==hiringView||SMOOTH.active)smoothPageChange(function(){hiringView=hv;pageHiring($("#page"));});return;}
+  if(act==="ordview"){var ov=a.getAttribute("data-v");if(ov!==ordersView||SMOOTH.active)smoothPageChange(function(){ordersView=ov;pageOrders($("#page"));});return;}
   if(act==="ordplat"){ordersPlat=a.getAttribute("data-v");pageOrders($("#page"));return;}
   if(act==="orddriver"){openDriverDetail(a.getAttribute("data-n"));return;}
   if(act==="ordmenu"){openOrdMenu(a);return;}
@@ -8502,7 +8520,7 @@ var FD={per:"this",W:0,tbl:{}};
 try{var _fp=localStorage.getItem("smou-fdper");if(_fp)FD.per=_fp;}catch(e){}
 var FD_PER=[["this","This month"],["last","Last month"],["q","This quarter"],["ytd","This year"],["all","12 months"]];
 var FD_CCOL=["--c-pay","--c-fuel","--c-mnt","--c-doc","--c-rent","--c-x1","--c-x2","--c-oth"];
-function fdQuiet(){return document.documentElement.classList.contains("v3-calm");}
+function fdQuiet(){return document.documentElement.classList.contains("v3-calm")||document.documentElement.classList.contains("smou-smooth");}
 /* ---------- data ---------- */
 function fdKeys(){var out=[];for(var i=11;i>=0;i--)out.push(mKeyOf(new Date(TODAY.getFullYear(),TODAY.getMonth()-i,1)));return out;}
 function fdMLab(k,yr){var p=k.split("-");return MONS[(+p[1])-1]+(yr?" "+p[0]:"");}
@@ -9038,7 +9056,7 @@ function pnlDateMK(v){var d=parseD(v);return d?mKeyOf(d):"";}
 })();
 document.addEventListener("click",function(e){
   if(getRoute()!==PNL_ROUTE)return;var b;
-  if((b=e.target.closest("[data-pltab]"))){PNL.tab=b.getAttribute("data-pltab");pagePnl();return;}
+  if((b=e.target.closest("[data-pltab]"))){var pt=b.getAttribute("data-pltab");if(pt!==PNL.tab||SMOOTH.active)smoothPageChange(function(){PNL.tab=pt;pagePnl();});return;}
   if((b=e.target.closest("[data-plstep]"))&&!b.disabled){var ms=pnlMonths(),i=ms.indexOf(PNL.mk)+(+b.getAttribute("data-plstep"));if(i>=0&&i<ms.length){PNL.mk=ms[i];PNL.open={};pagePnl();}return;}
   if((b=e.target.closest("[data-plcmp]"))){PNL.cmp=b.getAttribute("data-plcmp");try{localStorage.setItem("smou-pnlcmp",PNL.cmp);}catch(x){}pagePnl();return;}
   if((b=e.target.closest("[data-plexp]"))){if(b.classList.contains("on")){flClose();return;}flOpen(b,'<h6>Export '+esc(plLab(PNL.mk,true))+'</h6><button type="button" class="it" data-plact="xls">'+svg('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8l8 8M16 8l-8 8"/>')+'Excel file (.xlsx)</button><button type="button" class="it" data-plact="print">'+svg('<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z"/>')+'Print or save as PDF</button>');return;}
@@ -9421,7 +9439,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.19 · 30 Sep 2026 · GPS efficiency and freshness";
+var ERP_BUILD="v3.20 · 1 Oct 2026 · Smooth tab navigation";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -9720,7 +9738,7 @@ function tbRestore(hid,btn){
   }).catch(function(e){btn.disabled=false;toast("Could not restore: "+((e&&e.message)||"network error"),"err");});
 }
 document.addEventListener("click",function(e){
-  var a=e.target.closest("[data-tbtab]");if(a){TB.tab=a.getAttribute("data-tbtab");pageTrash(document.getElementById("page"));return;}
+  var a=e.target.closest("[data-tbtab]");if(a){var tt=a.getAttribute("data-tbtab");if(tt!==TB.tab||SMOOTH.active)smoothPageChange(function(){TB.tab=tt;pageTrash(document.getElementById("page"));});return;}
   var m=e.target.closest("[data-tbmore]");if(m){tbLoad();return;}
   var r=e.target.closest("[data-tbrestore]");if(r){e.preventDefault();tbRestore(r.getAttribute("data-tbrestore"),r);}
 });
@@ -10150,7 +10168,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&(e
     function put(sel){var a=old.querySelector(sel),b=fresh.querySelector(sel);if(!a||!b)return;
       var t=document.createElement("div");t.innerHTML=a.innerHTML;Array.prototype.forEach.call(t.querySelectorAll("[style]"),function(x){x.removeAttribute("style");});
       var t2=document.createElement("div");t2.innerHTML=b.innerHTML;Array.prototype.forEach.call(t2.querySelectorAll("[style]"),function(x){x.removeAttribute("style");});
-      if(t.innerHTML!==t2.innerHTML)a.innerHTML=b.innerHTML;}
+      if(t.innerHTML!==t2.innerHTML)a.innerHTML=b.innerHTML;if(b.hasAttribute("aria-label"))a.setAttribute("aria-label",b.getAttribute("aria-label"));}
     put(".v3-main");put(".v3-sub-nav");put(".v3-mtitle");put(".v3-tabbar");
     var os=old.querySelector(".v3-sub"),fs=fresh.querySelector(".v3-sub");if(os&&fs&&os.className!==fs.className)os.className=fs.className;
     var ow=old.querySelector(".v3-sub-r .v3-wd"),nw=fresh.querySelector(".v3-sub-r .v3-wd");
@@ -10162,6 +10180,8 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&(e
     var pageAdd=document.querySelector('#page [data-act="new"]');
     nb.style.display=pageAdd?"none":"";
   }
+
+  smoothHeaderRefresh=function(){ensure();refresh();hideDupAdd();};
 
   /* ---------- theme menu (3 skins) ---------- */
   buildThemeMenu=function(){
@@ -10345,6 +10365,101 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&(e
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){paint(false,true);});
   setInterval(tick,1500);
   setTimeout(tick,350);setTimeout(tick,1300);
+})();
+
+
+/* ===== Smooth navigation · stable shell, cancellable content transitions ===== */
+var smoothHeaderRefresh; // Assigned by the header module above; internal to the ERP closure.
+var SMOOTH={seq:0,active:null};
+document.documentElement.classList.add("smou-smooth");
+function smoothCancel(){
+  SMOOTH.seq++;
+  var old=SMOOTH.active;SMOOTH.active=null;
+  if(old){if(old.vt)old.vt.skipTransition();if(old.anim)old.anim.cancel();if(old.host)old.host.style.viewTransitionName=old.name;}
+  document.documentElement.classList.remove("smou-smooth-active");
+}
+function smoothFinishLayout(){
+  if(typeof smoothHeaderRefresh==="function")smoothHeaderRefresh();
+  if(typeof flApply==="function")flApply();
+  if(typeof mobApply==="function")mobApply();
+  if(LANG==="ar"){var app=document.querySelector("#root > .app");if(app)transEl(app);}
+}
+function smoothPageChange(draw,routeChange){
+  if(!routeChange&&CALM.last!==getRoute())return; // Old nested buttons cannot interrupt a pending route.
+  smoothCancel();
+  var pg=document.getElementById("page"),route=getRoute(),sig=calmSig(),seq=SMOOTH.seq;
+  var task={route:route,sig:sig,committed:false,vt:null,anim:null,host:pg,name:pg?pg.style.viewTransitionName:""};
+  SMOOTH.active=task;
+  function valid(){return seq===SMOOTH.seq&&getRoute()===route&&calmSig()===sig&&(!SB_ON||!!USER);}
+  function update(){
+    if(!valid())return;
+    if(pg)pg.style.viewTransitionName=task.name;
+    draw();task.committed=true;
+    if(getRoute()===route)smoothFinishLayout();
+    else if(task.vt)task.vt.skipTransition(); // Permission/unknown-route redirects retain their normal routing.
+  }
+  function done(){if(SMOOTH.active===task){if(pg)pg.style.viewTransitionName=task.name;SMOOTH.active=null;document.documentElement.classList.remove("smou-smooth-active");}}
+  function enter(opacity){var next=document.getElementById("page");if(valid()&&next&&typeof next.animate==="function"){
+    task.anim=next.animate([{opacity:opacity,transform:"translateY(4px)"},{opacity:1,transform:"translateY(0)"}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)"});
+    task.anim.finished.catch(function(){}); // Cancelling a native transition also cancels its live entrance.
+    return task.anim;
+  }}
+  var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!pg||reduced||document.visibilityState==="hidden"){
+    try{update();}finally{done();}return;
+  }
+  if(typeof document.startViewTransition==="function"){
+    document.documentElement.classList.add("smou-smooth-active");
+    try{
+      // Snapshot only the outgoing page. The incoming page stays live and clickable.
+      pg.style.viewTransitionName="smou-page";
+      task.vt=document.startViewTransition(update);
+      // The old snapshot is above the live page: fading it alone avoids a dim midpoint.
+      var entered=task.vt.ready.then(function(){if(task.committed){var animation=enter(1);if(animation)return animation.finished;}}).catch(function(){});
+      task.vt.updateCallbackDone.catch(function(err){console.error("ERP navigation render failed",err);});
+      Promise.all([task.vt.finished.catch(function(){}),entered]).then(done,done);
+      return;
+    }catch(err){pg.style.viewTransitionName=task.name;document.documentElement.classList.remove("smou-smooth-active");}
+  }
+  // Older browsers keep content visible while giving the same short, gentle movement.
+  try{
+    update();
+    if(enter(.88)){
+      task.anim.finished.then(done,done);
+    }else done();
+  }catch(err){done();throw err;}
+}
+(function(){
+  // All role and specialized-page wrappers remain in the render chain.
+  var previousPage=renderPage;
+  renderPage=function(){var route=getRoute(),r=previousPage.apply(this,arguments);if(getRoute()===route)CALM.last=route;return r;};
+  var previousApp=renderApp;
+  renderApp=function(){
+    var route=getRoute(),sig=calmSig(),pg=document.getElementById("page"),app=document.querySelector("#root > .app");
+    var active=SMOOTH.active;
+    if(active&&(active.route!==route||active.sig!==sig))smoothCancel();
+    else if(active&&!active.committed)return; // The pending callback will draw the latest data.
+    if(pg&&app&&CALM.sig===sig&&CALM.last!==route&&(!SB_ON||!!USER)){
+      smoothPageChange(function(){
+        var old=document.getElementById("page"),fresh=document.createElement("div");
+        fresh.className="page";fresh.id="page";
+        old.replaceWith(fresh); // Fresh per-route state, as with the original full render.
+        renderPage();ensureFabDock();window.scrollTo(0,0);
+      },true);
+      return;
+    }
+    if(!pg||!app||CALM.sig!==sig)smoothCancel();
+    var result=previousApp.apply(this,arguments);
+    smoothFinishLayout();return result;
+  };
+  window.addEventListener("pagehide",smoothCancel);
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="hidden"){
+      var task=SMOOTH.active;
+      if(task){if(task.vt)task.vt.skipTransition();if(task.anim)task.anim.cancel();}
+      // Keep a pending update valid: skip the visual effect, not the requested route.
+    }else if(CALM.last!==getRoute())renderApp();
+  });
 })();
 
 if(!location.hash){var r0="overview";try{r0=localStorage.getItem("smou-route")||"overview";}catch(e){}history.replaceState(null,"","#/"+r0);}
