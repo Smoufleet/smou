@@ -789,9 +789,17 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 .ordrec-spacer{flex:1}
 .ordrec-danger{color:var(--crit)!important;border-color:var(--crit)!important}
 .ordrec-picked{background:var(--teal-bg)!important}
-.ordrec-table td.actcol{white-space:nowrap}
+#ordrecTable th.actcol,#ordrecTable td.actcol{width:84px;min-width:84px;white-space:nowrap}
+#page #ordrecTable th.actcol,#page #ordrecTable td.actcol{text-align:center!important;padding-inline:10px!important}
+#ordrecTable .ordrec-delete{display:inline-grid;place-items:center;vertical-align:middle;position:relative;width:28px;height:28px;min-width:28px;min-height:28px;padding:0;flex:0 0 28px;border:1px solid color-mix(in srgb,var(--crit) 22%,var(--line));border-radius:8px;background:var(--surface);color:var(--crit);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 6%,transparent);line-height:1;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+#ordrecTable .ordrec-delete svg{display:block;width:13px;height:13px;stroke-width:1.7;pointer-events:none}
+#ordrecTable .ordrec-delete:not(:disabled):hover{background:var(--crit-bg);border-color:color-mix(in srgb,var(--crit) 60%,var(--line));box-shadow:0 2px 5px color-mix(in srgb,var(--ink) 8%,transparent)}
+#ordrecTable .ordrec-delete:disabled{opacity:.4;cursor:wait}
+html.m2 #page #ordrecTable tbody tr > td.m-a{justify-content:center!important;align-items:center!important;min-height:44px!important}
+@media(pointer:coarse){#ordrecTable .ordrec-delete::before{content:"";position:absolute;width:44px;height:44px;left:50%;top:50%;transform:translate(-50%,-50%)}}
+@media(prefers-reduced-motion:reduce){#ordrecTable .ordrec-delete{transition:none}}
 .ordrec-summary{padding-inline-start:22px;line-height:1.7;max-height:180px;overflow:auto}
-@media(max-width:860px){.ordrec-toolbar{padding:10px 12px;gap:8px}.ordrec-toolbar .btn{min-height:40px}.ordrec-pick{min-height:40px}.ordrec-table .ordrec-danger{min-height:40px}}
+@media(max-width:860px){.ordrec-toolbar{padding:10px 12px;gap:8px}.ordrec-toolbar .btn{min-height:40px}.ordrec-pick{min-height:40px}}
 
 </style>
 <style id="reskin">
@@ -4910,7 +4918,7 @@ function ordersRecords(P){
   var toolbar=allowed?'<div class="ordrec-toolbar"><label class="ordrec-all"><input type="checkbox" data-ordrec-all '+(ORDREC.busy?'disabled':'')+'> '+ordrecText("select")+'</label><span id="ordrecCount" class="hint" role="status" aria-live="polite"></span><button type="button" class="btn sm ghost" data-ordrec-action="clear">'+ordrecText("clear")+'</button><span class="ordrec-spacer"></span><button type="button" class="btn sm ordrec-danger" data-ordrec-action="bulk" disabled>'+ordrecText("bulk")+'</button></div>':"";
   var body=rows.map(function(r){var k=ordrecKey(r),picked=ORDREC.selected.has(k),label=r.driver+" · "+(r.platform||"")+" · "+r.month+" "+r.year;
     var check=allowed?'<label class="ordrec-pick"><input type="checkbox" data-ordrec-check="'+esc(k)+'" aria-label="Select '+esc(label)+'" '+(picked?'checked ':'')+(ORDREC.busy?'disabled':'')+'></label>':"";
-    return '<tr class="'+(picked?'ordrec-picked':'')+'" data-ordrec-row="'+esc(k)+'" style="cursor:pointer" data-act="orddriver" data-n="'+esc(r.driver)+'"><td class="nm" style="color:var(--teal-ink)">'+check+'<span>'+esc(r.driver)+'</span></td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td>'+(allowed?'<td class="actcol"><button type="button" class="btn sm ordrec-danger" data-ordrec-action="one" data-ordrec-key="'+esc(k)+'" aria-label="Delete '+esc(label)+'" '+(ORDREC.busy?'disabled':'')+'>'+svg(IC_del)+ordrecText("del")+'</button></td>':'')+'</tr>';
+    return '<tr class="'+(picked?'ordrec-picked':'')+'" data-ordrec-row="'+esc(k)+'" style="cursor:pointer" data-act="orddriver" data-n="'+esc(r.driver)+'"><td class="nm" style="color:var(--teal-ink)">'+check+'<span>'+esc(r.driver)+'</span></td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td>'+(allowed?'<td class="actcol"><button type="button" class="ordrec-delete" data-ordrec-action="one" data-ordrec-key="'+esc(k)+'" aria-label="'+esc(ordrecText("del")+" "+label)+'" title="'+esc(ordrecText("del"))+'" '+(ORDREC.busy?'disabled':'')+'>'+svg(IC_del).replace("<svg ",'<svg aria-hidden="true" focusable="false" ')+'</button></td>':'')+'</tr>';
   }).join("");
   setTimeout(ordrecPaint,0);
   return '<div class="card"><div class="card-h"><h3>Performance Records</h3><span class="hint">'+P.length+' rows</span></div>'+toolbar+'<div class="card-b"><div class="tbl-wrap"><table class="dt ordrec-table" id="ordrecTable"><thead><tr><th>Driver</th><th>Platform</th><th>Month</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th>'+(allowed?'<th class="actcol">Actions</th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
@@ -9349,7 +9357,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.17 · 30 Sep 2026 · order record selection and deletion";
+var ERP_BUILD="v3.18 · 30 Sep 2026 · compact record delete controls";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
