@@ -2393,6 +2393,76 @@ html.m2 #page table.dt.m-list tbody tr > td.m-a.cc-act{justify-content:flex-end 
 .bk-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .bk-list span{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--neutral-bg);color:var(--neutral)}
 .bk-prog{margin-top:10px;font-size:12px;font-weight:700;color:var(--acc-text,var(--acc))}
+
+/* ===== Users & Roles · add user / password link ===== */
+.acc-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.acc-hint{flex:1 1 260px;font-size:12.5px;color:var(--muted)}
+.acc-hint b{color:var(--ink)}
+.acc-bar .btn svg,.acc-act .btn svg,.acc-share .btn svg{width:15px;height:15px}
+.acc-act{text-align:right;white-space:nowrap}
+.acc-roles{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:12px;color:var(--muted)}
+.acc-roles b{color:var(--ink);font-weight:700}
+.acc-step{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;margin:4px 0 12px}
+.acc-step span{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:var(--accInk,#fff);font:800 12px/1 "JetBrains Mono",monospace}
+.acc-link{display:flex;gap:8px;margin-bottom:10px}
+.acc-link input{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 12px;font:500 12px "JetBrains Mono",monospace}
+.acc-share{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.acc-share #accWa{background:#128C4B;border-color:#128C4B;color:#fff}
+.acc-warn{padding:11px 13px;border-radius:12px;background:var(--crit-bg);color:var(--ink);font-size:12.5px;line-height:1.5;margin-bottom:14px;border:1px solid color-mix(in srgb,var(--crit) 35%,transparent)}
+.acc-warn code{font-size:11.5px;overflow-wrap:anywhere}
+/* set-your-password screen (after opening the link) */
+.acc-pw{position:fixed;inset:0;z-index:9900;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--ink) 55%,transparent);backdrop-filter:blur(6px)}
+.acc-pw-card{width:min(420px,100%);background:var(--panel);border-radius:22px;padding:26px 22px 22px;box-shadow:0 30px 70px rgba(0,0,0,.35);display:flex;flex-direction:column}
+.acc-pw-ic{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:var(--acc-soft,var(--teal-bg));color:var(--acc);margin-bottom:12px}
+.acc-pw-ic svg{width:24px;height:24px}
+.acc-pw h3{margin:0 0 6px;font:800 21px "Bricolage Grotesque",sans-serif;letter-spacing:-.02em}
+.acc-pw p{margin:0 0 16px;font-size:13px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.acc-pw p b{color:var(--ink)}
+.acc-pw label{font-size:12px;font-weight:700;margin:0 0 6px}
+.acc-pw input{height:46px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 14px;font:inherit;font-size:15px;margin-bottom:12px;width:100%;box-sizing:border-box}
+.acc-pw-f{position:relative}
+.acc-pw-f input{padding-right:70px}
+.acc-pw-f button{position:absolute;right:6px;top:6px;height:34px;padding:0 12px;border-radius:10px;border:0;background:var(--line);color:var(--ink);font:700 12px inherit;cursor:pointer}
+.acc-pw .err-msg{margin:-4px 0 10px}
+.acc-pw-go{height:46px;justify-content:center;font-size:14px}
+@media (max-width:640px){.acc-tbl .acc-act .btn{padding:0 10px}.acc-bar .btn{width:100%;justify-content:center}}
+/* phones: each user = a small card, nothing wider than the screen */
+@media (max-width:640px){
+  html.m2 #page table.dt.acc-tbl.acc-tbl{display:block!important;width:100%!important;min-width:0!important}
+  html.m2 #page table.dt.acc-tbl.acc-tbl thead{display:none!important}
+  html.m2 #page table.dt.acc-tbl.acc-tbl tbody{display:block!important}
+  html.m2 #page table.dt.acc-tbl.acc-tbl tr{display:grid!important;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 2px!important;border-bottom:1px solid var(--line)!important;background:none!important}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td{display:block!important;border:0!important;padding:0!important;min-width:0;white-space:normal!important;height:auto!important}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td:nth-child(1){grid-column:1}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td:nth-child(2){grid-column:1;font-size:12px;overflow-wrap:anywhere}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td:nth-child(3){grid-column:1 / -1}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td:nth-child(3) select{width:100%}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td:nth-child(4){grid-column:2;grid-row:1;text-align:right}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td.acc-act{grid-column:1 / -1;text-align:left}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td.acc-act:empty{display:none!important}
+  html.m2 #page table.dt.acc-tbl.acc-tbl td.acc-act .btn{width:100%;justify-content:center}
+  .acc-link{flex-wrap:wrap}.acc-link .btn{width:100%;justify-content:center}
+  .acc-share .btn{flex:1 1 100%;justify-content:center}
+}
+
+
+@media (max-width:640px){
+  body #page table.dt.acc-tbl.acc-tbl{display:block!important;width:100%!important;min-width:0!important}
+  body #page table.dt.acc-tbl.acc-tbl thead{display:none!important}
+  body #page table.dt.acc-tbl.acc-tbl tbody{display:block!important}
+  body #page table.dt.acc-tbl.acc-tbl tr{display:grid!important;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 2px!important;border-bottom:1px solid var(--line)!important;background:none!important}
+  body #page table.dt.acc-tbl.acc-tbl td{display:block!important;border:0!important;padding:0!important;min-width:0;white-space:normal!important;height:auto!important}
+  body #page table.dt.acc-tbl.acc-tbl td:nth-child(1){grid-column:1}
+  body #page table.dt.acc-tbl.acc-tbl td:nth-child(2){grid-column:1;font-size:12px;overflow-wrap:anywhere}
+  body #page table.dt.acc-tbl.acc-tbl td:nth-child(3){grid-column:1 / -1}
+  body #page table.dt.acc-tbl.acc-tbl td:nth-child(3) select{width:100%}
+  body #page table.dt.acc-tbl.acc-tbl td:nth-child(4){grid-column:2;grid-row:1;text-align:right}
+  body #page table.dt.acc-tbl.acc-tbl td.acc-act{grid-column:1 / -1;text-align:left}
+  body #page table.dt.acc-tbl.acc-tbl td.acc-act:empty{display:none!important}
+  body #page table.dt.acc-tbl.acc-tbl td.acc-act .btn{width:100%;justify-content:center}
+  .acc-link{flex-wrap:wrap}.acc-link .btn{width:100%;justify-content:center}
+  .acc-share .btn{flex:1 1 100%;justify-content:center}
+}
 </style>
 <script id="v3-boot">
 /* v3 boot: pick the saved skin before the page paints (Desert Dispatch by default) */
@@ -2405,6 +2475,10 @@ html.m2 #page table.dt.m-list tbody tr > td.m-a.cc-act{justify-content:flex-end 
   h.setAttribute("data-theme",s==="night"?"dark":"light");
   try{localStorage.setItem("smou-theme",s==="night"?"dark":"light");localStorage.removeItem("smou-accent");}catch(e){}
 })();
+/* login link (invite / password reset) arrives as #access_token=…&type=invite — keep it for the app and give the router a clean hash */
+(function(){try{var h=location.hash||"";if(!/(access_token=|error_code=|error_description=)/.test(h))return;
+  var p={};h.replace(/^#\/?/,"").split("&").forEach(function(kv){var i=kv.indexOf("=");if(i>0){try{p[decodeURIComponent(kv.slice(0,i))]=decodeURIComponent(kv.slice(i+1).replace(/\+/g," "));}catch(e){}}});
+  window.__AUTHLINK__=p;history.replaceState(null,"",location.pathname+location.search+"#/overview");}catch(e){}})();
 </script>
 <!-- External Libraries via CDN (High-speed & Cached) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -9114,7 +9188,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.14 · 30 Sep 2026 · day-3 backup";
+var ERP_BUILD="v3.15 · 1 Oct 2026 · day-6 logins";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -9570,6 +9644,148 @@ pageReports=function(pg){
   window.__erpVerShow=show;   /* used by the test page */
 })();
 
+/* ===== Day 6 · Logins for staff / client ======================================
+   Admin → Users & Roles → "Add user": name + email + role → a one-time link.
+   The admin sends that link (WhatsApp / email). The person opens it and sets
+   THEIR OWN password — nobody else ever sees or types it.
+   "Password link" on a user = new link if they forgot the password or the link expired.
+   ============================================================================ */
+var ACC={redirect:(function(){try{return location.origin+location.pathname;}catch(e){return "";}})()};
+function accRoleOpts(sel){return [["viewer","View-only"],["dataentry","Data Entry"],["admin","Admin"]].map(function(r){return '<option value="'+r[0]+'"'+(sel===r[0]?" selected":"")+'>'+r[1]+'</option>';}).join("");}
+function accErr(code){return {EXISTS:"This email already has a login. Use “Password link” on that user instead.",BAD_EMAIL:"Enter a valid email address.",ADMIN_ONLY:"Only an admin can add users.",NOT_SIGNED_IN:"Your session expired — sign in again.",NOT_FOUND:"User not found.",LINK_FAILED:"Could not make the link — try again."}[code]||"Something went wrong — try again.";}
+function accCall(body){
+  if(!SB||!SB.functions)return Promise.reject(new Error("Not connected"));
+  body.redirect=ACC.redirect;
+  return SB.functions.invoke("erp-users",{body:body}).then(function(r){
+    if(r.error){var ctx=r.error.context;
+      if(ctx&&typeof ctx.json==="function")return ctx.json().then(function(j){throw new Error(accErr(j&&j.error));},function(){throw new Error(accErr(""));});
+      throw new Error(accErr(""));}
+    if(r.data&&r.data.error)throw new Error(accErr(r.data.error));
+    return r.data;
+  });
+}
+function accLinkOk(link){try{var u=new URL(link),rt=u.searchParams.get("redirect_to")||"";return rt.indexOf(ACC.redirect.replace(/\/$/,""))===0;}catch(e){return true;}}
+/* ---- modal: add user ---- */
+function accAddModal(){
+  var ov=document.createElement("div");ov.className="overlay";ov.id="overlay";
+  ov.innerHTML='<div class="modal acc-modal" style="max-width:520px"><div class="modal-h"><div><h3>Add user</h3><div class="sub">They set their own password from the link you send</div></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
+    '<div class="modal-b" id="accBody"><div class="form-grid">'+
+      '<div class="field wide"><label for="accName">Name</label><input id="accName" placeholder="e.g. Mohammed (client)" autocomplete="off"></div>'+
+      '<div class="field wide"><label for="accEmail">Email <span class="req">*</span></label><input id="accEmail" type="email" inputmode="email" placeholder="name@company.com" autocomplete="off"></div>'+
+      '<div class="field wide"><label for="accRole">Access</label><select id="accRole">'+accRoleOpts("viewer")+'</select>'+
+        '<div class="acc-roles"><span><b>View-only</b> sees everything, changes nothing</span><span><b>Data Entry</b> adds &amp; edits records, no Finance / Admin</span><span><b>Admin</b> full control, incl. users &amp; delete</span></div></div>'+
+    '</div><div class="err-msg" id="accErr" hidden></div></div>'+
+    '<div class="modal-f" id="accFoot"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="accgo">Create login link</button></div></div>';
+  document.body.appendChild(ov);setTimeout(function(){var n=ov.querySelector("#accName");if(n)n.focus();},50);
+}
+function accCreate(btn){
+  var ov=document.getElementById("overlay");if(!ov)return;
+  var name=ov.querySelector("#accName").value.trim(),email=ov.querySelector("#accEmail").value.trim().toLowerCase(),role=ov.querySelector("#accRole").value,err=ov.querySelector("#accErr");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent="Enter a valid email address.";err.hidden=false;return;}
+  btn.disabled=true;btn.textContent="Creating…";err.hidden=true;
+  accCall({action:"invite",email:email,name:name,role:role}).then(function(d){
+    try{logAudit("create","users",d.id||email,(name||email)+" · "+roleLabel(role),[{f:"role",l:"Access",from:"",to:roleLabel(role)}]);}catch(e){}
+    accShowLink(d.link,name||email.split("@")[0],email,"invite");
+    if(getRoute()==="users")pageUsers(document.getElementById("page"));
+  }).catch(function(e){btn.disabled=false;btn.textContent="Create login link";err.textContent=e.message;err.hidden=false;});
+}
+/* ---- the link, ready to send ---- */
+function accShowLink(link,name,email,kind){
+  var ov=document.getElementById("overlay");
+  if(!ov){ov=document.createElement("div");ov.className="overlay";ov.id="overlay";ov.innerHTML='<div class="modal acc-modal" style="max-width:520px"></div>';document.body.appendChild(ov);}
+  var m=ov.querySelector(".modal");
+  var msg="Hi "+name+", "+(kind==="invite"?"your SMOU Fleet ERP login is ready.":"here is your SMOU Fleet ERP password reset link.")+
+    "\n\n1) Open this link and set your password:\n"+link+"\n\n2) After that, sign in at "+ACC.redirect+" with "+email+" and your password.\n\nThe link works once and expires soon.";
+  var bad=!accLinkOk(link);
+  m.innerHTML='<div class="modal-h"><div><h3>'+(kind==="invite"?"Login created":"New password link")+'</h3><div class="sub">'+esc(name)+' · '+esc(email)+'</div></div><button class="icon-btn" data-act="close" aria-label="Close">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'</button></div>'+
+    '<div class="modal-b">'+
+      (bad?'<div class="acc-warn"><b>Supabase is not pointing to this ERP yet.</b> This link will open the wrong page. In Supabase → Authentication → URL Configuration set <b>Site URL</b> to <code>'+esc(ACC.redirect)+'</code>, save, then make a new link.</div>':'')+
+      '<div class="acc-step"><span>1</span><div>Send this link to '+esc(name)+'. They open it and choose their own password.</div></div>'+
+      '<div class="acc-link"><input id="accLink" readonly value="'+esc(link)+'"><button class="btn sm" data-act="acccopy">Copy link</button></div>'+
+      '<div class="acc-share"><a class="btn sm" id="accWa" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(msg)+'">'+svg('<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z"/>')+'Send on WhatsApp</a>'+
+      '<a class="btn sm ghost" href="mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent("SMOU Fleet ERP login")+'&body='+encodeURIComponent(msg)+'">'+svg('<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>')+'Email</a>'+
+      '<button class="btn sm ghost" data-act="acccopymsg">Copy full message</button></div>'+
+      '<div class="acc-step"><span>2</span><div>The link works <b>once</b> and expires in about 1 hour. If it expires, use <b>Password link</b> on this user for a fresh one.</div></div>'+
+    '</div><div class="modal-f"><button class="btn primary" data-act="close">Done</button></div>';
+  ov._msg=msg;
+}
+function accCopy(t,btn){var done=function(){if(btn){var o=btn.textContent;btn.textContent="Copied ✓";setTimeout(function(){btn.textContent=o;},1500);}};
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){accCopyOld(t);done();});return;}}catch(e){}accCopyOld(t);done();}
+function accCopyOld(t){try{var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();}catch(e){}}
+function accReset(uid,btn){
+  btn.disabled=true;var o=btn.innerHTML;btn.textContent="…";
+  accCall({action:"reset",user_id:uid}).then(function(d){btn.disabled=false;btn.innerHTML=o;
+    try{logAudit("edit","users",uid,d.email,[{f:"pw",l:"Password link",from:"",to:"sent"}]);}catch(e){}
+    accShowLink(d.link,d.name||d.email.split("@")[0],d.email,d.kind==="invite"?"invite":"reset");
+  }).catch(function(e){btn.disabled=false;btn.innerHTML=o;toast(e.message,"err");});
+}
+/* ---- Users & Roles page ---- */
+pageUsers=function(pg){
+  if(!SB_ON||ROLE!=="admin"||!SB){go("overview");return;}
+  pg.innerHTML='<div class="acc-bar"><div class="acc-hint">Every person gets their own login. Access can be changed any time — <b>Waiting for approval</b> = blocked.</div><button class="btn primary" data-act="accadd">'+svg('<path d="M12 5v14M5 12h14"/>')+'Add user</button></div>'+
+    '<div class="card"><div class="card-b" id="usersBox"><div class="empty" style="padding:24px"><h4>Loading users…</h4></div></div></div>';
+  SB.from("profiles").select("id,email,name,role,created_at").order("created_at",{ascending:true}).then(function(res){
+    var box=document.getElementById("usersBox");if(!box)return;
+    if(res.error){box.innerHTML='<div class="autherr">'+esc(res.error.message)+'</div>';return;}
+    var rows=res.data||[];
+    box.innerHTML='<div class="tbl-wrap"><table class="dt acc-tbl"><thead><tr><th>Name</th><th>Email</th><th>Access</th><th>Added</th><th></th></tr></thead><tbody>'+
+      rows.map(function(u){var self=USER&&u.id===USER.id;
+        return '<tr><td><span class="nm">'+esc(u.name||"—")+'</span>'+(self?' <span class="sub">(you)</span>':'')+'</td><td class="mono">'+esc(u.email||"")+'</td>'+
+          '<td><select class="urole" data-urole data-uid="'+u.id+'"'+(self?' disabled':'')+'>'+["admin","dataentry","viewer","pending"].map(function(r){return '<option value="'+r+'"'+(u.role===r?" selected":"")+'>'+roleLabel(r)+'</option>';}).join("")+'</select></td>'+
+          '<td class="sub">'+(u.created_at?esc(new Date(u.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"2-digit"})):"")+'</td>'+
+          '<td class="acc-act">'+(self?'':'<button class="btn sm ghost" data-accreset="'+u.id+'" title="Make a new link so they can set a new password">'+svg('<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>')+'Password link</button>')+'</td></tr>';}).join("")+
+      '</tbody></table></div>';
+  }).catch(function(e){var box=document.getElementById("usersBox");if(box)box.innerHTML='<div class="autherr">'+esc((e&&e.message)||e)+'</div>';});
+};
+document.addEventListener("click",function(e){
+  var a=e.target.closest("[data-act]");
+  if(a){var act=a.getAttribute("data-act");
+    if(act==="accadd"){e.preventDefault();accAddModal();return;}
+    if(act==="accgo"){e.preventDefault();accCreate(a);return;}
+    if(act==="acccopy"){e.preventDefault();var i=document.getElementById("accLink");if(i)accCopy(i.value,a);return;}
+    if(act==="acccopymsg"){e.preventDefault();var ov=document.getElementById("overlay");if(ov&&ov._msg)accCopy(ov._msg,a);return;}
+  }
+  var r=e.target.closest("[data-accreset]");if(r){e.preventDefault();accReset(r.getAttribute("data-accreset"),r);}
+});
+
+/* ---- the person opens the link → "Set your password" ---- */
+function accLinkInfo(){return window.__AUTHLINK__||null;}
+function accPwModal(kind){
+  if(document.getElementById("accPw"))return;
+  var el=document.createElement("div");el.id="accPw";el.className="acc-pw";
+  el.innerHTML='<div class="acc-pw-card" role="dialog" aria-modal="true" aria-labelledby="accPwT">'+
+    '<div class="acc-pw-ic">'+svg('<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>')+'</div>'+
+    '<h3 id="accPwT">'+(kind==="invite"?"Welcome to SMOU Fleet":"Set a new password")+'</h3>'+
+    '<p>'+(kind==="invite"?"Choose your password. You will use it with <b>"+esc((USER&&USER.email)||"")+"</b> to sign in.":"Choose a new password for <b>"+esc((USER&&USER.email)||"")+"</b>.")+'</p>'+
+    '<label for="accPw1">New password</label><div class="acc-pw-f"><input id="accPw1" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"><button type="button" data-act="accpweye" aria-label="Show password">Show</button></div>'+
+    '<label for="accPw2">Type it again</label><input id="accPw2" type="password" autocomplete="new-password" placeholder="Same password">'+
+    '<div class="err-msg" id="accPwErr" hidden></div>'+
+    '<button class="btn primary acc-pw-go" data-act="accpwsave">Save password</button></div>';
+  document.body.appendChild(el);setTimeout(function(){var i=document.getElementById("accPw1");if(i)i.focus();},80);
+}
+function accPwSave(btn){
+  var p1=document.getElementById("accPw1").value,p2=document.getElementById("accPw2").value,err=document.getElementById("accPwErr");
+  var bad=p1.length<8?"Use at least 8 characters.":p1!==p2?"The two passwords are not the same.":"";
+  if(bad){err.textContent=bad;err.hidden=false;return;}
+  btn.disabled=true;btn.textContent="Saving…";err.hidden=true;
+  SB.auth.updateUser({password:p1}).then(function(r){
+    if(r&&r.error){btn.disabled=false;btn.textContent="Save password";err.textContent=/weak|pwned|leaked/i.test(r.error.message)?"This password is too easy to guess — choose another.":/same/i.test(r.error.message)?"Choose a password different from the old one.":r.error.message;err.hidden=false;return;}
+    window.__AUTHLINK__=null;var el=document.getElementById("accPw");if(el)el.remove();
+    toast("Password saved ✓ Next time sign in with your email and this password.","good");
+  }).catch(function(){btn.disabled=false;btn.textContent="Save password";err.textContent="Could not save — check your internet and try again.";err.hidden=false;});
+}
+document.addEventListener("click",function(e){var a=e.target.closest("[data-act]");if(!a)return;var act=a.getAttribute("data-act");
+  if(act==="accpwsave"){e.preventDefault();accPwSave(a);}
+  else if(act==="accpweye"){e.preventDefault();var i=document.getElementById("accPw1");if(i){var s=i.type==="password";i.type=s?"text":"password";document.getElementById("accPw2").type=i.type;a.textContent=s?"Hide":"Show";}}
+});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&(e.target.id==="accPw1"||e.target.id==="accPw2")){var b=document.querySelector('[data-act="accpwsave"]');if(b)accPwSave(b);}});
+(function(){var _oa=onAuthed;onAuthed=function(user){var r=_oa.apply(this,arguments);var L=accLinkInfo();
+  if(L&&L.access_token&&/^(invite|recovery|signup|magiclink)$/.test(L.type||""))setTimeout(function(){accPwModal(L.type==="recovery"?"recovery":"invite");},400);
+  return r;};})();
+(function(){var _sl=showLogin;showLogin=function(m){var L=accLinkInfo();
+  if(!m&&L&&(L.error||L.error_code)){m=/expired|invalid/i.test((L.error_code||"")+" "+(L.error_description||""))?"This link has expired or was already used. Ask your admin for a new “Password link”.":"This link did not work. Ask your admin for a new “Password link”.";window.__AUTHLINK__=null;}
+  return _sl.call(this,m);};})();
+
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
@@ -9923,7 +10139,7 @@ if(SB_ON){
   function startSB(){
     SB=sbClient();
     setSave("saving","Checking sign-in…");
-    SB.auth.getSession().then(function(res){
+    (function(){var L=window.__AUTHLINK__;return (L&&L.access_token&&L.refresh_token)?SB.auth.setSession({access_token:L.access_token,refresh_token:L.refresh_token}).catch(function(){}).then(function(){return SB.auth.getSession();}):SB.auth.getSession();})().then(function(res){
       var sess=res&&res.data&&res.data.session;
       if(sess&&sess.user){onAuthed(sess.user);}else{showLogin();}
     }).catch(function(){showLogin();});
