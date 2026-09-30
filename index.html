@@ -781,6 +781,18 @@ tr[data-rowid]:hover .rowmenu-btn{color:var(--ink-2)}
 @media(max-width:1100px){.cc-livegrid{grid-template-columns:1fr}#ccmap{height:380px}}
 .cc-live .sub,.cc-feed .sub,.cc-alert .sub,.cc-top .sub,.tbl-wrap td .sub{font-size:11.5px!important;color:var(--muted)!important;font-family:inherit}
 .cc-live .nm,.cc-feed b{font-size:13px}
+.ordrec-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--line)}
+.ordrec-all{display:inline-flex;align-items:center;gap:8px;min-height:36px;cursor:pointer;font-size:13px}
+.ordrec-pick{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:36px;vertical-align:middle;cursor:pointer;margin-inline-end:4px}
+.ordrec-pick input,.ordrec-all input{width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex:none}
+.ordrec-pick:focus-within,.ordrec-all:focus-within{outline:2px solid var(--teal);outline-offset:2px;border-radius:5px}
+.ordrec-spacer{flex:1}
+.ordrec-danger{color:var(--crit)!important;border-color:var(--crit)!important}
+.ordrec-picked{background:var(--teal-bg)!important}
+.ordrec-table td.actcol{white-space:nowrap}
+.ordrec-summary{padding-inline-start:22px;line-height:1.7;max-height:180px;overflow:auto}
+@media(max-width:860px){.ordrec-toolbar{padding:10px 12px;gap:8px}.ordrec-toolbar .btn{min-height:40px}.ordrec-pick{min-height:40px}.ordrec-table .ordrec-danger{min-height:40px}}
+
 </style>
 <style id="reskin">
 /* ============================================================
@@ -2816,6 +2828,7 @@ function acceptPending(p,data){
   applyPendingView();savePending();cacheSave();broadcastChange(p.collection,p.id,data,"UPDATE");
 }
 function flushPending(){
+  if(typeof ORDREC!=="undefined"&&ORDREC&&ORDREC.busy)return _pendingRun||Promise.resolve();
   if(_pendingRun)return _pendingRun;
   if(!SB||!USER||!PENDING.length)return Promise.resolve();
   _pendingRun=(async function(){
@@ -4768,8 +4781,8 @@ function pageOrders(pg){
     '<span style="flex:1"></span><button class="btn sm primary" data-act="ordmenu">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Import / Export'+svg('<path d="M6 9l6 6 6-6"/>')+'</button><input type="file" id="ordImportFile" accept=".xlsx,.xls" hidden></div>';
   // Daily Log tab renders regardless of whether monthly data exists
   if(ordersView==="daily"){pg.innerHTML=head+ordersDaily();if(LANG==="ar")transEl(pg);return;}
-  if(!P.length){pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:34px">'+svg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>')+'<h4>No performance data yet</h4><p>Add entries in the <b>Daily Log</b>, download the template, or import your Talabat / Keeta monthly report.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn sm" data-act="ordview" data-v="daily">'+svg('<path d="M12 5v14M5 12h14"/>')+'Open Daily Log</button><button class="btn sm" data-act="ordtemplate">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Download template</button>'+(can("edit")?'<button class="btn sm primary" data-act="ordimport">'+svg('<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button>':'')+'</div></div></div></div>';return;}
-  var FP=ordFilter(P);
+  if(!P.length){ordrecPrune([]);pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:34px">'+svg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>')+'<h4>No performance data yet</h4><p>Add entries in the <b>Daily Log</b>, download the template, or import your Talabat / Keeta monthly report.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn sm" data-act="ordview" data-v="daily">'+svg('<path d="M12 5v14M5 12h14"/>')+'Open Daily Log</button><button class="btn sm" data-act="ordtemplate">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Download template</button>'+(can("edit")?'<button class="btn sm primary" data-act="ordimport">'+svg('<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button>':'')+'</div></div></div></div>';return;}
+  var FP=ordFilter(P);ordrecPrune(FP);
   if(!FP.length){var sc=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ")||"matching";pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:30px">'+svg('<path d="M3 3v18h18"/>')+'<h4>No data for '+esc(sc)+'</h4><p>Try a different month or platform.</p></div></div></div>';return;}
   if(ordersView==="records")pg.innerHTML=head+ordersRecords(FP);
   else if(ordersView==="driver")pg.innerHTML=head+ordersByDriver(FP);
@@ -4868,13 +4881,99 @@ function ordersDash(P){
   '</div></div>';
   return kpis+trend+'<div class="grid g2" style="align-items:start"><div>'+plat+vehCard+glance+'</div>'+topCard+'</div>';
 }
-function ordersRecords(P){
-  var months=[];var mm={};P.forEach(function(r){var k=r.month+" "+r.year;if(!mm[k]){mm[k]=1;months.push(k);}});
-  months.sort(function(a,b){var pa=a.split(" "),pb=b.split(" ");return (pb[1]-pa[1])||(moIdx(pb[0])-moIdx(pa[0]));});
-  var rows=P.slice().sort(function(a,b){return (b.year-a.year)||(moIdx(b.month)-moIdx(a.month))||((num(b.orders)||0)-(num(a.orders)||0));});
-  var body=rows.map(function(r){return '<tr style="cursor:pointer" data-act="orddriver" data-n="'+esc(r.driver)+'"><td class="nm" style="color:var(--teal-ink)">'+esc(r.driver)+'</td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td></tr>';}).join("");
-  return '<div class="card"><div class="card-h"><h3>Performance Records</h3><span class="hint">'+P.length+' rows</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Driver</th><th>Platform</th><th>Month</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th></tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+/* Orders > Records: selection refers to source records, never to a row's position. */
+var ORDREC={selected:new Set(),visible:[],owner:null,plan:null,busy:false};
+function ordrecText(k){var en={select:"Select all shown",clear:"Unselect all",selected:"selected",del:"Delete",bulk:"Delete Selected",cancel:"Cancel",title:"Delete order records?",working:"Deleting…",actions:"Actions"};var ar={select:"تحديد كل المعروض",clear:"إلغاء التحديد",selected:"محدد",del:"حذف",bulk:"حذف المحدد",cancel:"إلغاء",title:"حذف سجلات الطلبات؟",working:"جارٍ الحذف…",actions:"الإجراءات"};return (LANG==="ar"?ar:en)[k]||en[k]||k;}
+function ordrecKey(r){return encodeURIComponent(JSON.stringify(r.fromLog?["log",r.driver,r.platform,perfMKey(r)]:["perf",String(r.id)]));}
+function ordrecGroup(r){return JSON.stringify([r.driver,r.platform,perfMKey(r)]);}
+function ordrecLogGroup(r){var d=parseD(r.date);return d?JSON.stringify([r.driver,r.platform,d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")]):null;}
+function ordrecRows(){return ordFilter(effectivePerf());}
+function ordrecPrune(rows){
+  var owner=pendingOwner();if(owner!==ORDREC.owner||!can("delete")){ORDREC.selected.clear();ORDREC.owner=owner;}
+  var keys=new Set(rows.map(ordrecKey));ORDREC.selected.forEach(function(k){if(!keys.has(k))ORDREC.selected.delete(k);});ORDREC.visible=rows.map(ordrecKey);
 }
+function ordrecChoose(key,on){if(!can("delete")||ORDREC.busy||ORDREC.visible.indexOf(key)<0)return;if(on)ORDREC.selected.add(key);else ORDREC.selected.delete(key);}
+function ordrecChooseAll(on){if(!can("delete")||ORDREC.busy)return;ORDREC.visible.forEach(function(k){if(on)ORDREC.selected.add(k);else ORDREC.selected.delete(k);});}
+function ordrecPlan(keys){
+  var wanted=new Set(keys),rows=ordrecRows().filter(function(r){return wanted.has(ordrecKey(r));}),targets=[],seen=new Set(),groups=new Set();
+  function add(c,r){var k=JSON.stringify([c,r.id]);if(seen.has(k))return;seen.add(k);targets.push({collection:c,id:r.id,data:clone(r)});}
+  rows.forEach(function(r){if(r.fromLog)groups.add(ordrecGroup(r));else add("perf",r);});
+  (STATE.grd.orderlog||[]).forEach(function(r){if(groups.has(ordrecLogGroup(r)))add("orderlog",r);});
+  // Remove imported reports hidden underneath the selected daily total, too, so they cannot reappear.
+  (STATE.grd.perf||[]).forEach(function(r){if(groups.has(ordrecGroup(r)))add("perf",r);});
+  targets.sort(function(a,b){return (a.collection+"/"+a.id).localeCompare(b.collection+"/"+b.id);});
+  return {owner:pendingOwner(),keys:rows.map(ordrecKey),rows:rows.map(clone),targets:targets};
+}
+function ordersRecords(P){
+  var allowed=can("delete");ordrecPrune(P);
+  var rows=P.slice().sort(function(a,b){return (b.year-a.year)||(moIdx(b.month)-moIdx(a.month))||((num(b.orders)||0)-(num(a.orders)||0));});
+  var toolbar=allowed?'<div class="ordrec-toolbar"><label class="ordrec-all"><input type="checkbox" data-ordrec-all '+(ORDREC.busy?'disabled':'')+'> '+ordrecText("select")+'</label><span id="ordrecCount" class="hint" role="status" aria-live="polite"></span><button type="button" class="btn sm ghost" data-ordrec-action="clear">'+ordrecText("clear")+'</button><span class="ordrec-spacer"></span><button type="button" class="btn sm ordrec-danger" data-ordrec-action="bulk" disabled>'+ordrecText("bulk")+'</button></div>':"";
+  var body=rows.map(function(r){var k=ordrecKey(r),picked=ORDREC.selected.has(k),label=r.driver+" · "+(r.platform||"")+" · "+r.month+" "+r.year;
+    var check=allowed?'<label class="ordrec-pick"><input type="checkbox" data-ordrec-check="'+esc(k)+'" aria-label="Select '+esc(label)+'" '+(picked?'checked ':'')+(ORDREC.busy?'disabled':'')+'></label>':"";
+    return '<tr class="'+(picked?'ordrec-picked':'')+'" data-ordrec-row="'+esc(k)+'" style="cursor:pointer" data-act="orddriver" data-n="'+esc(r.driver)+'"><td class="nm" style="color:var(--teal-ink)">'+check+'<span>'+esc(r.driver)+'</span></td><td>'+(r.platform?'<span class="chip">'+esc(r.platform)+'</span>':"—")+'</td><td>'+esc(r.month)+" "+esc(r.year)+'</td><td>'+esc(r.vehicle||"—")+'</td><td class="mono" style="text-align:right">'+fmtN(r.days)+'</td><td class="mono nm" style="text-align:right">'+fmtN(r.orders)+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--teal-ink)">'+perfUTR(r).toFixed(1)+'</td>'+(allowed?'<td class="actcol"><button type="button" class="btn sm ordrec-danger" data-ordrec-action="one" data-ordrec-key="'+esc(k)+'" aria-label="Delete '+esc(label)+'" '+(ORDREC.busy?'disabled':'')+'>'+svg(IC_del)+ordrecText("del")+'</button></td>':'')+'</tr>';
+  }).join("");
+  setTimeout(ordrecPaint,0);
+  return '<div class="card"><div class="card-h"><h3>Performance Records</h3><span class="hint">'+P.length+' rows</span></div>'+toolbar+'<div class="card-b"><div class="tbl-wrap"><table class="dt ordrec-table" id="ordrecTable"><thead><tr><th>Driver</th><th>Platform</th><th>Month</th><th>Vehicle</th><th style="text-align:right">Days</th><th style="text-align:right">Orders</th><th style="text-align:right">UTR</th>'+(allowed?'<th class="actcol">Actions</th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+}
+function ordrecPaint(){
+  var n=ORDREC.selected.size,all=document.querySelector('[data-ordrec-all]'),count=document.getElementById("ordrecCount"),bulk=document.querySelector('[data-ordrec-action="bulk"]'),clear=document.querySelector('[data-ordrec-action="clear"]');
+  if(count)count.textContent=n+" "+ordrecText("selected");if(bulk){bulk.disabled=!n||ORDREC.busy;bulk.textContent=ordrecText(ORDREC.busy?"working":"bulk")+(n?" ("+n+")":"");}if(clear)clear.disabled=!n||ORDREC.busy;
+  if(all){all.checked=ORDREC.visible.length>0&&n===ORDREC.visible.length;all.indeterminate=n>0&&n<ORDREC.visible.length;all.disabled=ORDREC.busy||!ORDREC.visible.length;}
+  document.querySelectorAll('[data-ordrec-check]').forEach(function(el){var on=ORDREC.selected.has(el.getAttribute("data-ordrec-check"));el.checked=on;el.disabled=ORDREC.busy;var row=el.closest("tr");if(row)row.classList.toggle("ordrec-picked",on);});
+  document.querySelectorAll('[data-ordrec-action="one"]').forEach(function(el){el.disabled=ORDREC.busy;});
+}
+function ordrecOpen(keys){
+  if(ORDREC.busy)return;if(!can("delete")){toast("Only an admin can delete entries.","err");return;}
+  var plan=ordrecPlan(keys);if(!plan.targets.length){toast("Select at least one current record.","err");return;}
+  ORDREC.plan=plan;closeForm();var daily=plan.targets.filter(function(t){return t.collection==="orderlog";}).length,monthly=plan.targets.length-daily;
+  var ov=document.createElement("div");ov.id="overlay";ov.className="overlay";
+  ov.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="ordrecTitle" style="max-width:580px"><div class="modal-h"><h3 id="ordrecTitle">'+ordrecText("title")+'</h3></div><div class="modal-b"><p>Delete <b>'+plan.rows.length+'</b> selected record'+(plan.rows.length===1?'':'s')+'?</p><ul class="ordrec-summary">'+plan.rows.slice(0,8).map(function(r){return '<li>'+esc(r.driver)+' · '+esc(r.platform||"—")+' · '+esc(r.month+" "+r.year)+'</li>';}).join("")+'</ul>'+(plan.rows.length>8?'<p>And '+(plan.rows.length-8)+' more records.</p>':'')+'<p>This removes <b>'+daily+' Daily Log entr'+(daily===1?'y':'ies')+'</b> and <b>'+monthly+' imported monthly record'+(monthly===1?'':'s')+'</b> for the selection.</p>'+(daily?'<p>Daily Log entries and matching imported reports are included so the monthly totals do not reappear.</p>':'')+'<p>Order reports and order-based pay totals will update.</p>'+(SB_ON?'<p class="hint">Deleted saved entries can be restored from Admin → Recycle Bin.</p>':'')+'<p id="ordrecError" role="alert" style="color:var(--crit)" hidden></p></div><div class="modal-f"><button type="button" class="btn ghost" data-ordrec-action="cancel">'+ordrecText("cancel")+'</button><button type="button" class="btn ordrec-danger" data-ordrec-action="confirm">'+svg(IC_del)+ordrecText("del")+' '+plan.rows.length+'</button></div></div>';
+  document.body.appendChild(ov);var cancel=ov.querySelector('[data-ordrec-action="cancel"]');if(cancel)cancel.focus();if(LANG==="ar")transEl(ov);
+}
+function ordrecError(message){var el=document.getElementById("ordrecError");if(el){el.hidden=false;el.textContent=message;}else toast(message,"err");}
+function ordrecFinish(plan){
+  var keys=new Set(plan.targets.map(function(t){return JSON.stringify([t.collection,t.id]);}));
+  ["perf","orderlog"].forEach(function(c){STATE.grd[c]=(STATE.grd[c]||[]).filter(function(r){return !keys.has(JSON.stringify([c,r.id]));});});
+  plan.targets.forEach(function(t){delete shadow[t.collection+"/"+t.id];logAudit("delete",t.collection,t.id,(t.data.driver||"")+" · "+(t.data.date||t.data.month+" "+t.data.year),[{f:"orders",l:"Orders",from:String(t.data.orders||0),to:""}]);broadcastChange(t.collection,t.id,null,"DELETE");});
+  if(dailyEdit&&keys.has(JSON.stringify(["orderlog",dailyEdit])))dailyEdit=null;
+  ORDREC.selected.clear();ORDREC.plan=null;saveLocal();cacheSave();
+}
+async function ordrecCommit(){
+  var plan=ORDREC.plan;if(!plan||ORDREC.busy)return;
+  if(!can("delete")||plan.owner!==pendingOwner()){ordrecError("Your account or access changed. Reopen the selection.");return;}
+  ORDREC.busy=true;ordrecPaint();var btn=document.querySelector('[data-ordrec-action="confirm"]');if(btn){btn.disabled=true;btn.textContent=ordrecText("working");}
+  try{
+    // Let any already-running save finish, and pause new saves until this deletion is confirmed.
+    if(_pendingRun)await _pendingRun;
+    if(!can("delete")||plan.owner!==pendingOwner())throw new Error("Your account or access changed. Reopen the selection.");
+    var latest=ordrecPlan(plan.keys);
+    if(!jsonSame(latest.targets,plan.targets))throw new Error("These records changed. Cancel and review the selection again.");
+    var keys=new Set(plan.targets.map(function(t){return JSON.stringify([t.collection,t.id]);}));
+    if(PENDING.some(function(p){return keys.has(JSON.stringify([p.collection,p.id]));}))throw new Error("These records have pending edits. Sync or review those edits before deleting.");
+    if(PENDING_DEL.some(function(p){return keys.has(JSON.stringify([p.collection,p.id]));}))throw new Error("Some selected entries are already waiting for deletion. Let them sync first.");
+    if(SB_ON){
+      if(!SB||navigator.onLine===false)throw new Error("Connect to the internet to delete these records.");
+      var result=await SB.rpc("erp_delete_order_records",{p_rows:plan.targets});
+      if(result.error)throw new Error(/ORDER_RECORDS_CHANGED/.test(result.error.message||"")?"These records changed in the office. Refresh and review the selection again.":/ADMIN_REQUIRED|permission denied/i.test(result.error.message||"")?"Only an admin can delete entries.":"Deletion could not be confirmed. Reconnect and retry; repeating this request will not delete other entries.");
+      if(typeof result.data!=="number")throw new Error("Deletion could not be confirmed. Refresh and check the selected entries.");
+    }
+    if(plan.owner!==pendingOwner()){ORDREC.selected.clear();ORDREC.plan=null;return;}
+    ordrecFinish(plan);closeForm();pageOrders(document.getElementById("page"));toast(plan.rows.length+" order record"+(plan.rows.length===1?"":"s")+" deleted.","good");
+  }catch(e){ordrecError(e.message||"Could not delete. Please retry.");}
+  finally{ORDREC.busy=false;ordrecPaint();if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=ordrecText("del")+" "+plan.rows.length;}}
+}
+document.addEventListener("click",function(e){
+  var action=e.target.closest('[data-ordrec-action]'),pick=e.target.closest('.ordrec-pick,.ordrec-all');if(!action&&!pick)return;
+  e.stopImmediatePropagation();if(!action)return;e.preventDefault();var kind=action.getAttribute("data-ordrec-action");
+  if(ORDREC.busy)return;
+  if(kind==="one")ordrecOpen([action.getAttribute("data-ordrec-key")]);
+  else if(kind==="bulk")ordrecOpen(Array.from(ORDREC.selected));
+  else if(kind==="clear"){ordrecChooseAll(false);ordrecPaint();}
+  else if(kind==="confirm")ordrecCommit();
+  else if(kind==="cancel"){ORDREC.plan=null;closeForm();}
+},true);
+document.addEventListener("change",function(e){var el=e.target;if(el.hasAttribute("data-ordrec-check")){e.stopImmediatePropagation();ordrecChoose(el.getAttribute("data-ordrec-check"),el.checked);ordrecPaint();}else if(el.hasAttribute("data-ordrec-all")){e.stopImmediatePropagation();ordrecChooseAll(el.checked);ordrecPaint();}},true);
+
 function ordersByDriver(P){
   var agg={};P.forEach(function(r){var k=r.driver;if(!agg[k])agg[k]={driver:r.driver,orders:0,days:0,months:0,tal:0,kee:0,vehicle:r.vehicle};var a=agg[k];a.orders+=num(r.orders)||0;a.days+=num(r.days)||0;a.months++;if(r.platform==="Talabat")a.tal+=num(r.orders)||0;else if(r.platform==="Keeta")a.kee+=num(r.orders)||0;});
   var list=Object.keys(agg).map(function(k){return agg[k];}).sort(function(a,b){return b.orders-a.orders;});
@@ -8229,7 +8328,7 @@ var MOB_TABLES=[
  {h:["Net Payable","Basic"],t:"Employee",r:"Net Payable",m:["Basic","Additions","Deductions"],a:"Salary"},
  {h:["Source","Amount In (KWD)"],t:"Source",r:"Amount In (KWD)",m:["Date","Received By","Note"]},
  {h:["Candidate","Onboarding"],t:"Candidate",r:"Onboarding",b:"Status",m:["Nationality","Vehicle","Arrived"]},
- {h:["Month","UTR","Days"],t:"Driver",r:"Orders",m:["Platform","Month","Vehicle","Days","UTR"]},
+ {h:["Month","UTR","Days"],t:"Driver",r:"Orders",m:["Platform","Month","Vehicle","Days","UTR"],a:"Actions"},
  {h:["Talabat","Keeta","Months"],t:"Driver",r:"Orders",m:["#","Days","UTR","Talabat","Keeta"]},
  {h:["Date","Driver","Orders","Note"],t:"Driver",r:"Orders",m:["Date","Platform","Vehicle","Note"],a:true},
  {h:["Name","Email","Role"],t:"Name",r:"Role",m:["Email"]}
@@ -8262,6 +8361,7 @@ function mobTable(tbl){
   if(tbl._mobSig===sig&&tbl._mobRows===tbl.tBodies.length+":"+(tbl.tBodies[0]&&tbl.tBodies[0].rows.length)&&!tbl.querySelector("tbody tr:not([data-m])"))return;
   var visible=labs.filter(function(l){return l;}).length;
   var c=mobConf(labs);
+  if(tbl.classList.contains("ordrec-table"))c={t:labs[0],r:labs[5],m:[labs[1],labs[2],labs[3],labs[4],labs[6]],a:labs.length>7?labs[7]:false};
   if(!c&&visible<=4){tbl.classList.add("m-mini");tbl.classList.remove("m-list");tbl._mobSig=sig;return;}   /* small tables stay tables */
   if(!c)c=mobGuess(tbl,labs);if(!c)return;
   tbl.classList.add("m-list");tbl.classList.remove("m-mini");
@@ -9249,7 +9349,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.16 · 30 Sep 2026 · sync and account fixes";
+var ERP_BUILD="v3.17 · 30 Sep 2026 · order record selection and deletion";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
