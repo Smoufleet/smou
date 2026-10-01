@@ -6630,7 +6630,7 @@ function ccSubscribe(){
   if(CC.chan||!SB)return;
   try{
     CC.chan=SB.channel("erp-command-center");
-    ["drivers","shifts","fuel_records","shift_points"].forEach(function(t){CC.chan.on("postgres_changes",{event:"*",schema:"public",table:t},ccOnRealtime);});
+    ["drivers","fuel_records"].forEach(function(t){CC.chan.on("postgres_changes",{event:"*",schema:"public",table:t},ccOnRealtime);});
     CC.chan.subscribe();
   }catch(e){CC.chan=null;}
 }
@@ -7020,7 +7020,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     var had=!!CC.chan;
     if(!had&&SB){try{
       CC.chan=SB.channel("erp-command-center");
-      ["drivers","shifts","fuel_records","shift_points","sos_alerts","vehicle_checks","announcements"].forEach(function(t){CC.chan.on("postgres_changes",{event:"*",schema:"public",table:t},ccOnRealtime);});
+      ["drivers","fuel_records","sos_alerts","vehicle_checks","announcements"].forEach(function(t){CC.chan.on("postgres_changes",{event:"*",schema:"public",table:t},ccOnRealtime);});
       CC.chan.subscribe();}catch(e){CC.chan=null;_sub();}}
   };
   var _apply=ccApply;
@@ -7140,6 +7140,130 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   (document.head||document.documentElement).appendChild(st);
 })();
 
+/* ===== Compact fleet GPS sync: current positions only, business changes separately ===== */
+function smouKeepNewerGps(next,previous,camel){
+  if(!previous)return next;
+  var out=Object.assign({},next),ms=function(v){return typeof v==='number'?v:Date.parse(v)||0;};
+  var position=camel?['liveLat','liveLng','liveAcc','livePosAt','lastPing','speed','heading','liveSrc']:['live_lat','live_lng','live_acc','live_pos_at','live_time','speed','heading','live_src'];
+  var pos=camel?'livePosAt':'live_pos_at',old=ms(previous[pos]),fresh=ms(next[pos]);
+  if(old>fresh||(old>0&&old===fresh))position.forEach(function(k){out[k]=previous[k];});
+  [camel?'liveAt':'live_at',camel?'trkAt':'trk_at'].forEach(function(k){if(ms(previous[k])>ms(next[k]))out[k]=previous[k];});
+  if(!camel&&old>fresh)['live_rej_lat','live_rej_lng','live_rej_at'].forEach(function(k){out[k]=previous[k];});
+  return out;
+}
+function createSmouFleetSync(o){
+  var generation=0,who=null,running=false,mapOn=false,timer=null,wake=null;
+  var gpsJob=null,shiftJob=null,scanJob=null,gpsVersion=0,lastGps=0,lastScan=0;
+  var cursor=0,queued={},versions={},revisions={},serial=0,scanAgain=false;
+  function wanted(){return !!o.owner()&&o.wanted();}
+  function valid(g,u){return running&&g===generation&&u===who&&u===o.owner()&&wanted();}
+  function abort(job){if(job&&job.controller)job.controller.abort();}
+  function request(q,job){return q.abortSignal&&job.controller?q.abortSignal(job.controller.signal):q;}
+  function job(){return {controller:typeof AbortController!=="undefined"?new AbortController():null};}
+  function error(kind,e){if(o.error)o.error(kind,e&&e.message||String(e||"Sync failed"));}
+  function later(){if(wake)return;wake=setTimeout(function(){wake=null;tick();},0);}
+  function stop(){
+    if(running||mapOn){generation++;gpsVersion++;}
+    running=false;mapOn=false;if(timer)clearInterval(timer);timer=null;
+    if(wake)clearTimeout(wake);wake=null;abort(gpsJob);abort(shiftJob);abort(scanJob);
+    lastGps=0;lastScan=0;
+  }
+  function sync(){
+    if(!wanted()){stop();return;}
+    var u=o.owner();
+    /* Signal timestamps come from the server: never seed this cursor from the office clock. */
+    if(who!==u){stop();who=u;cursor=0;queued={};versions={};revisions={};}
+    if(!running){running=true;generation++;timer=setInterval(tick,15000);}
+    var next=!!o.gpsWanted();
+    if(next!==mapOn){mapOn=next;gpsVersion++;lastGps=0;abort(gpsJob);}
+    tick();
+  }
+  function queue(id,operation){
+    if(id==null||!wanted()||!running)return;id=String(id);
+    versions[id]=++serial;
+    if(operation==='DELETE'){delete queued[id];o.business(null,id);}
+    else queued[id]=versions[id];
+    later();
+  }
+  function signal(p){
+    if(!running||!wanted())return;
+    var r=p&&p.new;if(!r||!r.shift_id)return;
+    var id=String(r.shift_id),revision=String(r.revision||r.changed_at||'');
+    if(revisions[id]===revision)return;
+    if(revisions[id]&&/^\d+$/.test(revisions[id])&&/^\d+$/.test(revision)){
+      var previous=revisions[id].replace(/^0+/,''),next=revision.replace(/^0+/,'');
+      if(next.length<previous.length||(next.length===previous.length&&next<previous))return;
+    }
+    revisions[id]=revision;
+    queue(r.shift_id,r.operation);
+  }
+  function flush(){
+    if(shiftJob||!running||!wanted())return;
+    var ids=Object.keys(queued).slice(0,100);if(!ids.length)return;
+    var stamps={},g=generation,u=who,j=job();ids.forEach(function(id){stamps[id]=queued[id];});shiftJob=j;
+    Promise.resolve(request(o.client.from('shifts').select('*').in('id',ids),j)).then(function(r){
+      if(!valid(g,u))return;if(r.error)throw r.error;
+      var found={};(r.data||[]).forEach(function(row){found[String(row.id)]=row;});
+      ids.forEach(function(id){if(versions[id]!==stamps[id])return;delete queued[id];o.business(found[id]||null,id);});
+      if(o.error)o.error('business','');
+    }).catch(function(e){if(valid(g,u))error('business',e);}).finally(function(){
+      if(shiftJob===j)shiftJob=null;
+      if(valid(g,u)&&Object.keys(queued).some(function(id){return stamps[id]!==queued[id];}))later();
+      else if(running&&generation!==g)later();
+    });
+  }
+  function scan(force){
+    if(scanJob){if(force)scanAgain=true;return;}
+    if(!running||!wanted()||(!force&&Date.now()-lastScan<60000))return;
+    var g=generation,u=who,j=job(),since=new Date(Math.max(0,cursor-60000)).toISOString(),after=null,high=cursor;
+    lastScan=Date.now();scanJob=j;
+    function page(){
+      if(!valid(g,u))return Promise.resolve();
+      var q=o.client.from('shift_business_changes').select('shift_id,operation,revision,changed_at').gte('changed_at',since).order('shift_id',{ascending:true}).limit(1000);
+      if(after!==null)q=q.gt('shift_id',after);
+      return Promise.resolve(request(q,j)).then(function(r){
+        if(!valid(g,u))return;if(r.error)throw r.error;
+        var rows=r.data||[];
+        rows.forEach(function(row){high=Math.max(high,Date.parse(row.changed_at)||0);signal({new:row});});
+        if(rows.length===1000){var id=String(rows[rows.length-1].shift_id);if(id===after)throw new Error('Business change page did not advance');after=id;return page();}
+        cursor=high;
+      });
+    }
+    page().catch(function(e){if(valid(g,u))error('business',e);}).finally(function(){
+      if(scanJob===j)scanJob=null;
+      if(scanAgain){scanAgain=false;lastScan=0;if(running)later();}
+      else if(running&&generation!==g)later();
+    });
+  }
+  function poll(force){
+    if(gpsJob||!running||!wanted()||!mapOn||!o.gpsWanted()||(!force&&Date.now()-lastGps<15000))return;
+    var g=generation,u=who,v=gpsVersion,j=job(),atSerial=serial;lastGps=Date.now();gpsJob=j;
+    Promise.resolve(request(o.client.rpc('erp_live_gps_snapshot'),j)).then(function(r){
+      if(!valid(g,u)||v!==gpsVersion||!mapOn||!o.gpsWanted())return;
+      if(r.error)throw r.error;
+      if(!r.data||!Array.isArray(r.data.shifts))throw new Error('Invalid live GPS response');
+      var seen={};
+      r.data.shifts.forEach(function(row){
+        var id=String(row.id);seen[id]=true;if((versions[id]||0)>atSerial)return;
+        if(!o.hasActive(id))queue(id,'UPSERT');else o.gps(row);
+      });
+      o.activeIds().forEach(function(id){if(!seen[String(id)]&&(versions[String(id)]||0)<=atSerial)queue(id,'UPSERT');});
+      if(o.error)o.error('gps','');if(o.fresh)o.fresh(r.data.server_at);
+    }).catch(function(e){if(valid(g,u)&&v===gpsVersion)error('gps',e);}).finally(function(){
+      if(gpsJob===j)gpsJob=null;
+      if(running&&(generation!==g||gpsVersion!==v))later();
+    });
+  }
+  function tick(){
+    if(!wanted()){stop();return;}
+    if(!running)return;
+    if(o.owner()!==who||!!o.gpsWanted()!==mapOn){sync();return;}
+    poll(false);scan(false);flush();
+  }
+  return {sync:sync,stop:stop,signal:signal,reconcile:function(){sync();scan(true);},poll:function(){sync();poll(false);},changed:queue};
+}
+/* ===== End compact fleet GPS sync ===== */
+
 /* ===== Command Center: accurate live location (full trails, stale ticker, realtime auto-reconnect, polling backup) ===== */
 (function(){
   var ACC_MAX=100;              /* fixes worse than ±100 m are not drawn on the route */
@@ -7163,11 +7287,11 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   function needsShifts(){var r=getRoute();return r==="overview"||r.indexOf("cc/")===0;}
   function alive(epoch,who){return epoch===syncEpoch&&who===owner()&&wanted();}
   function closeChannel(){var ch=CC.chan;CC.chan=null;clearTimeout(retryT);retryT=null;if(ch&&SB)try{Promise.resolve(SB.removeChannel(ch)).catch(function(){});}catch(e){}}
-  function stop(){syncEpoch++;closeChannel();scopeKey="";flights={};loadP=null;refreshP=null;refreshQueued=false;CC.loading=false;CC.rt="paused";}
+  function stop(){if(fleet)fleet.stop();syncEpoch++;closeChannel();scopeKey="";flights={};loadP=null;refreshP=null;refreshQueued=false;CC.loading=false;CC.rt="paused";paintRt();}
   function bindOwner(){
     var who=owner();if(who===syncOwner)return;
     stop();syncOwner=who;shiftScan=fuelScan=checkScan=lastSafety=0;lastRoute="";
-    CC.loaded=false;CC.err="";CC._x2=false;CC.lastSync=0;
+    CC.loaded=false;CC.err="";CC._x2=false;CC.lastSync=0;CC.gpsAt=0;CC.gpsErr="";
     CORE.forEach(function(t){CC[KEYS[t]]=[];});
     ccTeardown();CC.view=null;CC.follow=null;CC.f={driver:"all",platform:"all",status:"all",search:""};
     if(window.ccSosBar)window.ccSosBar();
@@ -7195,7 +7319,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     var slot={events:[],promise:null};flights[t]=slot;
     slot.promise=readPages(t,filter,epoch,who).then(function(rows){
       if(!alive(epoch,who)||flights[t]!==slot)throw cancelled();
-      if(mode==="replace")CC[KEYS[t]]=rows;
+      if(mode==="replace")CC[KEYS[t]]=t==="shifts"?rows.map(function(row){return keepNewerGps(row,shiftById(row.id));}):rows;
       else{
         var found={};rows.forEach(function(r){found[String(r.id)]=true;});
         if(known)CC[KEYS[t]]=CC[KEYS[t]].filter(function(r){return !known[String(r.id)]||found[String(r.id)];});
@@ -7220,7 +7344,33 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     else if(r==="overview"){var b=document.getElementById("ccBanner");if(b)b.outerHTML=ccBannerHTML();}
     paintRt();
   }
-  function tables(){var ts=["drivers","sos_alerts","vehicle_checks"];if(needsShifts())ts.push("shifts","fuel_records");if(getRoute()==="cc/announce")ts.push("announcements");return ts;}
+  var GPS_FIELDS=["live_lat","live_lng","live_acc","live_pos_at","live_time","live_at","speed","heading","live_src","trk_at","live_rej_lat","live_rej_lng","live_rej_at"];
+  function keepNewerGps(row,previous){
+    if(!previous||row.status!=="ACTIVE"||previous.status!=="ACTIVE")return row;
+    return smouKeepNewerGps(row,previous,false);
+  }
+  var oldApply=ccApply;ccApply=function(table,event,row,old){
+    if(table==="shifts"&&row)row=keepNewerGps(row,shiftById(row.id));
+    return oldApply(table,event,row,old);
+  };
+  var fleet=createSmouFleetSync({
+    client:SB,owner:owner,wanted:function(){return wanted()&&needsShifts();},
+    gpsWanted:function(){return CC.loaded&&getRoute()==="cc/live";},
+    hasActive:function(id){var s=shiftById(id);return !!s&&s.status==="ACTIVE";},
+    activeIds:function(){return ccActive().map(function(s){return String(s.id);});},
+    gps:function(row){var s=shiftById(row.id);if(!s||s.status!=="ACTIVE")return;
+      row=smouKeepNewerGps(row,s,false);
+      GPS_FIELDS.forEach(function(k){if(Object.prototype.hasOwnProperty.call(row,k))s[k]=row[k];});
+    },
+    business:function(row,id){
+      var p={table:"shifts",eventType:row?"UPDATE":"DELETE",new:row,old:{id:id}};
+      if(flights.shifts)flights.shifts.events.push(p);
+      ccApply("shifts",p.eventType,row,p.old);repaint(true);
+    },
+    fresh:function(){CC.gpsAt=Date.now();CC.lastSync=Date.now();repaint(false);},
+    error:function(kind,message){if(kind==="gps")CC.gpsErr=message;else CC.syncErr=message;paintRt();}
+  });
+  function tables(){var ts=["drivers","sos_alerts","vehicle_checks"];if(needsShifts())ts.push("shift_business_changes","fuel_records");if(getRoute()==="cc/announce")ts.push("announcements");return ts;}
   ccSubscribe=function(){
     bindOwner();if(!wanted()){if(CC.chan)stop();return;}
     var ts=tables(),key=syncOwner+"|"+ts.join(",");if(CC.chan&&scopeKey===key)return;
@@ -7230,6 +7380,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
       var ch=SB.channel("erp-command-visible-"+Date.now()+"-"+epoch);CC.chan=ch;
       ts.forEach(function(t){ch.on("postgres_changes",{event:"*",schema:"public",table:t},function(p){
         if(CC.chan!==ch||!alive(epoch,who))return;
+        if(p.table==="shift_business_changes"){fleet.signal(p);return;}
         var before=p.table==="shifts"&&p.new?shiftById(p.new.id):null;
         var business=before&&["status","break_started_at","orders_done","orders_cancelled","distance","end_odo","duration"].some(function(k){return before[k]!==p.new[k];});
         if(flights[p.table])flights[p.table].events.push(p);
@@ -7238,7 +7389,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
       });});
       ch.subscribe(function(st){
         if(CC.chan!==ch||!alive(epoch,who))return;
-        if(st==="SUBSCRIBED"){CC.rt="live";paintRt();refresh(false);}
+        if(st==="SUBSCRIBED"){CC.rt="live";paintRt();fleet.reconcile();refresh(false);}
         else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED"){
           closeChannel();CC.rt="down";paintRt();
           retryT=setTimeout(function(){if(wanted())ccSubscribe();},5000);
@@ -7255,7 +7406,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     var jobs=CORE.map(function(t){return fetchTable(t,null,"replace",epoch,who);});
     var p=Promise.all(jobs).then(function(){
       if(!alive(epoch,who))throw cancelled();
-      CC.loaded=true;CC._x2=true;CC.err="";shiftScan=watermark("shifts");fuelScan=watermark("fuel_records");checkScan=watermark("vehicle_checks");lastSafety=started;CC.lastSync=Date.now();
+      CC.loaded=true;CC._x2=true;CC.err="";shiftScan=watermark("shifts");fuelScan=watermark("fuel_records");checkScan=watermark("vehicle_checks");lastSafety=started;CC.lastSync=Date.now();fleet.sync();
       if(window.ccSosBar)window.ccSosBar();
     }).catch(function(e){if(alive(epoch,who)&&!e.ccCancelled)CC.err=e.message||"Could not load driver data";})
       .finally(function(){if(loadP===p){loadP=null;CC.loading=false;}});
@@ -7271,11 +7422,11 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
     var active=knownActive(),ids=Object.keys(active),open={};(CC.sos||[]).forEach(function(a){if(a.status==="OPEN")open[String(a.id)]=true;});
     if(fullView){jobs.push(fetchTable("drivers",null,"replace",epoch,who));}
     if(withShifts){
-      var full=fullView&&/^cc\/(shifts|km|drivers)$/.test(r);
-      var since=recent(shiftScan);
-      /* Include ended shifts that were active before a disconnect and newly created shifts. */
-      var clauses=["status.eq.ACTIVE","created_at.gte."+since];if(ids.length)clauses.push("id.in.("+ids.join(",")+")");
-      jobs.push(fetchTable("shifts",full?null:function(q){return q.or(clauses.join(","));},full?"replace":"merge",epoch,who,full?null:active).then(function(){if(alive(epoch,who)){shiftScan=watermark("shifts");CC.lastSync=Date.now();}}));
+      /* Full business history is read only on an explicit register visit. */
+      if(fullView&&/^cc\/(shifts|km|drivers)$/.test(r)){
+        jobs.push(fetchTable("shifts",null,"replace",epoch,who).then(function(){if(alive(epoch,who))shiftScan=watermark("shifts");}));
+      }
+      if(fullView)fleet.reconcile();else fleet.sync();
       var fuelSince=recent(fuelScan);
       jobs.push(fetchTable("fuel_records",fullView&&r==="cc/fuel"?null:function(q){return q.gte("created_at",fuelSince);},fullView&&r==="cc/fuel"?"replace":"merge",epoch,who).then(function(){if(alive(epoch,who))fuelScan=watermark("fuel_records");}));
     }
@@ -7294,12 +7445,13 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.
   function paintRt(){var el=document.getElementById("ccRt");if(el)el.outerHTML=rtBadge();}
   function rtBadge(){
     var up=CC.rt==="live",age=CC.lastSync?ccAgo(CC.lastSync):"";
+    if(getRoute()==="cc/live"){var ok=!!CC.gpsAt&&Date.now()-CC.gpsAt<45000&&!CC.gpsErr&&wanted();return '<span id="ccRt" class="pill '+(ok?"good":"warn")+'" title="'+esc(CC.gpsErr||"Current driver locations refresh every 15 seconds")+'"><span class="pd"></span>'+(!wanted()?"GPS sync paused":CC.gpsErr?"GPS sync delayed":ok?"Live GPS · 15s":CC.gpsAt?"GPS sync delayed":"Updating GPS…")+'</span>';}
     return '<span id="ccRt" class="pill '+(up&&!CC.syncErr?"good":"warn")+'" title="'+(CC.syncErr?esc(CC.syncErr):up?"Realtime connected — locations arrive as the phone sends them":"Reconnecting — current shifts refresh every 15 seconds")+'"><span class="pd"></span>'+(CC.syncErr?"Sync delayed":up?"Realtime":"Backup sync"+(age?" · "+age:""))+'</span>';
   }
   function syncView(){
     bindOwner();if(!wanted()){if(CC.chan||loadP||refreshP)stop();return;}
     var route=getRoute(),changed=lastRoute!==route;lastRoute=route;
-    ccSubscribe();if(!CC.loaded){ccLoad();return;}if(changed)refresh(true);
+    fleet.sync();ccSubscribe();if(!CC.loaded){ccLoad();return;}if(changed)refresh(true);
   }
   setInterval(function(){
     bindOwner();if(!wanted())return;if(!CC.chan)ccSubscribe();
@@ -9439,7 +9591,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.20 · 1 Oct 2026 · Smooth tab navigation";
+var ERP_BUILD="v3.21 · 1 Oct 2026 · Fleet GPS capacity";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
