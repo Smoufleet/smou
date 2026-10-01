@@ -2509,6 +2509,10 @@ html.m2 #page table.dt.m-list tbody tr > td.m-a.cc-act{justify-content:flex-end 
 <style id="smooth-navigation-style">
 
 /* Approved smooth navigation: animate content only; keep the existing shell and colors. */
+/* Keep control dimensions stable when flat layout is applied after a redraw. */
+#page .btn,#page button,#page input,#page select,#page textarea{
+  transition-property:background-color,border-color,color,box-shadow,opacity,transform;
+}
 html.smou-smooth #page > *,html.smou-smooth #page .grid.g4 > .stat,
 html.smou-smooth #page .fd .c,html.smou-smooth #page .fd .pod .blk,
 html.smou-smooth #page .fd .hero .plat span{animation:none !important}
@@ -9591,7 +9595,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.21 · 1 Oct 2026 · Fleet GPS capacity";
+var ERP_BUILD="v3.22 · 1 Oct 2026 · Stable page transitions";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -10552,7 +10556,7 @@ function smoothPageChange(draw,routeChange){
   }
   function done(){if(SMOOTH.active===task){if(pg)pg.style.viewTransitionName=task.name;SMOOTH.active=null;document.documentElement.classList.remove("smou-smooth-active");}}
   function enter(opacity){var next=document.getElementById("page");if(valid()&&next&&typeof next.animate==="function"){
-    task.anim=next.animate([{opacity:opacity,transform:"translateY(4px)"},{opacity:1,transform:"translateY(0)"}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)"});
+    task.anim=next.animate([{opacity:opacity},{opacity:1}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)"});
     task.anim.finished.catch(function(){}); // Cancelling a native transition also cancels its live entrance.
     return task.anim;
   }}
