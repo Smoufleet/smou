@@ -2547,6 +2547,40 @@ try {
   console.warn("Supabase local init note:", e);
 }
 </script>
+<script id="tab-lock">
+/* v3.26: only ONE ERP tab per browser may save. All tabs share the same offline outbox (localStorage), so two tabs
+   saving at once could overwrite each other's not-yet-synced edits. A second tab shows a notice instead; "Use here"
+   moves the ERP to that tab and pauses the other one (it stops writing anything). Browsers without Web Locks: unchanged. */
+(function(){
+  var NAME="smou-erp-active-tab";window.__smouTab={main:null};
+  if(!(navigator.locks&&navigator.locks.request))return;
+  function T(en,ar){try{return (localStorage.getItem("smou-lang")==="ar")?ar:en;}catch(e){return en;}}
+  function show(kind){
+    var go=function(){
+      var o=document.getElementById("tabLockOv");if(o)o.remove();
+      o=document.createElement("div");o.id="tabLockOv";o.setAttribute("role","alertdialog");o.setAttribute("aria-modal","true");
+      o.style.cssText="position:fixed;inset:0;z-index:2147483000;background:rgba(20,16,12,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:system-ui,-apple-system,Segoe UI,sans-serif";
+      var t=kind==="stolen"?T("ERP is now open in another tab","تم فتح النظام في تبويب آخر"):T("ERP is already open in another tab","النظام مفتوح بالفعل في تبويب آخر");
+      var s=kind==="stolen"?T("This tab is paused so nothing gets overwritten. Your unsent changes are safe and are now in the other tab.","تم إيقاف هذا التبويب مؤقتًا حتى لا يتم استبدال أي شيء. تغييراتك محفوظة وموجودة الآن في التبويب الآخر."):T("To keep offline changes safe, the ERP works in one tab at a time. Use the other tab, or continue here (the other tab will pause).","لحماية التغييرات غير المرسلة يعمل النظام في تبويب واحد فقط. استخدم التبويب الآخر أو تابع هنا (سيتوقف التبويب الآخر مؤقتًا).");
+      o.innerHTML='<div style="max-width:420px;width:100%;background:#fff;color:#292420;border-radius:16px;padding:24px 22px;box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:center">'+
+        '<div style="font-size:17px;font-weight:700;margin-bottom:8px">'+t+'</div><div style="font-size:13.5px;line-height:1.5;color:#6E6558;margin-bottom:18px">'+s+'</div>'+
+        '<button type="button" id="tabLockUse" style="border:0;border-radius:10px;padding:11px 18px;font-weight:700;font-size:14px;background:#C96442;color:#fff;cursor:pointer">'+T("Use ERP in this tab","استخدم النظام في هذا التبويب")+'</button></div>';
+      document.body.appendChild(o);
+      document.getElementById("tabLockUse").onclick=function(){this.disabled=true;
+        /* take over: the other tab is told immediately (its lock is aborted) and stops writing; then start fresh here */
+        navigator.locks.request(NAME,{steal:true},function(){return new Promise(function(r){setTimeout(r,600);});})
+          .then(function(){location.reload();},function(){location.reload();});};
+    };
+    if(document.body)go();else document.addEventListener("DOMContentLoaded",go);
+  }
+  try{
+    navigator.locks.request(NAME,{ifAvailable:true},function(lock){
+      if(!lock){window.__smouTab.main=false;show("other");return;}
+      window.__smouTab.main=true;return new Promise(function(){});   /* hold it while this tab is open */
+    }).catch(function(){window.__smouTab.main=false;show("stolen");});   /* another tab took over */
+  }catch(e){window.__smouTab.main=null;}
+})();
+</script>
 <script id="appcode">
 (function(){
 "use strict";
@@ -2737,7 +2771,8 @@ function expCell(s){var d=parseD(s);if(!d)return '<span style="color:var(--muted
   return '<span class="mono" style="color:var(--'+expClass(dd)+')">'+d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)+'</span>';}
 
 /* ---------- persistence ---------- */
-function saveLocal(){try{localStorage.setItem("smou-erp",JSON.stringify(STATE));}catch(e){}}
+function tabPaused(){return !!(window.__smouTab&&window.__smouTab.main===false);}
+function saveLocal(){if(tabPaused())return;try{localStorage.setItem("smou-erp",JSON.stringify(STATE));}catch(e){}}
 var SAVECLS="",SAVETXT="Saved";
 function setSave(cls,txt){SAVECLS=cls;SAVETXT=txt;var el=$("#saveInd");if(!el)return;el.className="save-ind "+cls;$(".save-txt",el).textContent=txt;}
 function jsonEmbed(o){return JSON.stringify(o).replace(/</g,"\\u003c");}
@@ -2785,7 +2820,7 @@ var shadow={};
 var PENDING=(function(){try{return JSON.parse(localStorage.getItem("smou-pending")||"[]")||[];}catch(e){return [];}})();
 var _pendingRun=null;
 var _pendingStorageOK=true;
-function savePending(){try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));_pendingStorageOK=true;return true;}catch(e){_pendingStorageOK=false;setSave("err","Device storage full — keep this tab open");return false;}}
+function savePending(){if(tabPaused())return true;try{localStorage.setItem("smou-pending",JSON.stringify(PENDING));_pendingStorageOK=true;return true;}catch(e){_pendingStorageOK=false;setSave("err","Device storage full — keep this tab open");return false;}}
 function pendingOwner(){return USER&&typeof USER==="object"?USER.id:null;}
 function jsonSame(a,b){function ordered(v){if(Array.isArray(v))return v.map(ordered);if(v&&typeof v==="object"){var o={};Object.keys(v).sort().forEach(function(k){o[k]=ordered(v[k]);});return o;}return v;}return JSON.stringify(ordered(a))===JSON.stringify(ordered(b));}
 function fieldDiff(localObj,base){var out={};base=base||{};Object.keys(localObj||{}).forEach(function(k){if(k!=="id"&&!jsonSame(localObj[k],base[k]))out[k]=localObj[k]===undefined?undefined:clone(localObj[k]);});return out;}
@@ -2871,6 +2906,7 @@ function acceptPending(p,data){
   applyPendingView();savePending();cacheSave();broadcastChange(p.collection,p.id,data,"UPDATE");
 }
 function flushPending(){
+  if(tabPaused())return Promise.resolve();
   if(typeof ORDREC!=="undefined"&&ORDREC&&ORDREC.busy)return _pendingRun||Promise.resolve();
   if(_pendingRun)return _pendingRun;
   if(!SB||!USER||!PENDING.length)return Promise.resolve();
@@ -2905,7 +2941,7 @@ async function reviewPending(){
 
 /* ---- delete outbox: failed deletes are remembered + retried, and never allowed to resurrect ---- */
 var PENDING_DEL=(function(){try{return JSON.parse(localStorage.getItem("smou-pending-del")||"[]")||[];}catch(e){return [];}})();
-function savePendingDel(){try{localStorage.setItem("smou-pending-del",JSON.stringify(PENDING_DEL));}catch(e){}}
+function savePendingDel(){if(tabPaused())return;try{localStorage.setItem("smou-pending-del",JSON.stringify(PENDING_DEL));}catch(e){}}
 function queuePendingDel(ops){_wgen++;ops.forEach(function(d){var k=d[0]+"/"+d[1];PENDING_DEL=PENDING_DEL.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING_DEL.push({collection:d[0],id:d[1],owner:pendingOwner()});});savePendingDel();}
 function clearPendingDel(ops){if(!PENDING_DEL.length)return;var ok={};ops.forEach(function(d){var c=Array.isArray(d)?d[0]:d.collection,i=Array.isArray(d)?d[1]:d.id;ok[c+"/"+i]=1;});PENDING_DEL=PENDING_DEL.filter(function(p){return !ok[p.collection+"/"+p.id];});savePendingDel();}
 // remove any rows that are queued for deletion from local state + shadow, so a reload/reconcile can't bring them back
@@ -2914,6 +2950,7 @@ function stripPendingDel(){
   PENDING_DEL.forEach(function(p){if(p.owner&&p.owner!==pendingOwner())return;var dest=COLLSET[p.collection];if(dest){var arr=STATE[dest[0]]&&STATE[dest[0]][dest[1]];if(arr){var i=arr.findIndex(function(x){return x&&x.id===p.id;});if(i>=0)arr.splice(i,1);}}delete shadow[p.collection+"/"+p.id];});
 }
 function flushPendingDel(){
+  if(tabPaused())return Promise.resolve();
   if(!SB||!PENDING_DEL||!PENDING_DEL.length)return Promise.resolve();
   /* v3.25: only this account's deletes (untagged = older version: as before). The database answers a delete it does not
      allow with "0 rows", not an error — so read the row again: still there = refused → show it again; gone = done. */
@@ -2940,7 +2977,7 @@ function flushPendingDel(){
 
 /* ===== Phase 2: audit trail — stored as __audit__ rows, excluded from the main sync/diff ===== */
 var AUDITQ=(function(){try{return JSON.parse(localStorage.getItem("smou-audit-q")||"[]")||[];}catch(e){return [];}})();
-function saveAuditQ(){try{localStorage.setItem("smou-audit-q",JSON.stringify(AUDITQ));}catch(e){}}
+function saveAuditQ(){if(tabPaused())return;try{localStorage.setItem("smou-audit-q",JSON.stringify(AUDITQ));}catch(e){}}
 function auditUser(){var u=USER;if(u&&typeof u==="object")return ((u.email||"").split("@")[0])||u.id||"—";return u||"—";}
 function logAudit(action,coll,recId,label,changes){
   if(!SB_ON)return;
@@ -2948,7 +2985,7 @@ function logAudit(action,coll,recId,label,changes){
   if(!SB){AUDITQ.push(row);saveAuditQ();return;}
   SB.from("records").upsert([row],{onConflict:"collection,id"}).then(function(res){if(res&&res.error){AUDITQ.push(row);saveAuditQ();}}).catch(function(){AUDITQ.push(row);saveAuditQ();});
 }
-function flushAudit(){
+function flushAudit(){if(tabPaused())return Promise.resolve();
   if(!SB||!AUDITQ.length)return Promise.resolve();
   var rows=AUDITQ.slice();
   return SB.from("records").upsert(rows,{onConflict:"collection,id"}).then(function(res){if(!res.error){AUDITQ=[];saveAuditQ();}}).catch(function(){});
@@ -2972,10 +3009,10 @@ function applyRows(rows){
 }
 var _lastSig="";
 function dataSig(rows){var a=[];for(var i=0;i<rows.length;i++){a.push(rows[i].collection+"/"+rows[i].id+"="+JSON.stringify(rows[i].data));}return a.sort().join("|");}
-function cacheSave(){try{localStorage.setItem("smou-cache",JSON.stringify({grd:STATE.grd,finance:STATE.finance,t:Date.now()}));}catch(e){}}
+function cacheSave(){if(tabPaused())return;try{localStorage.setItem("smou-cache",JSON.stringify({grd:STATE.grd,finance:STATE.finance,t:Date.now()}));}catch(e){}}
 /* ===== Phase 4 (advanced): true delta sync — only fetch what changed. Merges only, never clears. ===== */
 var lastSync=(function(){try{return localStorage.getItem("smou-lastsync")||"";}catch(e){return "";}})();
-function saveLastSync(){try{localStorage.setItem("smou-lastsync",lastSync);}catch(e){}}
+function saveLastSync(){if(tabPaused())return;try{localStorage.setItem("smou-lastsync",lastSync);}catch(e){}}
 var _deltaOK=true; // becomes false if the updated_at column isn't there yet (app still works, full-sync fallback)
 function bumpLastSync(rows){var mx=lastSync;for(var i=0;i<rows.length;i++){var u=rows[i]&&rows[i].updated_at;if(u&&u>mx)mx=u;}if(mx&&mx!==lastSync){lastSync=mx;saveLastSync();}}
 function applyDelta(rows){
@@ -3013,6 +3050,7 @@ function sbSeed(){
 }
 var sbBusy=false;
 function persistSB(){
+  if(tabPaused()){setSave("err","Paused — ERP is open in another tab");return;}
   SB=sbClient();if(!SB){setSave("err","Not connected");return;}
   var ups=[],delOps=[];
   COLLS.forEach(function(c){var coll=c[0],cur={};c[1]().forEach(function(r){cur[r.id]=1;if(shadow[coll+"/"+r.id]!==JSON.stringify(r))ups.push({collection:coll,id:r.id,data:r});});Object.keys(shadow).forEach(function(k){if(k.indexOf(coll+"/")===0&&!cur[k.slice(coll.length+1)])delOps.push([coll,k.slice(coll.length+1)]);});});
@@ -9728,7 +9766,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.25 · 3 Oct 2026 · review fixes";
+var ERP_BUILD="v3.26 · 3 Oct 2026 · one active tab";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
