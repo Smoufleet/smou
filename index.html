@@ -2784,7 +2784,8 @@ function pendingOwner(){return USER&&typeof USER==="object"?USER.id:null;}
 function jsonSame(a,b){function ordered(v){if(Array.isArray(v))return v.map(ordered);if(v&&typeof v==="object"){var o={};Object.keys(v).sort().forEach(function(k){o[k]=ordered(v[k]);});return o;}return v;}return JSON.stringify(ordered(a))===JSON.stringify(ordered(b));}
 function fieldDiff(localObj,base){var out={};base=base||{};Object.keys(localObj||{}).forEach(function(k){if(k!=="id"&&!jsonSame(localObj[k],base[k]))out[k]=localObj[k]===undefined?undefined:clone(localObj[k]);});return out;}
 function pendingPatch(base,p){var v=Object.assign({},base||{},p.patch||{});(p.unset||[]).forEach(function(k){delete v[k];});v.id=p.id;return v;}
-function queuePending(rows){rows.forEach(function(u){
+var _wgen=0;
+function queuePending(rows){_wgen++;rows.forEach(function(u){
   var key=u.collection+"/"+u.id,owner=pendingOwner(),old=PENDING.find(function(p){return p.collection+"/"+p.id===key&&(!p.owner||p.owner===owner);}),base=null;
   if(old&&old.v!==2){old.error="Older offline edit: review its fields before syncing.";return;}
   try{if(shadow[key])base=JSON.parse(shadow[key]);}catch(e){}
@@ -2897,7 +2898,7 @@ async function reviewPending(){
 /* ---- delete outbox: failed deletes are remembered + retried, and never allowed to resurrect ---- */
 var PENDING_DEL=(function(){try{return JSON.parse(localStorage.getItem("smou-pending-del")||"[]")||[];}catch(e){return [];}})();
 function savePendingDel(){try{localStorage.setItem("smou-pending-del",JSON.stringify(PENDING_DEL));}catch(e){}}
-function queuePendingDel(ops){ops.forEach(function(d){var k=d[0]+"/"+d[1];PENDING_DEL=PENDING_DEL.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING_DEL.push({collection:d[0],id:d[1]});});savePendingDel();}
+function queuePendingDel(ops){_wgen++;ops.forEach(function(d){var k=d[0]+"/"+d[1];PENDING_DEL=PENDING_DEL.filter(function(p){return (p.collection+"/"+p.id)!==k;});PENDING_DEL.push({collection:d[0],id:d[1]});});savePendingDel();}
 function clearPendingDel(ops){if(!PENDING_DEL.length)return;var ok={};ops.forEach(function(d){var c=Array.isArray(d)?d[0]:d.collection,i=Array.isArray(d)?d[1]:d.id;ok[c+"/"+i]=1;});PENDING_DEL=PENDING_DEL.filter(function(p){return !ok[p.collection+"/"+p.id];});savePendingDel();}
 // remove any rows that are queued for deletion from local state + shadow, so a reload/reconcile can't bring them back
 function stripPendingDel(){
@@ -3048,6 +3049,57 @@ function sbDelta(){
 }
 // pick the cheap path when we can, else the full safety-net check
 function sbSync(){ if(_deltaOK&&lastSync)return sbDelta(); return sbReconcile(); }
+/* v3.24 LIGHT CHECK (every 5 min). Downloads only what changed + the list of IDs, instead of every record.
+   SAFETY RULES — it never writes or deletes anything in the database; it only updates THIS screen:
+   - a row leaves this screen only if (1) the full ID list was read with no error, (2) a second direct
+     lookup confirms the row is really gone from the server, and (3) nothing was saved/queued meanwhile;
+   - rows with unsynced edits on this device are never touched;
+   - STATE and shadow are changed together, so the save logic can never turn this into a delete;
+   - any error / half read → nothing is removed (the hourly full check runs as before). */
+var _lightBusy=false;
+function _lightCalm(){return !_pendingRun&&!_reconciling&&!(typeof ORDREC!=="undefined"&&ORDREC&&ORDREC.busy)&&!_rtBusy();}
+function _pendingKeys(){var o={};(PENDING||[]).forEach(function(p){o[p.collection+"/"+p.id]=1;});(PENDING_DEL||[]).forEach(function(p){o[p.collection+"/"+p.id]=1;});return o;}
+function _shadowCount(){var n=0;for(var k in shadow){if(Object.prototype.hasOwnProperty.call(shadow,k)&&COLLSET[k.slice(0,k.indexOf("/"))])n++;}return n;}
+function sbLightReconcile(){
+  if(!SB_ON||!SB||!USER||_reconciling||_lightBusy)return Promise.resolve();
+  if(!_deltaOK||!lastSync)return sbReconcile();
+  _lightBusy=true;
+  return Promise.resolve(sbDelta()).then(function(){if(_deltaOK)return _lightRemovals();})
+    .catch(function(){}).then(function(){_lightBusy=false;});
+}
+function _lightRemovals(){
+  if(!_lightCalm())return;
+  var g0=_wgen;
+  return SB.from("records").select("id",{count:"exact",head:true}).neq("collection","__audit__").then(function(c){
+    if(c.error||typeof c.count!=="number")return;
+    if(c.count===_shadowCount())return;            // same number of rows as the server → nothing removed elsewhere
+    return sbAllRecords("collection,id").then(function(res){
+      if(res.error||!res.data||!res.data.length)return;          // half/failed read → remove nothing
+      if(!_lightCalm()||_wgen!==g0)return;
+      var on={};res.data.forEach(function(x){on[x.collection+"/"+x.id]=1;});
+      var skip=_pendingKeys(),cand=[];
+      Object.keys(shadow).forEach(function(k){var c0=k.slice(0,k.indexOf("/"));if(COLLSET[c0]&&!on[k]&&!skip[k])cand.push([c0,k.slice(c0.length+1)]);});
+      if(!cand.length)return;
+      if(cand.length>300)return sbReconcile();                    // big change → use the classic full check
+      // second opinion: ask the server directly for each candidate; anything that answers is kept
+      var by={};cand.forEach(function(x){(by[x[0]]=by[x[0]]||[]).push(x[1]);});
+      var jobs=[];Object.keys(by).forEach(function(coll){for(var i=0;i<by[coll].length;i+=80)jobs.push([coll,by[coll].slice(i,i+80)]);});
+      var still={},failed=false;
+      return jobs.reduce(function(p,j){return p.then(function(){if(failed)return;
+        return SB.from("records").select("collection,id").eq("collection",j[0]).in("id",j[1]).then(function(r){
+          if(r.error||!Array.isArray(r.data)){failed=true;return;}
+          r.data.forEach(function(x){still[x.collection+"/"+x.id]=1;});});});},Promise.resolve()).then(function(){
+        if(failed||!_lightCalm()||_wgen!==g0)return;
+        var skip2=_pendingKeys(),gone=0;
+        cand.forEach(function(x){var k=x[0]+"/"+x[1];if(still[k]||skip2[k]||!(k in shadow))return;
+          var dest=COLLSET[x[0]],arr=dest&&STATE[dest[0]]&&STATE[dest[0]][dest[1]];
+          if(arr){var i=arr.findIndex(function(r){return r&&r.id===x[1];});if(i>=0)arr.splice(i,1);}
+          delete shadow[k];gone++;});
+        if(gone){applyPendingView();cacheSave();calmRefresh();}
+      });
+    });
+  }).catch(function(){});
+}
 function broadcastChange(coll,id,data,eventType){
   if(!_rtChan||!_rtLive)return;
   try{
@@ -3118,8 +3170,8 @@ function sbWireLive(){
     if(PENDING_DEL&&PENDING_DEL.length)flushPendingDel();
     if(AUDITQ&&AUDITQ.length)flushAudit();
     if(document.visibilityState==="visible"&&!_rtLive&&!_rtScheduled)sbSubscribe();
-    // every ~5 min: full reconcile — guarantees deletes & any missed change self-heal (nothing ever stays lost/stale)
-    if(document.visibilityState==="visible"&&(++_hb%12===0))sbReconcile();
+    // every ~5 min: LIGHT check (changes + removed rows); every ~60 min: the FULL safety-net reconcile as before
+    if(document.visibilityState==="visible"){_hb++;if(_hb%144===0)sbReconcile();else if(_hb%12===0)sbLightReconcile();}
   },25000);
 }
 
@@ -6595,7 +6647,18 @@ var CC={loaded:false,loading:false,err:"",drivers:[],shifts:[],fuel:[],chan:null
   f:{driver:"all",platform:"all",status:"all",search:""}};
 var CC_KM_FLAG=400, CC_STALE=120000, CC_PLATFORMS=["Talabat","Keeta"];
 function ccIsAdmin(){return SB_ON&&!!SB&&ROLE==="admin";}
-function ccToday(){try{return new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kuwait"});}catch(e){return isoToday();}}
+function ccToday(){try{return kuwaitDateKey();}catch(e){return isoToday();}}
+/* v3.24: long lists render the newest CC_PAGE rows; "Show more" adds more. Filters/search/export still use every row. */
+var CC_PAGE=200;CC.lim=CC_PAGE;CC.limSig="";
+function ccLimRows(rows,what){var sig=what;try{sig+="|"+JSON.stringify(CC.f)+"|"+(typeof FLM!=="undefined"?JSON.stringify([FLM["cc:driver"],FLM["cc:platform"],FLM["cc:status"]]):"");}catch(e){}
+  if(sig!==CC.limSig){CC.limSig=sig;CC.lim=CC_PAGE;}return rows.length>CC.lim?rows.slice(0,CC.lim):rows;}
+function ccMoreFoot(n,what,label){var shown=Math.min(n,CC.lim);
+  return '<div class="tbl-foot"><span>'+(n>shown?"Showing latest "+shown+" of "+n+" "+label:n+" "+label)+'</span><span style="display:flex;gap:8px;flex-wrap:wrap">'+
+    (n>shown?'<button class="btn sm" data-act="ccmore">Show '+Math.min(CC_PAGE,n-shown)+' more</button>':"")+
+    '<button class="btn sm" data-act="ccexport" data-what="'+what+'">Export CSV</button></span></div>';}
+document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest('[data-act="ccmore"]');if(!a)return;
+  var sc=document.scrollingElement||document.documentElement,y=sc.scrollTop,w=document.querySelector(".tbl-wrap"),wy=w?w.scrollTop:0;
+  CC.lim+=CC_PAGE;renderPage();sc.scrollTop=y;var w2=document.querySelector(".tbl-wrap");if(w2)w2.scrollTop=wy;});
 function ccDay(offset){try{return new Date(Date.now()-offset*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Kuwait"});}catch(e){return isoToday();}}
 function ccMs(s){return Date.parse(s.started_at||s.created_at)||0;}
 function ccLiveMs(s){return s.live_at?Date.parse(s.live_at):null;}
@@ -6783,8 +6846,9 @@ function ccAlerts(){
   var out=[];
   ccDone().filter(ccFlag).slice(0,4).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['crit','Odometer check · '+esc(d?d.name:"Driver"),fmtD(s.date)+' · shift shows '+(s.distance||0)+' km (limit '+CC_KM_FLAG+'). Check the end-ODO photo.']);});
   ccActive().filter(function(s){return Date.now()-ccMs(s)>14*3600000;}).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['warn','Shift open 14h+ · '+esc(d?d.name:"Driver"),'Clocked in '+ccAgo(ccMs(s))+'. Probably forgot to clock out — use End shift.']);});
-  CC.shifts.filter(function(s){return s.date===ccToday()&&(s.login_src==="hub"||s.logout_src==="hub");}).slice(0,3).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['warn','Hub picked, not GPS · '+esc(d?d.name:"Driver"),'Check-in/out location was chosen from the hub list.']);});
-  CC.drivers.forEach(function(d){var n=ccDone().filter(function(s){return String(s.driver_id)===String(d.id);}).length;var f=CC.fuel.filter(function(x){return String(x.driver_id)===String(d.id);}).length;if(n>=3&&!f)out.push(['neutral','No fuel logged · '+esc(d.name),n+' shifts, zero fuel entries.']);});
+  var _td=ccToday();CC.shifts.filter(function(s){return s.date===_td&&(s.login_src==="hub"||s.logout_src==="hub");}).slice(0,3).forEach(function(s){var d=ccDrv(s.driver_id);out.push(['warn','Hub picked, not GPS · '+esc(d?d.name:"Driver"),'Check-in/out location was chosen from the hub list.']);});
+  var _nS={},_nF={};ccDone().forEach(function(s){var k=String(s.driver_id);_nS[k]=(_nS[k]||0)+1;});CC.fuel.forEach(function(x){var k=String(x.driver_id);_nF[k]=(_nF[k]||0)+1;});
+  CC.drivers.forEach(function(d){var n=_nS[String(d.id)]||0;var f=_nF[String(d.id)]||0;if(n>=3&&!f)out.push(['neutral','No fuel logged · '+esc(d.name),n+' shifts, zero fuel entries.']);});
   CC.drivers.filter(function(d){return !d.employee_id;}).forEach(function(d){out.push(['neutral','Not linked to an employee · '+esc(d.name),'Phone '+esc(d.phone||"—")+' doesn’t match any employee mobile. Edit the driver to link.']);});
   if(!out.length)return '<div class="empty" style="padding:18px"><p>All clear — nothing flagged.</p></div>';
   return out.slice(0,8).map(function(a){return '<div class="cc-alert"><span class="pill '+a[0]+'"><span class="pd"></span>'+(a[0]==="crit"?"Check":a[0]==="warn"?"Review":"Info")+'</span><div><div style="font-size:13px;font-weight:700">'+a[1]+'</div><div class="sub">'+a[2]+'</div></div></div>';}).join("");
@@ -6863,7 +6927,7 @@ function ccForceEnd(id){
 /* ---------- SHIFT LOGS ---------- */
 function ccShiftsPage(){
   var rows=CC.shifts.filter(ccPass).slice().sort(function(a,b){return ccMs(b)-ccMs(a);});
-  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);
+  var tb=rows.length?ccLimRows(rows,"shifts").map(function(s){var d=ccDrv(s.driver_id);
     return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td>'+
       '<td>'+(s.status==="ACTIVE"?'<span class="pill good"><span class="pd"></span>On duty</span>':'<span class="pill neutral"><span class="pd"></span>Completed</span>')+(ccFlag(s)?' <span class="pill crit">check km</span>':'')+'</td>'+
       '<td><div class="mono">'+esc(s.login_time||"—")+'</div><div class="sub">'+esc(s.login_place||"")+(s.login_src==="hub"?" · hub":"")+'</div></td>'+
@@ -6873,17 +6937,17 @@ function ccShiftsPage(){
       '<td class="cc-act">'+(s.status==="ACTIVE"?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End</button>':ccDelBtn("shifts",s.id))+'</td></tr>';}).join("")
     :'<tr><td colspan="11"><div class="empty" style="padding:24px"><h4>No shifts match</h4><p>Try clearing the filters.</p></div></td></tr>';
   return ccFilters(true)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
-    '<div class="tbl-foot"><span>'+rows.length+' shifts</span><button class="btn sm" data-act="ccexport" data-what="shifts">Export CSV</button></div>';
+    ccMoreFoot(rows.length,"shifts","shifts");
 }
 /* ---------- KM ---------- */
 function ccKmPage(){
   var rows=ccDone().filter(ccPass).slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"")||ccMs(b)-ccMs(a);});
   var tot=rows.reduce(function(a,s){return a+(s.distance||0);},0);
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Distance (filtered)",fmtKm(tot)+" km",rows.length+" completed shifts","var(--teal)")+ccKpi("Today",fmtKm(ccKmDay(ccToday()))+" km","all drivers","var(--good)")+ccKpi("Last 7 days",fmtKm([0,1,2,3,4,5,6].reduce(function(a,i){return a+ccKmDay(ccDay(i));},0))+" km","all drivers","var(--indigo)")+ccKpi("Flagged",rows.filter(ccFlag).length,"over "+CC_KM_FLAG+" km or negative","var(--crit)")+'</div>';
-  var tb=rows.length?rows.map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td><td class="cc-act">'+ccDelBtn("km",s.id)+'</td></tr>';}).join("")
+  var tb=rows.length?ccLimRows(rows,"km").map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td><td class="cc-act">'+ccDelBtn("km",s.id)+'</td></tr>';}).join("")
     :'<tr><td colspan="9"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
   return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
-    '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="km">Export CSV</button></div>';
+    ccMoreFoot(rows.length,"km","completed shifts");
 }
 /* ---------- FUEL ---------- */
 function ccFuelPage(){
@@ -6892,10 +6956,10 @@ function ccFuelPage(){
     .slice().sort(function(a,b){return (Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0);});
   var tot=rows.reduce(function(a,r){return a+(r.cost||0);},0),rec=rows.filter(function(r){return r.receipt_photo;}).length;
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Fuel spend",money(tot)+" KWD",rows.length+" refills","var(--amber)")+ccKpi("With receipt",rows.length?Math.round(rec/rows.length*100)+"%":"—",rec+" of "+rows.length,"var(--good)")+ccKpi("Today",money(CC.fuel.filter(function(x){return x.date===ccToday();}).reduce(function(a,x){return a+(x.cost||0);},0))+" KWD","all drivers","var(--teal)")+ccKpi("Drivers refilling",Object.keys(rows.reduce(function(a,r){a[r.driver_id]=1;return a;},{})).length,"in this list","var(--indigo)")+'</div>';
-  var tb=rows.length?rows.map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(r.receipt_photo?'<a href="'+esc(r.receipt_photo)+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(r.receipt_photo)+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td><td class="cc-act">'+ccDelBtn("fuel",r.id)+'</td></tr>';}).join("")
+  var tb=rows.length?ccLimRows(rows,"fuel").map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(r.receipt_photo?'<a href="'+esc(r.receipt_photo)+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(r.receipt_photo)+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td><td class="cc-act">'+ccDelBtn("fuel",r.id)+'</td></tr>';}).join("")
     :'<tr><td colspan="6"><div class="empty" style="padding:24px"><h4>No fuel entries yet</h4><p>Drivers log fuel from the app with a receipt photo.</p></div></td></tr>';
   return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
-    '<div class="tbl-foot"><span></span><button class="btn sm" data-act="ccexport" data-what="fuel">Export CSV</button></div>';
+    ccMoreFoot(rows.length,"fuel","refills");
 }
 /* ---------- DRIVER ACCOUNTS ---------- */
 function ccDriversPage(){
@@ -7340,7 +7404,7 @@ function createSmouFleetSync(o){
     var slot={events:[],promise:null};flights[t]=slot;
     slot.promise=readPages(t,filter,epoch,who).then(function(rows){
       if(!alive(epoch,who)||flights[t]!==slot)throw cancelled();
-      if(mode==="replace")CC[KEYS[t]]=t==="shifts"?rows.map(function(row){return keepNewerGps(row,shiftById(row.id));}):rows;
+      if(mode==="replace")CC[KEYS[t]]=t==="shifts"?(function(){var ix={};(CC.shifts||[]).forEach(function(x){if(x)ix[String(x.id)]=x;});return rows.map(function(row){return keepNewerGps(row,ix[String(row.id)]);});})():rows;
       else{
         var found={};rows.forEach(function(r){found[String(r.id)]=true;});
         if(known)CC[KEYS[t]]=CC[KEYS[t]].filter(function(r){return !known[String(r.id)]||found[String(r.id)];});
@@ -9615,7 +9679,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.23 · 2 Oct 2026 · review fixes";
+var ERP_BUILD="v3.24 · 3 Oct 2026 · fast logs + light sync";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
