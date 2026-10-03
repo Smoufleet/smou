@@ -2551,8 +2551,12 @@ try {
 (function(){
 "use strict";
 var FONTLINK='<link rel="stylesheet" href="'+(function(){try{return new URL("fonts/fonts.css",location.href).href;}catch(e){return "fonts/fonts.css";}})()+'">';
-function kuwaitDateKey(){var p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kuwait",year:"numeric",month:"2-digit",day:"2-digit",calendar:"gregory",numberingSystem:"latn"}).formatToParts(new Date()),v={};p.forEach(function(x){v[x.type]=x.value;});return v.year+"-"+v.month+"-"+v.day;}
-function updateToday(){var p=kuwaitDateKey().split("-");TODAY=new Date(+p[0],+p[1]-1,+p[2]);return TODAY;}
+var _kwFmt=null,_kwKey="",_kwAt=0,_todayKey="";
+function kuwaitDateKey(){var n=Date.now();if(_kwKey&&n-_kwAt<30000&&n>=_kwAt)return _kwKey;
+  try{if(!_kwFmt)_kwFmt=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kuwait",year:"numeric",month:"2-digit",day:"2-digit",calendar:"gregory",numberingSystem:"latn"});var v={};_kwFmt.formatToParts(new Date(n)).forEach(function(x){v[x.type]=x.value;});_kwKey=v.year+"-"+v.month+"-"+v.day;}
+  catch(e){var d=new Date(n);_kwKey=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  _kwAt=n;return _kwKey;}
+function updateToday(){var k=kuwaitDateKey();if(k!==_todayKey||!TODAY){var p=k.split("-");TODAY=new Date(+p[0],+p[1]-1,+p[2]);_todayKey=k;}return TODAY;}
 var TODAY;updateToday();
 var MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 var MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -3873,7 +3877,7 @@ function renderPage(){
   var rk=routeKind(route);var _vb=$("#vbadge");if(_vb){_vb.innerHTML=vIcon(rk.v);_vb.title=(rk.v==="bike"?"Bike":"Car")+" register";}
   if(pg){pg.style.backgroundImage=rk.p;pg.style.backgroundSize="108px 108px";}
   var titles={overview:["Overview","Fleet & finance at a glance"],finance:["Finance Dashboard","Cost control · SMOU International"],"finance/log":["Expense Log","All logged expenses"],"finance/new":["New Expense","Log a daily cost entry"]};
-  var newBtn=$("#newBtn");
+  var newBtn=$("#newBtn")||document.createElement("button");  /* page can render while the header is being redrawn */
   var P=route.split("/");
   if(route.indexOf("cc/")!==0&&typeof ccTeardown==="function")ccTeardown();
   if(route==="cc"||route.indexOf("cc/")===0){newBtn.hidden=true;pageCC(pg,P[1]);return;}
@@ -3895,7 +3899,7 @@ function renderPage(){
   else {go("overview");}
   if(!can("edit")&&newBtn)newBtn.hidden=true;
 }
-function setTitle(t,c){$("#pgTitle").textContent=t;$("#pgCrumb").textContent=c;}
+function setTitle(t,c){var a=$("#pgTitle"),b=$("#pgCrumb");if(a)a.textContent=t;if(b)b.textContent=c;}
 
 /* ============ REGISTER PAGE ============ */
 var curEnt=null;
@@ -4957,14 +4961,17 @@ function ordrecOpen(keys){
   var plan=ordrecPlan(keys);if(!plan.targets.length){toast("Select at least one current record.","err");return;}
   ORDREC.plan=plan;closeForm();var daily=plan.targets.filter(function(t){return t.collection==="orderlog";}).length,monthly=plan.targets.length-daily;
   var ov=document.createElement("div");ov.id="overlay";ov.className="overlay";
-  ov.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="ordrecTitle" style="max-width:580px"><div class="modal-h"><h3 id="ordrecTitle">'+ordrecText("title")+'</h3></div><div class="modal-b"><p>Delete <b>'+plan.rows.length+'</b> selected record'+(plan.rows.length===1?'':'s')+'?</p><ul class="ordrec-summary">'+plan.rows.slice(0,8).map(function(r){return '<li>'+esc(r.driver)+' · '+esc(r.platform||"—")+' · '+esc(r.month+" "+r.year)+'</li>';}).join("")+'</ul>'+(plan.rows.length>8?'<p>And '+(plan.rows.length-8)+' more records.</p>':'')+'<p>This removes <b>'+daily+' Daily Log entr'+(daily===1?'y':'ies')+'</b> and <b>'+monthly+' imported monthly record'+(monthly===1?'':'s')+'</b> for the selection.</p>'+(daily?'<p>Daily Log entries and matching imported reports are included so the monthly totals do not reappear.</p>':'')+'<p>Order reports and order-based pay totals will update.</p>'+(SB_ON?'<p class="hint">Deleted saved entries can be restored from Admin → Recycle Bin.</p>':'')+'<p id="ordrecError" role="alert" style="color:var(--crit)" hidden></p></div><div class="modal-f"><button type="button" class="btn ghost" data-ordrec-action="cancel">'+ordrecText("cancel")+'</button><button type="button" class="btn ordrec-danger" data-ordrec-action="confirm">'+svg(IC_del)+ordrecText("del")+' '+plan.rows.length+'</button></div></div>';
+  ov.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="ordrecTitle" style="max-width:580px"><div class="modal-h"><h3 id="ordrecTitle">'+ordrecText("title")+'</h3></div><div class="modal-b"><p>'+((LANG==="ar")?'حذف <b>'+plan.rows.length+'</b> من السجلات المحددة؟':'Delete <b>'+plan.rows.length+'</b> selected record'+(plan.rows.length===1?'':'s')+'?')+'</p><ul class="ordrec-summary">'+plan.rows.slice(0,8).map(function(r){return '<li>'+esc(r.driver)+' · '+esc(r.platform||"—")+' · '+esc(r.month+" "+r.year)+'</li>';}).join("")+'</ul>'+(plan.rows.length>8?'<p>'+((LANG==="ar")?'و '+(plan.rows.length-8)+' سجلات أخرى.':'And '+(plan.rows.length-8)+' more records.')+'</p>':'')+'<p>'+((LANG==="ar")?'سيتم حذف <b>'+daily+'</b> من إدخالات السجل اليومي و<b>'+monthly+'</b> من السجلات الشهرية المستوردة.':'This removes <b>'+daily+' Daily Log entr'+(daily===1?'y':'ies')+'</b> and <b>'+monthly+' imported monthly record'+(monthly===1?'':'s')+'</b> for the selection.')+'</p>'+(daily?'<p>'+((LANG==="ar")?'تُحذف إدخالات السجل اليومي والتقارير المستوردة المطابقة حتى لا تعود المجاميع الشهرية للظهور.':'Daily Log entries and matching imported reports are included so the monthly totals do not reappear.')+'</p>':'')+'<p>'+((LANG==="ar")?'سيتم تحديث تقارير الطلبات ومجاميع الرواتب المبنية على الطلبات.':'Order reports and order-based pay totals will update.')+'</p>'+(SB_ON?'<p class="hint">'+((LANG==="ar")?'يمكن استعادة السجلات المحذوفة من الإدارة ← سلة المحذوفات.':'Deleted saved entries can be restored from Admin → Recycle Bin.')+'</p>':'')+'<p id="ordrecError" role="alert" style="color:var(--crit)" hidden></p></div><div class="modal-f"><button type="button" class="btn ghost" data-ordrec-action="cancel">'+ordrecText("cancel")+'</button><button type="button" class="btn ordrec-danger" data-ordrec-action="confirm">'+svg(IC_del)+ordrecText("del")+' '+plan.rows.length+'</button></div></div>';
   document.body.appendChild(ov);var cancel=ov.querySelector('[data-ordrec-action="cancel"]');if(cancel)cancel.focus();if(LANG==="ar")transEl(ov);
 }
 function ordrecError(message){var el=document.getElementById("ordrecError");if(el){el.hidden=false;el.textContent=message;}else toast(message,"err");}
 function ordrecFinish(plan){
   var keys=new Set(plan.targets.map(function(t){return JSON.stringify([t.collection,t.id]);}));
   ["perf","orderlog"].forEach(function(c){STATE.grd[c]=(STATE.grd[c]||[]).filter(function(r){return !keys.has(JSON.stringify([c,r.id]));});});
-  plan.targets.forEach(function(t){delete shadow[t.collection+"/"+t.id];logAudit("delete",t.collection,t.id,(t.data.driver||"")+" · "+(t.data.date||t.data.month+" "+t.data.year),[{f:"orders",l:"Orders",from:String(t.data.orders||0),to:""}]);broadcastChange(t.collection,t.id,null,"DELETE");});
+  var many=plan.targets.length>50,daily=plan.targets.filter(function(t){return t.collection==="orderlog";}).length;
+  plan.targets.forEach(function(t){delete shadow[t.collection+"/"+t.id];if(!many)broadcastChange(t.collection,t.id,null,"DELETE");});
+  /* one audit line for the whole deletion; each deleted row is still kept in Admin → Recycle Bin */
+  logAudit("delete","orders","bulk-"+Date.now().toString(36),plan.rows.length+" order record"+(plan.rows.length===1?"":"s")+" · "+daily+" daily + "+(plan.targets.length-daily)+" monthly",plan.rows.slice(0,20).map(function(r){return {f:"row",l:"Deleted",from:r.driver+" · "+(r.platform||"")+" · "+r.month+" "+r.year,to:""};}));
   if(dailyEdit&&keys.has(JSON.stringify(["orderlog",dailyEdit])))dailyEdit=null;
   ORDREC.selected.clear();ORDREC.plan=null;saveLocal();cacheSave();
 }
@@ -4988,13 +4995,13 @@ async function ordrecCommit(){
       if(typeof result.data!=="number")throw new Error("Deletion could not be confirmed. Refresh and check the selected entries.");
     }
     if(plan.owner!==pendingOwner()){ORDREC.selected.clear();ORDREC.plan=null;return;}
-    ordrecFinish(plan);closeForm();pageOrders(document.getElementById("page"));toast(plan.rows.length+" order record"+(plan.rows.length===1?"":"s")+" deleted.","good");
+    ordrecFinish(plan);closeForm();if(getRoute()==="orders")pageOrders(document.getElementById("page"));else calmRefresh();toast(plan.rows.length+" order record"+(plan.rows.length===1?"":"s")+" deleted.","good");
   }catch(e){ordrecError(e.message||"Could not delete. Please retry.");}
-  finally{ORDREC.busy=false;ordrecPaint();if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=ordrecText("del")+" "+plan.rows.length;}}
+  finally{ORDREC.busy=false;ordrecPaint();try{if(PENDING.length)flushPending();}catch(_){}if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=ordrecText("del")+" "+plan.rows.length;}}
 }
 document.addEventListener("click",function(e){
   var action=e.target.closest('[data-ordrec-action]'),pick=e.target.closest('.ordrec-pick,.ordrec-all');if(!action&&!pick)return;
-  e.stopImmediatePropagation();if(!action)return;e.preventDefault();var kind=action.getAttribute("data-ordrec-action");
+  if(!action)return;e.stopImmediatePropagation();e.preventDefault();var kind=action.getAttribute("data-ordrec-action");
   if(ORDREC.busy)return;
   if(kind==="one")ordrecOpen([action.getAttribute("data-ordrec-key")]);
   else if(kind==="bulk")ordrecOpen(Array.from(ORDREC.selected));
@@ -5510,7 +5517,7 @@ document.addEventListener("click",function(e){
   if(act==="hireview"){var hv=a.getAttribute("data-v");if(hv!==hiringView||SMOOTH.active)smoothPageChange(function(){hiringView=hv;pageHiring($("#page"));});return;}
   if(act==="ordview"){var ov=a.getAttribute("data-v");if(ov!==ordersView||SMOOTH.active)smoothPageChange(function(){ordersView=ov;pageOrders($("#page"));});return;}
   if(act==="ordplat"){ordersPlat=a.getAttribute("data-v");pageOrders($("#page"));return;}
-  if(act==="orddriver"){openDriverDetail(a.getAttribute("data-n"));return;}
+  if(act==="orddriver"){if(e.target.closest(".ordrec-pick,.ordrec-all,[data-ordrec-action]"))return;openDriverDetail(a.getAttribute("data-n"));return;}
   if(act==="ordmenu"){openOrdMenu(a);return;}
   if(act==="ordtemplate"){ordTemplateXLSX();return;}
   if(act==="ordexport"){exportOrdersXLSX();return;}
@@ -6592,10 +6599,11 @@ function ccToday(){try{return new Date().toLocaleDateString("en-CA",{timeZone:"A
 function ccDay(offset){try{return new Date(Date.now()-offset*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Kuwait"});}catch(e){return isoToday();}}
 function ccMs(s){return Date.parse(s.started_at||s.created_at)||0;}
 function ccLiveMs(s){return s.live_at?Date.parse(s.live_at):null;}
-function ccStale(s){var t=ccLiveMs(s);return !t||Date.now()-t>CC_STALE;}
+function ccNow(){return Date.now()+(CC.skew||0);}  /* server time, from the live GPS snapshot */
+function ccStale(s){var t=ccLiveMs(s);return !t||ccNow()-t>CC_STALE;}
 /* Heartbeats describe phone reachability, never the age of its coordinates. */
-function ccPositionMs(s){var t=Date.parse(s.live_pos_at||"");if(isFinite(t)&&t>0&&t<=Date.now()+60000)return t;return null;}
-function ccLocationStale(s){var p=ccPositionMs(s);return ccStale(s)||!p||Date.now()-p>CC_STALE;}
+function ccPositionMs(s){var t=Date.parse(s.live_pos_at||"");if(isFinite(t)&&t>0&&t<=ccNow()+60000)return t;return null;}
+function ccLocationStale(s){var p=ccPositionMs(s);if(!p&&ccNow()-ccMs(s)<3*60000)return false;return ccStale(s)||!p||ccNow()-p>CC_STALE;}
 
 function ccAgo(ms){if(!ms)return "no GPS yet";var sec=Math.max(0,Math.round((Date.now()-ms)/1000));if(sec<60)return sec+"s ago";var m=Math.floor(sec/60);if(m<60)return m+"m ago";var h=Math.floor(m/60);if(h<24)return h+"h "+(m%60)+"m ago";return Math.floor(h/24)+"d ago";}
 function ccDrv(id){return CC.drivers.filter(function(d){return String(d.id)===String(id);})[0];}
@@ -7169,7 +7177,7 @@ function createSmouFleetSync(o){
   function stop(){
     if(running||mapOn){generation++;gpsVersion++;}
     running=false;mapOn=false;if(timer)clearInterval(timer);timer=null;
-    if(wake)clearTimeout(wake);wake=null;abort(gpsJob);abort(shiftJob);abort(scanJob);
+    if(wake)clearTimeout(wake);wake=null;abort(gpsJob);abort(shiftJob);abort(scanJob);gpsJob=null;shiftJob=null;scanJob=null;
     lastGps=0;lastScan=0;
   }
   function sync(){
@@ -7177,7 +7185,7 @@ function createSmouFleetSync(o){
     var u=o.owner();
     /* Signal timestamps come from the server: never seed this cursor from the office clock. */
     if(who!==u){stop();who=u;cursor=0;queued={};versions={};revisions={};}
-    if(!running){running=true;generation++;timer=setInterval(tick,15000);}
+    if(!running){running=true;generation++;timer=setInterval(tick,5000);}  /* light 5 s tick; GPS is fetched when 14 s have passed */
     var next=!!o.gpsWanted();
     if(next!==mapOn){mapOn=next;gpsVersion++;lastGps=0;abort(gpsJob);}
     tick();
@@ -7205,7 +7213,7 @@ function createSmouFleetSync(o){
     if(shiftJob||!running||!wanted())return;
     var ids=Object.keys(queued).slice(0,100);if(!ids.length)return;
     var stamps={},g=generation,u=who,j=job();ids.forEach(function(id){stamps[id]=queued[id];});shiftJob=j;
-    Promise.resolve(request(o.client.from('shifts').select('*').in('id',ids),j)).then(function(r){
+    Promise.resolve().then(function(){return request(o.client.from('shifts').select('*').in('id',ids),j);}).then(function(r){
       if(!valid(g,u))return;if(r.error)throw r.error;
       var found={};(r.data||[]).forEach(function(row){found[String(row.id)]=row;});
       ids.forEach(function(id){if(versions[id]!==stamps[id])return;delete queued[id];o.business(found[id]||null,id);});
@@ -7221,6 +7229,14 @@ function createSmouFleetSync(o){
     if(!running||!wanted()||(!force&&Date.now()-lastScan<60000))return;
     var g=generation,u=who,j=job(),since=new Date(Math.max(0,cursor-60000)).toISOString(),after=null,high=cursor;
     lastScan=Date.now();scanJob=j;
+    function first(){
+      if(cursor>0)return Promise.resolve();
+      return Promise.resolve(request(o.client.from('shift_business_changes').select('changed_at').order('changed_at',{ascending:false}).limit(1),j)).then(function(r){
+        if(!valid(g,u))return;if(r.error)throw r.error;var top=r.data&&r.data[0]?Date.parse(r.data[0].changed_at)||0:0;
+        /* the load just read every current shift: look back 5 min for changes that raced it, not the whole history */
+        cursor=top?Math.max(1,top-240000):1;high=cursor;since=new Date(Math.max(0,cursor-60000)).toISOString();
+      });
+    }
     function page(){
       if(!valid(g,u))return Promise.resolve();
       var q=o.client.from('shift_business_changes').select('shift_id,operation,revision,changed_at').gte('changed_at',since).order('shift_id',{ascending:true}).limit(1000);
@@ -7233,16 +7249,16 @@ function createSmouFleetSync(o){
         cursor=high;
       });
     }
-    page().catch(function(e){if(valid(g,u))error('business',e);}).finally(function(){
+    Promise.resolve().then(first).then(page).catch(function(e){if(valid(g,u))error('business',e);}).finally(function(){
       if(scanJob===j)scanJob=null;
       if(scanAgain){scanAgain=false;lastScan=0;if(running)later();}
       else if(running&&generation!==g)later();
     });
   }
   function poll(force){
-    if(gpsJob||!running||!wanted()||!mapOn||!o.gpsWanted()||(!force&&Date.now()-lastGps<15000))return;
+    if(gpsJob||!running||!wanted()||!mapOn||!o.gpsWanted()||(!force&&Date.now()-lastGps<14000))return;
     var g=generation,u=who,v=gpsVersion,j=job(),atSerial=serial;lastGps=Date.now();gpsJob=j;
-    Promise.resolve(request(o.client.rpc('erp_live_gps_snapshot'),j)).then(function(r){
+    Promise.resolve().then(function(){return request(o.client.rpc('erp_live_gps_snapshot'),j);}).then(function(r){
       if(!valid(g,u)||v!==gpsVersion||!mapOn||!o.gpsWanted())return;
       if(r.error)throw r.error;
       if(!r.data||!Array.isArray(r.data.shifts))throw new Error('Invalid live GPS response');
@@ -7259,6 +7275,7 @@ function createSmouFleetSync(o){
     });
   }
   function tick(){
+    if(o.ready&&!o.ready())return;
     if(!wanted()){stop();return;}
     if(!running)return;
     if(o.owner()!==who||!!o.gpsWanted()!==mapOn){sync();return;}
@@ -7348,6 +7365,9 @@ function createSmouFleetSync(o){
     else if(r==="overview"){var b=document.getElementById("ccBanner");if(b)b.outerHTML=ccBannerHTML();}
     paintRt();
   }
+  var bizT=null,bizSet="";
+  function activeSet(){return ccActive().map(function(s){return String(s.id);}).sort().join(",");}
+  function bizRepaint(){if(bizT)return;bizT=setTimeout(function(){bizT=null;var now=activeSet(),changed=now!==bizSet;bizSet=now;repaint(changed||!CC.map);},250);}
   var GPS_FIELDS=["live_lat","live_lng","live_acc","live_pos_at","live_time","live_at","speed","heading","live_src","trk_at","live_rej_lat","live_rej_lng","live_rej_at"];
   function keepNewerGps(row,previous){
     if(!previous||row.status!=="ACTIVE"||previous.status!=="ACTIVE")return row;
@@ -7358,7 +7378,7 @@ function createSmouFleetSync(o){
     return oldApply(table,event,row,old);
   };
   var fleet=createSmouFleetSync({
-    client:SB,owner:owner,wanted:function(){return wanted()&&needsShifts();},
+    client:{from:function(t){return SB.from(t);},rpc:function(n,a){return SB.rpc(n,a);}},ready:function(){return !!SB;},owner:owner,wanted:function(){return wanted()&&needsShifts();},
     gpsWanted:function(){return CC.loaded&&getRoute()==="cc/live";},
     hasActive:function(id){var s=shiftById(id);return !!s&&s.status==="ACTIVE";},
     activeIds:function(){return ccActive().map(function(s){return String(s.id);});},
@@ -7369,9 +7389,9 @@ function createSmouFleetSync(o){
     business:function(row,id){
       var p={table:"shifts",eventType:row?"UPDATE":"DELETE",new:row,old:{id:id}};
       if(flights.shifts)flights.shifts.events.push(p);
-      ccApply("shifts",p.eventType,row,p.old);repaint(true);
+      ccApply("shifts",p.eventType,row,p.old);bizRepaint();
     },
-    fresh:function(){CC.gpsAt=Date.now();CC.lastSync=Date.now();repaint(false);},
+    fresh:function(serverAt){var t=Date.parse(serverAt||"");if(isFinite(t)&&t>0)CC.skew=t-Date.now();CC.gpsAt=Date.now();CC.lastSync=Date.now();repaint(false);},
     error:function(kind,message){if(kind==="gps")CC.gpsErr=message;else CC.syncErr=message;paintRt();}
   });
   function tables(){var ts=["drivers","sos_alerts","vehicle_checks"];if(needsShifts())ts.push("shift_business_changes","fuel_records");if(getRoute()==="cc/announce")ts.push("announcements");return ts;}
@@ -9595,7 +9615,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.22 · 1 Oct 2026 · Stable page transitions";
+var ERP_BUILD="v3.23 · 2 Oct 2026 · review fixes";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -10193,6 +10213,32 @@ document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&(e
   if(!m&&L&&(L.error||L.error_code)){m=/expired|invalid/i.test((L.error_code||"")+" "+(L.error_description||""))?"This link has expired or was already used. Ask your admin for a new “Password link”.":"This link did not work. Ask your admin for a new “Password link”.";window.__AUTHLINK__=null;}
   return _sl.call(this,m);};})();
 
+/* ===== SOS never silent: the live channel pauses in a hidden tab, so a light check keeps watching ===== */
+(function(){
+  var seen=null,title0=document.title,flashT=null;
+  function openList(){return (CC.sos||[]).filter(function(a){return a.status==="OPEN";});}
+  function beep(){try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var ac=new A();[0,.35,.7].forEach(function(t){var o=ac.createOscillator(),g=ac.createGain();o.type="square";o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+.22);});setTimeout(function(){try{ac.close();}catch(e){}},1500);}catch(e){}}
+  function flash(name){if(flashT)return;var on=false;title0=document.title;flashT=setInterval(function(){on=!on;document.title=on?"🚨 SOS · "+name:title0;},1000);}
+  function unflash(){if(flashT){clearInterval(flashT);flashT=null;document.title=title0;}}
+  function check(list){
+    if(seen===null){seen={};list.forEach(function(a){seen[String(a.id)]=1;});return;}
+    var fresh=list.filter(function(a){return !seen[String(a.id)];});fresh.forEach(function(a){seen[String(a.id)]=1;});
+    if(!fresh.length)return;
+    var d=ccDrv(fresh[0].driver_id),name=(d&&d.name)||"Driver";beep();toast("SOS · "+name+" · "+(fresh[0].type||"")+(fresh.length>1?" (+"+(fresh.length-1)+" more)":""),"err");
+    if(document.hidden){flash(name);try{if(window.Notification&&Notification.permission==="granted")new Notification("SOS · "+name,{body:fresh[0].type||"",tag:"smou-sos"});}catch(e){}}
+  }
+  /* a live SOS already beeps through the channel — remember it */
+  var _rt=ccOnRealtime;ccOnRealtime=function(p){if(p&&p.table==="sos_alerts"&&p.new){if(seen===null)seen={};seen[String(p.new.id)]=1;}return _rt.apply(this,arguments);};
+  if(window.ccSosBar){var _bar=window.ccSosBar;window.ccSosBar=function(){var r=_bar.apply(this,arguments);try{if(CC.loaded)check(openList());}catch(e){}return r;};}
+  setInterval(function(){
+    if(!document.hidden||!SB||!USER||!(typeof ccIsAdmin==="function"&&ccIsAdmin()))return;
+    SB.from("sos_alerts").select("*").eq("status","OPEN").then(function(r){if(!r||r.error||!r.data)return;
+      r.data.forEach(function(a){if(!(CC.sos||[]).some(function(x){return String(x.id)===String(a.id);}))CC.sos.unshift(a);});
+      check(r.data);
+    },function(){});
+  },30000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)unflash();});
+})();
 /* ===== v3 redesign module ===== */
 /* ================================================================
    SMOU v3 — full-width top navigation, sub-tab row, 3 themes,
@@ -10618,6 +10664,8 @@ function smoothPageChange(draw,routeChange){
   });
 })();
 
+/* a background refresh can finish before the app shell is drawn (splash still showing): skip, the shell draws the page itself */
+(function(){var _rpGuard=renderPage;renderPage=function(){if(!document.getElementById("page"))return;return _rpGuard.apply(this,arguments);};})();
 if(!location.hash){var r0="overview";try{r0=localStorage.getItem("smou-route")||"overview";}catch(e){}history.replaceState(null,"","#/"+r0);}
 var _hadCache=false;
 if(SB_ON){
