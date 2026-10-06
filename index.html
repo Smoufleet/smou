@@ -2528,6 +2528,40 @@ html.smou-smooth-active::view-transition-old(smou-page){animation:smouPageOut 26
  html.smou-smooth-active::view-transition-new(smou-page){animation:none !important}
 }
 </style>
+<style id="v329css">
+/* v3.29: compact "Actions" button + menu, and page numbers under long lists */
+.act2-btn{height:32px;padding:0 11px 0 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--acc) 38%,transparent);
+  background:color-mix(in srgb,var(--acc) 9%,var(--panel));color:var(--acc);font-family:inherit;font-weight:700;font-size:12.5px;line-height:1;
+  display:inline-flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.act2-btn:hover{background:color-mix(in srgb,var(--acc) 15%,var(--panel))}
+.act2-btn svg{width:15px;height:15px;flex:none}
+.act2-btn .cv{width:12px;height:12px;opacity:.8}
+.act2-btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.act2-badge{background:var(--acc);color:#fff;border-radius:999px;font-size:10.5px;font-weight:800;padding:2px 7px;line-height:1.2}
+.act2-badge[hidden]{display:none}
+.act2-btn.on .act2-badge{background:#fff;color:var(--acc)}
+.ms-pop.act2-pop{width:260px;min-width:260px;border-radius:14px;padding:6px;box-shadow:0 18px 40px rgba(40,30,20,.16)}
+.act2-sec{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px 4px}
+.act2-sec.sel{color:var(--acc)}
+.act2-pop .menu-item.red{color:var(--crit)}.act2-pop .menu-item.red svg{color:var(--crit)}
+.act2-pop .menu-item small{margin-left:auto;color:var(--muted);font-size:11px}
+.pg2{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;font-family:inherit;font-size:12.5px;color:var(--ink-2)}
+.pg2 b{color:var(--ink)}
+.pg2-r{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pg2-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.pg2-nav button{min-width:30px;height:30px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-family:inherit;font-weight:600;font-size:12.5px;cursor:pointer}
+.pg2-nav button:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+.pg2-nav button.cur{background:var(--acc);border-color:var(--acc);color:#fff;cursor:default}
+.pg2-nav button:disabled{opacity:.4;cursor:default}
+.pg2-nav button.cur:disabled{opacity:1}
+.act2-pop .ms-list{max-height:none;overflow:visible}
+.pg2-nav .dots{padding:0 3px;color:var(--muted)}
+.pg2-size{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.pg2-size select{height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);padding:0 6px;font:inherit;color:var(--ink)}
+.pg2-box{padding:12px 16px;border-top:1px solid var(--line)}
+@media (min-width:701px){.pg2-box,.tbl-foot.pg2{padding-right:78px}}
+@media (max-width:700px){.pg2{justify-content:center}.pg2-size{display:none}.pg2>span:first-child{width:100%;text-align:center}}
+</style>
 </head>
 <body>
 <div id="root"></div>
@@ -2728,6 +2762,25 @@ function num(v){var n=parseFloat(v);return isNaN(n)?null:n;}
 function safeUrl(u){u=String(u==null?"":u).trim();if(!u)return "";if(/^(https:|blob:)/i.test(u))return u;if(/^data:(image\/[a-z0-9.+-]+|application\/pdf)[;,]/i.test(u))return u;return "";}
 /* v3.25: a CSV cell that starts with = + - @ tab or CR is opened by Excel as a formula — prefix ' (plain numbers stay numbers) */
 function csvSafe(v){if(v==null)return "";if(typeof v==="number")return String(v);v=String(v);if(/^[=+\-@\t\r]/.test(v)&&!/^[+-]?\d+(\.\d+)?$/.test(v))v="'"+v;return v;}
+/* v3.29: page numbers for long lists (registers, Daily Log, Command Center logs). Only the screen is split into pages —
+   search, filters, totals, select-all and export still use every matching row. */
+var PG_SIZES=[25,50,100],PGH={};
+function pgSize(){var n=50;try{n=+localStorage.getItem("smou-pgsize")||50;}catch(e){}return PG_SIZES.indexOf(n)>=0?n:50;}
+function pgCalc(total,page){var size=pgSize(),pages=Math.max(1,Math.ceil(total/size));page=Math.min(Math.max(1,(+page)||1),pages);return {page:page,pages:pages,size:size,from:(page-1)*size,to:Math.min(total,page*size)};}
+function pgNav(key,pi,total){
+  if(total<=PG_SIZES[0])return "";
+  var b=function(p,lab,cls,dis){return '<button type="button" class="'+(cls||"")+'" data-pg="'+key+'" data-p="'+p+'"'+(dis?" disabled":"")+'>'+lab+'</button>';};
+  var h='';
+  if(pi.pages>1){var set={},list=[];[1,pi.pages,pi.page-1,pi.page,pi.page+1].forEach(function(p){if(p>=1&&p<=pi.pages&&!set[p]){set[p]=1;list.push(p);}});list.sort(function(a,c){return a-c;});
+    h+='<div class="pg2-nav">'+b(pi.page-1,"‹ Prev","",pi.page<=1);
+    list.forEach(function(p,i){if(i&&p-list[i-1]>1)h+='<span class="dots">…</span>';h+=b(p,p,p===pi.page?"cur":"",p===pi.page);});
+    h+=b(pi.page+1,"Next ›","",pi.page>=pi.pages)+'</div>';}
+  h+='<label class="pg2-size">Rows per page <select data-pgsize="'+key+'">'+PG_SIZES.map(function(n){return '<option'+(n===pi.size?" selected":"")+'>'+n+'</option>';}).join("")+'</select></label>';
+  return h;}
+function pgShowing(pi,total,unit){return total?('Showing <b>'+(pi.from+1)+'–'+pi.to+'</b> of <b>'+total.toLocaleString("en-US")+'</b> '+esc(unit)):('0 '+esc(unit));}
+function pgTop(el){if(!el)return;try{var r=el.getBoundingClientRect();if(r.top<0||r.top>innerHeight*.6)window.scrollBy({top:r.top-90,behavior:"smooth"});}catch(e){}}
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-pg]");if(!b||b.disabled)return;var f=PGH[b.getAttribute("data-pg")];if(f){e.preventDefault();f(+b.getAttribute("data-p"));}});
+document.addEventListener("change",function(e){var s=e.target.closest&&e.target.closest("[data-pgsize]");if(!s)return;try{localStorage.setItem("smou-pgsize",String(+s.value));}catch(x){}var f=PGH[s.getAttribute("data-pgsize")];if(f)f(1);});
 function money(n){return (n||0).toLocaleString("en-US",{minimumFractionDigits:3,maximumFractionDigits:3});}
 function parseD(s){if(!s)return null;var m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;}
 function daysTo(d){return Math.round((d-updateToday())/86400000);}
@@ -4025,7 +4078,7 @@ function pageRegister(pg,ent){
       (can("delete")?'<button class="btn sm danger" data-act="seldel">'+svg(IC_del)+'Delete selected</button>':'')+
       '<button class="btn ghost sm" data-act="selclear">Clear</button></div>'+
     '<div class="tbl-wrap"><table class="dt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>'+
-    '<div class="tbl-foot"><span id="foot"></span></div>';
+    '<div class="tbl-foot pg2"><span id="foot"></span><span class="pg2-r" id="pgnav"></span></div>';
   $("#thead").innerHTML='<tr><th class="selcol"><input type="checkbox" class="selchk" data-selall title="Select all"></th>'+cfg.columns.map(function(c,i){return '<th data-sort="'+i+'">'+esc(c.h)+' <span class="sar">⇅</span></th>';}).join("")+'<th class="actcol">Actions</th></tr>';
   fillRows(ent);
   $("#q").addEventListener("input",function(){view.search=this.value;view.sel={};fillRows(ent);});
@@ -4045,8 +4098,10 @@ function selIds(){var s=view.sel||{};return Object.keys(s).filter(function(k){re
 function toggleSelRow(ent,id,on){if(!view.sel)view.sel={};view.sel[id]=!!on;var tr=$('tr[data-rowid="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');if(tr)tr.classList.toggle("selrow",!!on);refreshSelUI(ent);}
 function toggleSelAll(ent,on){if(!view.sel)view.sel={};(view._visIds||[]).forEach(function(id){view.sel[id]=!!on;});fillRows(ent);}
 function clearSel(ent){view.sel={};fillRows(ent);}
+PGH.reg=function(p){if(!curEnt||!document.getElementById("tbody"))return;view.page=p;fillRows(curEnt);pgTop(document.querySelector("#page .tbl-wrap"));};
 function refreshSelUI(ent){
-  var ids=selIds();var bar=$("#selbar");if(bar){bar.hidden=!ids.length;var sc=$("#selcount");if(sc)sc.textContent=ids.length+" selected";}
+  var ids=selIds();var bar=$("#selbar");if(bar){bar.hidden=true;}
+  var ab=$("[data-actbtn]");if(ab){ab.classList.toggle("on",ids.length>0);var bd=ab.querySelector(".act2-badge");if(bd){bd.textContent=ids.length;bd.hidden=!ids.length;}}
   var sa=$("[data-selall]");if(sa){var vis=view._visIds||[];var allOn=vis.length&&vis.every(function(id){return view.sel[id];});sa.checked=!!allOn;sa.indeterminate=(!allOn&&ids.length>0);}
 }
 function exportSelected(ent){var rows=store(ent).filter(function(r){return view.sel&&view.sel[r.id];});if(!rows.length){toast("Select at least one row first.","err");return;}saveSheet(ent,true,rows);}
@@ -4220,6 +4275,9 @@ function fillRows(ent){
   rows=msApply(rows,view.filters);
   if(view.sort!=null){var c=cfg.columns[view.sort];rows.sort(function(a,b){var av=c.s(a),bv=c.s(b);if(typeof av==="number"&&typeof bv==="number")return (av-bv)*view.dir;var as=String(av==null?"":av).trim(),bs=String(bv==null?"":bv).trim();if(!as&&bs)return 1;if(as&&!bs)return -1;return as.localeCompare(bs)*view.dir;});}
   view._visIds=rows.map(function(r){return r.id;});
+  /* v3.29: one page of rows on screen; a new search / filter / sort / register starts again at page 1 */
+  var _sig=ent+"|"+(view.search||"")+"|"+JSON.stringify(view.filters||{})+"|"+view.sort+"|"+view.dir;if(_sig!==view._pgSig){view._pgSig=_sig;view.page=1;}
+  var _pi=pgCalc(rows.length,view.page);view.page=_pi.page;var _all=rows;rows=rows.slice(_pi.from,_pi.to);
   if(!view.sel)view.sel={};
   (function(){var vis={};view._visIds.forEach(function(i){vis[i]=1;});Object.keys(view.sel).forEach(function(k){if(!vis[k])delete view.sel[k];});})(); /* v3.25: a hidden row is never selected */
   var tb=$("#tbody");
@@ -4228,9 +4286,10 @@ function fillRows(ent){
     return '<tr data-rowid="'+esc(r.id)+'" class="'+(on?"selrow":"")+'" style="cursor:pointer"><td class="selcol"><input type="checkbox" class="selchk" data-selrow data-id="'+esc(r.id)+'"'+(on?" checked":"")+'></td>'+cfg.columns.map(function(c){return '<td>'+c.v(r)+'</td>';}).join("")+
     '<td class="actcol"><button class="rowmenu-btn" data-rowmenu data-id="'+esc(r.id)+'" title="Actions">'+svg('<circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>')+'</button></td></tr>';}).join("");
   refreshSelUI(ent);
-  var f=$("#foot");if(f){var ft="Showing "+rows.length+" of "+store(ent).length+" "+cfg.title.toLowerCase();
-    if(ent==="expenses"){var tot=rows.reduce(function(a,b){return a+(num(b.amount)||0);},0);ft+="  ·  Total "+money(tot)+" KWD";}
-    f.textContent=ft;}
+  var f=$("#foot");if(f){var allN=store(ent).length,ft=pgShowing(_pi,_all.length,cfg.title.toLowerCase())+(_all.length<allN?' <span style="color:var(--muted)">(filtered from '+allN.toLocaleString("en-US")+')</span>':"");
+    if(ent==="expenses"){var tot=_all.reduce(function(a,b){return a+(num(b.amount)||0);},0);ft+="  ·  Total "+money(tot)+" KWD";}
+    f.innerHTML=ft;}
+  var pn=$("#pgnav");if(pn)pn.innerHTML=pgNav("reg",_pi,_all.length);
   var th=$("#thead");if(th)$$("th",th).forEach(function(t,i){t.classList.toggle("sorted",view.sort===i);var ar=t.querySelector(".sar");if(ar&&i<cfg.columns.length)ar.textContent=view.sort===i?(view.dir>0?"▲":"▼"):"⇅";});
 }
 
@@ -4932,7 +4991,7 @@ function pageOrders(pg){
   if(ordersMonth!=="all"&&!mkeys[ordersMonth])ordersMonth="all";
   var monsel='<select id="ordMonthSel" class="ord-msel"><option value="all"'+(ordersMonth==="all"?" selected":"")+'>All months</option>'+mopts.map(function(k){return '<option value="'+k+'"'+(ordersMonth===k?" selected":"")+'>'+esc(perfMLabel(k))+'</option>';}).join("")+'</select>';
   var head='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+subtabs+plfilter+monsel+
-    '<span style="flex:1"></span><button class="btn sm primary" data-act="ordmenu">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Import / Export'+svg('<path d="M6 9l6 6 6-6"/>')+'</button><input type="file" id="ordImportFile" accept=".xlsx,.xls" hidden></div>';
+    '<span style="flex:1"></span><button class="act2-btn" data-act="ordmenu" type="button" aria-haspopup="menu">'+ACT_IC+'<span>Actions</span>'+ACT_CV+'</button><input type="file" id="ordImportFile" accept=".xlsx,.xls" hidden></div>';
   // Daily Log tab renders regardless of whether monthly data exists
   if(ordersView==="daily"){pg.innerHTML=head+ordersDaily();if(LANG==="ar")transEl(pg);return;}
   if(!P.length){ordrecPrune([]);pg.innerHTML=head+'<div class="card"><div class="card-b"><div class="empty" style="padding:34px">'+svg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/>')+'<h4>No performance data yet</h4><p>Add entries in the <b>Daily Log</b>, download the template, or import your Talabat / Keeta monthly report.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn sm" data-act="ordview" data-v="daily">'+svg('<path d="M12 5v14M5 12h14"/>')+'Open Daily Log</button><button class="btn sm" data-act="ordtemplate">'+svg('<path d="M12 3v12M8 11l4 4 4-4M4 21h16"/>')+'Download template</button>'+(can("edit")?'<button class="btn sm primary" data-act="ordimport">'+svg('<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import report</button>':'')+'</div></div></div></div>';return;}
@@ -4943,7 +5002,8 @@ function pageOrders(pg){
   else pg.innerHTML=head+ordersDash(FP);
   if(LANG==="ar")transEl(pg);
 }
-var dailyEdit=null;
+var dailyEdit=null,dailyPage=1,dailySig="";
+PGH.daily=function(p){dailyPage=p;var pg=$("#page");if(pg&&typeof pageOrders==="function"&&ordersView==="daily"){pageOrders(pg);pgTop(pg.querySelector(".dl-table"));}};
 function ordersDaily(){
   var log=(STATE.grd.orderlog||[]).slice();
   // apply month + platform filters to the listing
@@ -4963,8 +5023,11 @@ function ordersDaily(){
     '<div class="dl-fld dl-btn"><label>&nbsp;</label><button class="btn primary" data-act="dailyadd">'+(ed?"Save changes":"Add entry")+'</button></div>'+
   '</div></div></div>':"";
   var scope=[ordersPlat!=="all"?ordersPlat:"",ordersMonth!=="all"?perfMLabel(ordersMonth):""].filter(Boolean).join(" · ");
-  var body=rows.length?rows.map(function(e){var d=parseD(e.date);var dl=d?(d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)):esc(e.date);return '<tr><td class="mono">'+dl+'</td><td class="nm">'+esc(e.driver)+'</td><td>'+(e.platform?'<span class="chip">'+esc(e.platform)+'</span>':"—")+'</td><td>'+esc(e.vehicle||"—")+'</td><td class="mono nm" style="text-align:right">'+fmtN(e.orders)+'</td><td style="color:var(--muted);font-size:12px">'+esc(e.note||"")+'</td>'+(can("edit")?'<td class="actcol" style="white-space:nowrap"><button class="rowmenu-btn" data-act="dailyedit" data-id="'+e.id+'" title="Edit">'+svg(IC_edit)+'</button>'+(can("delete")?'<button class="rowmenu-btn" data-act="dailydel" data-id="'+e.id+'" title="Delete">'+svg(IC_del)+'</button>':'')+'</td>':'')+'</tr>';}).join(""):'<tr><td colspan="7"><div class="empty" style="padding:22px">'+svg('<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>')+'<h4>No entries'+(scope?" for "+esc(scope):"")+'</h4><p>'+(can("edit")?"Add your first daily entry above.":"No daily entries recorded.")+'</p></div></td></tr>';
-  var table='<div class="card"><div class="card-h"><h3>Daily Entries</h3><span class="hint">'+rows.length+' entr'+(rows.length===1?"y":"ies")+(scope?" · "+esc(scope):"")+' · '+fmtN(totO)+' orders</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Vehicle</th><th style="text-align:right">Orders</th><th>Note</th>'+(can("edit")?'<th></th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div></div></div>';
+  /* v3.29: one page of the log on screen (totals above still count every entry) */
+  var _dsig=ordersPlat+"|"+ordersMonth+"|"+(typeof FLM!=="undefined"?JSON.stringify(FLM.om||[]):"");if(_dsig!==dailySig){dailySig=_dsig;dailyPage=1;}
+  var _dpi=pgCalc(rows.length,dailyPage);dailyPage=_dpi.page;var _dall=rows.length;
+  var body=rows.length?rows.slice(_dpi.from,_dpi.to).map(function(e){var d=parseD(e.date);var dl=d?(d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)):esc(e.date);return '<tr><td class="mono">'+dl+'</td><td class="nm">'+esc(e.driver)+'</td><td>'+(e.platform?'<span class="chip">'+esc(e.platform)+'</span>':"—")+'</td><td>'+esc(e.vehicle||"—")+'</td><td class="mono nm" style="text-align:right">'+fmtN(e.orders)+'</td><td style="color:var(--muted);font-size:12px">'+esc(e.note||"")+'</td>'+(can("edit")?'<td class="actcol" style="white-space:nowrap"><button class="rowmenu-btn" data-act="dailyedit" data-id="'+e.id+'" title="Edit">'+svg(IC_edit)+'</button>'+(can("delete")?'<button class="rowmenu-btn" data-act="dailydel" data-id="'+e.id+'" title="Delete">'+svg(IC_del)+'</button>':'')+'</td>':'')+'</tr>';}).join(""):'<tr><td colspan="7"><div class="empty" style="padding:22px">'+svg('<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>')+'<h4>No entries'+(scope?" for "+esc(scope):"")+'</h4><p>'+(can("edit")?"Add your first daily entry above.":"No daily entries recorded.")+'</p></div></td></tr>';
+  var table='<div class="card dl-table"><div class="card-h"><h3>Daily Entries</h3><span class="hint">'+rows.length+' entr'+(rows.length===1?"y":"ies")+(scope?" · "+esc(scope):"")+' · '+fmtN(totO)+' orders</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Vehicle</th><th style="text-align:right">Orders</th><th>Note</th>'+(can("edit")?'<th></th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>'+(_dall>PG_SIZES[0]?'<div class="pg2 pg2-box"><span>'+pgShowing(_dpi,_dall,"entries")+'</span><span class="pg2-r">'+pgNav("daily",_dpi,_dall)+'</span></div>':'')+'</div></div>';
   var note='<div class="hintbar" style="background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;padding:9px 13px;border-radius:10px;margin-bottom:16px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+' Daily entries automatically roll up into the monthly Dashboard, Records &amp; By Driver — orders add up and each day you log counts as one active day.</div>';
   return note+form+table;
 }
@@ -6557,10 +6620,24 @@ document.addEventListener("click",function(e){
 });
 
 /* ============ EXPORT / IMPORT / TEMPLATE ============ */
+var ACT_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h10M4 17h6"/><circle cx="17" cy="7" r="2.6"/><circle cx="13" cy="17" r="2.6"/><path d="M19.6 7H20M15.6 17H20"/></svg>',
+    ACT_CV='<svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+/* v3.29: "Actions" — selected rows (when any) + export / template / import, all in one small menu */
+function actMenuItems(ent){
+  var n=selIds().length,cfg=ENT[ent]||{title:""},h="";
+  if(n){h+='<div class="act2-sec sel">'+n+' selected</div>'+
+    '<div class="menu-item" data-act="selexport">'+svg('<path d="M12 3v11M8 10l4 4 4-4"/><path d="M4 21h16"/>')+'Export selected<small>.xlsx</small></div>'+
+    (can("delete")?'<div class="menu-item red" data-act="seldel">'+svg(IC_del)+'Delete selected</div>':'')+
+    '<div class="menu-item" data-act="selclear">'+svg('<path d="M18 6 6 18M6 6l12 12"/>')+'Clear selection</div><div class="menu-sep"></div>';}
+  h+='<div class="act2-sec">All '+esc(String(cfg.title||"").toLowerCase())+' · '+(store(ent)||[]).length.toLocaleString("en-US")+'</div>'+
+    '<div class="menu-item" data-actexport>'+svg('<path d="M12 3v11M8 10l4 4 4-4"/><path d="M4 21h16"/>')+'Export all to Excel<small>.xlsx</small></div>'+
+    '<div class="menu-item" data-acttemplate>'+svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 15h8"/>')+'Download blank template</div>'+
+    '<div class="menu-item" data-actimport>'+svg('<path d="M12 14V3M8 7l4-4 4 4"/><path d="M4 21h16"/>')+'Import from Excel</div>';
+  return h;}
 function actionsMenu(ent){
   return '<div class="ms" data-actions>'+
-    '<button class="btn sm" data-actbtn type="button">Import / Export <svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--muted)"><path d="M6 9l6 6 6-6"/></svg></button>'+
-    '<div class="ms-pop" hidden style="right:0;left:auto;min-width:210px"><div class="ms-list">'+
+    '<button class="act2-btn" data-actbtn type="button" aria-haspopup="menu">'+ACT_IC+'<span>Actions</span><span class="act2-badge" hidden>0</span>'+ACT_CV+'</button>'+
+    '<div class="ms-pop act2-pop" hidden style="right:0;left:auto"><div class="ms-list">'+
       '<div class="menu-item" data-actexport>'+svg('<path d="M12 3v11M8 10l4 4 4-4"/><path d="M4 21h16"/>')+'Export to Excel</div>'+
       '<div class="menu-item" data-acttemplate>'+svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 15h8"/>')+'Download blank template</div>'+
       '<div class="menu-sep"></div>'+
@@ -6758,7 +6835,8 @@ function importSheet(ent,arraybuffer){
 }
 document.addEventListener("click",function(e){
   var ab=e.target.closest("[data-actbtn]");
-  if(ab){var pop=ab.parentNode.querySelector(".ms-pop");var open=!pop.hidden;closeAllMS();if(!open)pop.hidden=false;return;}
+  if(ab){var pop=ab.parentNode.querySelector(".ms-pop");var open=!pop.hidden;closeAllMS();if(!open){var ls=pop.querySelector(".ms-list");if(ls&&curEnt&&ENT[curEnt])ls.innerHTML=actMenuItems(curEnt);pop.hidden=false;}return;}
+  if(e.target.closest(".act2-pop [data-act]"))closeAllMS();
   var mi=e.target.closest("[data-actexport],[data-acttemplate],[data-actimport]");
   if(mi){var ent=curEnt;closeAllMS();
     if(mi.hasAttribute("data-actexport"))saveSheet(ent,true);
@@ -6778,12 +6856,12 @@ var CC_KM_FLAG=400, CC_STALE=120000, CC_PLATFORMS=["Talabat","Keeta"];
 function ccIsAdmin(){return SB_ON&&!!SB&&ROLE==="admin";}
 function ccToday(){try{return kuwaitDateKey();}catch(e){return isoToday();}}
 /* v3.24: long lists render the newest CC_PAGE rows; "Show more" adds more. Filters/search/export still use every row. */
-var CC_PAGE=200;CC.lim=CC_PAGE;CC.limSig="";
+var CC_PAGE=200;CC.lim=CC_PAGE;CC.limSig="";CC.page=1;CC._pi=null;
+PGH.cc=function(p){CC.page=p;renderPage();pgTop(document.querySelector("#page .tbl-wrap"));};
 function ccLimRows(rows,what){var sig=what;try{sig+="|"+JSON.stringify(CC.f)+"|"+(typeof FLM!=="undefined"?JSON.stringify([FLM["cc:driver"],FLM["cc:platform"],FLM["cc:status"]]):"");}catch(e){}
-  if(sig!==CC.limSig){CC.limSig=sig;CC.lim=CC_PAGE;}return rows.length>CC.lim?rows.slice(0,CC.lim):rows;}
-function ccMoreFoot(n,what,label){var shown=Math.min(n,CC.lim);
-  return '<div class="tbl-foot"><span>'+(n>shown?"Showing latest "+shown+" of "+n+" "+label:n+" "+label)+'</span><span style="display:flex;gap:8px;flex-wrap:wrap">'+
-    (n>shown?'<button class="btn sm" data-act="ccmore">Show '+Math.min(CC_PAGE,n-shown)+' more</button>':"")+
+  if(sig!==CC.limSig){CC.limSig=sig;CC.lim=CC_PAGE;CC.page=1;}var pi=pgCalc(rows.length,CC.page);CC.page=pi.page;CC._pi=pi;return rows.slice(pi.from,pi.to);}
+function ccMoreFoot(n,what,label){var pi=CC._pi||pgCalc(n,1);
+  return '<div class="tbl-foot pg2"><span>'+pgShowing(pi,n,label)+'</span><span class="pg2-r">'+pgNav("cc",pi,n)+
     '<button class="btn sm" data-act="ccexport" data-what="'+what+'">Export CSV</button></span></div>';}
 document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest('[data-act="ccmore"]');if(!a)return;
   var sc=document.scrollingElement||document.documentElement,y=sc.scrollTop,w=document.querySelector(".tbl-wrap"),wy=w?w.scrollTop:0;
@@ -9813,7 +9891,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.28 · 6 Oct 2026 · Windows save dialog";
+var ERP_BUILD="v3.29 · 6 Oct 2026 · pages + Actions menu";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -11137,6 +11215,7 @@ if(SB_ON){
       var add=tb.querySelector('[data-act="new"]'); tb.insertBefore(c, add||null); }
     var rows=page.querySelectorAll(".dt tbody tr");
     var n=[].filter.call(rows,function(r){return !r.querySelector("td[colspan]");}).length;
+    var ft=document.getElementById("foot"),mm=ft&&/of\s*([\d,]+)/.exec(ft.textContent||"");if(mm)n=mm[1]; /* v3.29: with pages, count all matching records */
     c.innerHTML='<b>'+n+'</b> records';
   }
   var root=document.getElementById("root");
