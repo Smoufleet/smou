@@ -6626,6 +6626,16 @@ function saveBlobFile(blob,filename){
       if(nav.canShare({files:[f]})){nav.share({files:[f],title:filename}).catch(function(e){if(e&&e.name==="AbortError")return;viaLink();});return;}
     }catch(e){}
   }
+  /* v3.28 Windows (Chrome / Edge): save straight to disk with the normal "Save As" window. This does not go through the
+     browser's download list, so download-manager add-ons (IDM etc.), blocked downloads or scanners can't swap or break the file. */
+  if(/Windows/i.test(ua)&&typeof window.showSaveFilePicker==="function"){
+    var ext=(filename.match(/\.[a-z0-9]+$/i)||[".bin"])[0],acc={};acc[blob.type||"application/octet-stream"]=[ext];
+    var pick;try{pick=window.showSaveFilePicker({suggestedName:filename,types:[{description:ext.slice(1).toUpperCase()+" file",accept:acc}]});}catch(e){pick=Promise.reject(e);}
+    pick.then(function(h){return h.createWritable().then(function(w){return w.write(blob).then(function(){return w.close();});});})
+      .then(function(){toast("Saved "+filename,"good");},
+        function(e){if(e&&e.name==="AbortError"){toast("Not saved — "+filename,"err");return;}viaLink();dlHelpBar(blob,filename);});
+    return;
+  }
   viaLink();dlHelpBar(blob,filename);
 }
 function dlHelpBar(blob,filename){
@@ -9803,7 +9813,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.27 · 6 Oct 2026 · export download fix";
+var ERP_BUILD="v3.28 · 6 Oct 2026 · Windows save dialog";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
