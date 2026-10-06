@@ -6223,7 +6223,7 @@ function entryPDF(ent,id){
   if(rec.assign&&rec.assign.length){y=pdfSection(doc,y,"Assignment / Handover History");
     y=pdfKV(doc,y,rec.assign.map(function(h){return [fmtD(h.date)+(h.ret?" → "+fmtD(h.ret):""),h.to+(h.from?" (from "+h.from+")":"")+(h.reason?" — "+h.reason:"")];}));}
   pdfFoot(doc);
-  doc.save(slug(cfg.singular+"_"+primary)+".pdf");
+  pdfSave(doc,slug(cfg.singular+"_"+primary)+".pdf");
   toast("PDF downloaded.","good");
 }
 
@@ -6254,7 +6254,7 @@ function payslipPDF(id){
   doc.setTextColor(90,90,90);doc.setFont("helvetica","normal");doc.setFontSize(9.5);
   doc.text("Employee Signature",40,y+15);doc.text("Authorized (SMOU International)",W-200,y+15);
   pdfFoot(doc);
-  doc.save(slug("payslip_"+(r.employee||"")+"_"+(r.month||"")+"_"+(r.year||""))+".pdf");
+  pdfSave(doc,slug("payslip_"+(r.employee||"")+"_"+(r.month||"")+"_"+(r.year||""))+".pdf");
   toast("Payslip downloaded.","good");
 }
 
@@ -6310,7 +6310,7 @@ function handoverPDF(ent,rec,en){
   doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(95,95,95);
   doc.text("Issued by (SMOU International)",40,y+15);doc.text("Received by (Employee)",W-230,y+15);
   pdfFoot(doc);
-  doc.save(slug(kind+"_handover_"+assetLabel(ent,rec)+"_"+en.to)+".pdf");
+  pdfSave(doc,slug(kind+"_handover_"+assetLabel(ent,rec)+"_"+en.to)+".pdf");
   toast("Handover voucher downloaded.","good");
 }
 function hovById(ent,id,aid){var r=recById(ent,id);if(!r||!r.assign)return null;return r.assign.filter(function(x){return x.id===aid;})[0];}
@@ -6596,7 +6596,7 @@ function saveSheet(ent,withData,rows){
   var buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
   var u8=new Uint8Array(buf);
   var xlsxMime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  function blobSave(){try{var blob=new Blob([u8],{type:xlsxMime});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=base+".xlsx";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove();},150);toast((withData?"Exported ":"Template ")+base+".xlsx","good");}catch(e){toast("Download not supported in this view.","err");}}
+  function blobSave(){try{saveBlobFile(new Blob([u8],{type:xlsxMime}),base+".xlsx");toast((withData?"Exported ":"Template ")+base+".xlsx","good");}catch(e){toast("Download not supported in this view.","err");}}
   if(window.claude&&claude.use){
     claude.use("downloads").then(function(dl){
       if(!dl){blobSave();return;}
@@ -6611,7 +6611,44 @@ function saveSheet(ent,withData,rows){
   } else blobSave();
 }
 /* ============ REPORTS & EXPORT ============ */
-function dlFile(data,filename,mime){try{var blob=new Blob([data],{type:mime||"application/octet-stream"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove();},150);}catch(e){toast("Download not supported in this view.","err");}}
+/* v3.27: one safe way to save a file (all Excel / CSV / PDF / backup exports use it).
+   - The download link now stays valid for 60 s (before: 0.15 s). With "Ask where to save each file", a slow antivirus scan,
+     or Safari, the link was already gone when the browser wanted the file → toast said "Exported" but nothing was saved.
+   - A small "Not in your Downloads? Save it here" bar stays for 15 s. It opens a normal Save dialog (Chrome / Edge),
+     which also works when the browser blocks automatic downloads for this site.
+   - iPhone / iPad: the share sheet opens (Save to Files, WhatsApp, Mail…). */
+function saveBlobFile(blob,filename){
+  var nav=navigator,ua=nav.userAgent||"",iOS=/iP(hone|od|ad)/.test(ua)||(/Macintosh/.test(ua)&&(nav.maxTouchPoints||0)>1);
+  function viaLink(){var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=filename;a.rel="noopener";a.style.display="none";
+    document.body.appendChild(a);a.click();setTimeout(function(){try{a.remove();}catch(e){}},1500);setTimeout(function(){try{URL.revokeObjectURL(url);}catch(e){}},60000);}
+  if(iOS&&nav.share&&nav.canShare&&typeof File==="function"){
+    try{var f=new File([blob],filename,{type:blob.type||"application/octet-stream"});
+      if(nav.canShare({files:[f]})){nav.share({files:[f],title:filename}).catch(function(e){if(e&&e.name==="AbortError")return;viaLink();});return;}
+    }catch(e){}
+  }
+  viaLink();dlHelpBar(blob,filename);
+}
+function dlHelpBar(blob,filename){
+  var old=document.getElementById("dlHelp");if(old)old.remove();
+  var b=document.createElement("div");b.id="dlHelp";b.setAttribute("role","status");
+  b.style.cssText="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel,#fff);color:var(--ink,#292420);border:1px solid var(--line,#E5DED2);border-radius:12px;padding:9px 12px;box-shadow:0 10px 28px rgba(0,0,0,.18);font-size:13px";
+  b.innerHTML='<span><b>'+esc(filename)+'</b> · '+esc(LANG==="ar"?"لم يظهر في التنزيلات؟":"Not in your Downloads?")+'</span><button type="button" class="btn sm primary" data-dlsave>'+esc(LANG==="ar"?"احفظه هنا":"Save it here")+'</button><button type="button" class="btn sm ghost" data-dlx aria-label="Close">✕</button>';
+  document.body.appendChild(b);var tm=setTimeout(function(){b.remove();},15000);
+  b.querySelector("[data-dlx]").onclick=function(){clearTimeout(tm);b.remove();};
+  b.querySelector("[data-dlsave]").onclick=function(){clearTimeout(tm);b.remove();
+    var ext=(filename.match(/\.[a-z0-9]+$/i)||[".bin"])[0];
+    if(window.showSaveFilePicker){
+      var acc={};acc[blob.type||"application/octet-stream"]=[ext];
+      window.showSaveFilePicker({suggestedName:filename,types:[{description:filename,accept:acc}]}).then(function(h){return h.createWritable().then(function(w){return w.write(blob).then(function(){return w.close();});});})
+        .then(function(){toast("Saved "+filename,"good");},function(e){if(e&&e.name==="AbortError")return;openInTab();});
+    }else openInTab();
+    function openInTab(){var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();
+      setTimeout(function(){a.remove();},1500);setTimeout(function(){URL.revokeObjectURL(url);},60000);
+      toast("If it still doesn't save: click the download icon in the address bar and choose \"Always allow\".","err");}
+  };
+}
+function pdfSave(doc,name){try{saveBlobFile(doc.output("blob"),name);}catch(e){doc.save(name);}}
+function dlFile(data,filename,mime){try{saveBlobFile(new Blob([data],{type:mime||"application/octet-stream"}),filename);}catch(e){toast("Download not supported in this view.","err");}}
 function backupJSON(){var data=JSON.stringify({app:"SMOU Fleet ERP",exportedAt:new Date().toISOString(),state:STATE},null,2);dlFile(data,"SMOU-Fleet-Backup_"+isoToday()+".json","application/json");toast("Backup downloaded.","good");}
 function exportAllExcel(){
   if(!xlsxReady()){toast("Excel engine still loading — try again in a moment.","err");return;}
@@ -6646,7 +6683,7 @@ function monthlyReportPDF(){
   y=pdfKV(doc,y,[["Income",money(inc)+" KWD"],["Expenses",money(exp)+" KWD"],["Payroll",money(pay)+" KWD"],["Net Profit",money(inc-exp-pay)+" KWD"]]);
   y=pdfSection(doc,y,"Hiring");
   y=pdfKV(doc,y,[["Candidates in pipeline",String(H.length)],["Fully Ready",String(ready)],["Avg Onboarding",avg+"%"]]);
-  pdfFoot(doc);doc.save("SMOU-Monthly-Report_"+tm+".pdf");toast("Monthly report downloaded.","good");
+  pdfFoot(doc);pdfSave(doc,"SMOU-Monthly-Report_"+tm+".pdf");toast("Monthly report downloaded.","good");
 }
 function expiryReportPDF(){
   var doc=pdfNew();if(!doc)return;
@@ -6654,7 +6691,7 @@ function expiryReportPDF(){
   var y=pdfHead(doc,"Document Expiry Report","Expired + expiring within 30 days");
   if(!al.length){y=pdfKV(doc,y+6,[["Status","All documents valid — nothing expiring within 30 days."]]);}
   else{y=pdfSection(doc,y,al.length+" document(s)");y=pdfKV(doc,y,al.map(function(a){var when=a.days<0?(Math.abs(a.days)+"d ago"):(a.days+"d left");return [a.title+(a.sub?" — "+a.sub:""),when+"  ("+a.date.getDate()+" "+MONS[a.date.getMonth()]+" "+a.date.getFullYear()+")"];}));}
-  pdfFoot(doc);doc.save("SMOU-Expiry-Report_"+isoToday()+".pdf");toast("Expiry report downloaded.","good");
+  pdfFoot(doc);pdfSave(doc,"SMOU-Expiry-Report_"+isoToday()+".pdf");toast("Expiry report downloaded.","good");
 }
 function pageReports(pg){
   setTitle("Reports & Export","Download reports and backups");var nb=$("#newBtn");if(nb)nb.hidden=true;
@@ -8483,7 +8520,7 @@ function rpExport(){
   var P=rpPivot(rows),aoa=[[RPD[RPT.prow]+" / "+RPD[RPT.pcol]].concat(P.ck.map(function(c){return rpDimLabel(RPT.pcol,c);})).concat(["Total"])];
   P.rk.forEach(function(a){aoa.push([rpDimLabel(RPT.prow,a)].concat(P.ck.map(function(c){return +(P.m[a+"\u0001"+c]||0).toFixed(3);})).concat([+P.rt[a].toFixed(3)]));});
   aoa.push(["Total"].concat(P.ck.map(function(c){return +P.ct[c].toFixed(3);})).concat([+P.gt.toFixed(3)]));
-  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),"Pivot");XLSX.writeFile(wb,"SMOU-expense-pivot.xlsx");toast("Pivot exported.","good");
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),"Pivot");dlFile(new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"})),"SMOU-expense-pivot.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");toast("Pivot exported.","good");
 }
 
 /* ---------- routing + the old buttons now open the pages ---------- */
@@ -9364,7 +9401,7 @@ function pnlExcel(){
   var t=[["KWD"].concat(X.t12.map(function(k){return plLab(k);})).concat(["Total"])];
   [["Net revenue","rev"],["Cost of services","cos"],["Gross profit","gp"],["Operating expenses","opx"],["EBITDA","ebitda"],["Net profit","net"]].forEach(function(rw){var vals=X.t12.map(function(k){return +pnlBook(k,X.cache).r[rw[1]].toFixed(3);});t.push([rw[0]].concat(vals).concat([+vals.reduce(function(s,v){return s+v;},0).toFixed(3)]));});
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),"12 months");
-  XLSX.writeFile(wb,"SMOU-PnL-"+X.mk+".xlsx");toast("P&L exported.","good");
+  dlFile(new Uint8Array(XLSX.write(wb,{bookType:"xlsx",type:"array"})),"SMOU-PnL-"+X.mk+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");toast("P&L exported.","good");
 }
 /* ---------- lock: no changes to entries dated in a closed month ---------- */
 function pnlLockMsg(mk){toast(plLab(mk,true)+" is closed in the P&L. An admin can reopen it in Finance → P&L Report.","err");}
@@ -9766,7 +9803,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.26 · 3 Oct 2026 · one active tab";
+var ERP_BUILD="v3.27 · 6 Oct 2026 · export download fix";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
