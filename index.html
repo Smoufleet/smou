@@ -3205,7 +3205,9 @@ function sbLoad(){
   });
   function _applyFull(res){
     if(res.error)throw res.error;
-    if(!res.data||!res.data.length){return sbSeed();}
+    /* v3.32: an empty answer is taken as it is. This device's saved copy is NEVER uploaded into an empty
+       database (that could bring back records someone deleted). */
+    if(!res.data||!res.data.length){applyRows([]);flushAudit();flushPendingDel();return flushPending();}
     applyRows(res.data);bumpLastSync(res.data);
     flushAudit();flushPendingDel();
     return flushPending();
@@ -3231,6 +3233,56 @@ function persistSB(){
   }).catch(function(e){setSave("err","Saved on device · will retry");toast((e&&e.message)||"Connection unavailable — changes remain on this device.","err");});
 }
 
+/* v3.32 PRIVATE DOCUMENTS. The "files" store is private, so a saved link (…/object/public/files/…) no longer opens
+   by itself. Every image, preview and link on screen that points there is swapped for a signed link that works
+   for 1 hour, asked for in ONE request per batch (e.g. a whole employee list) and remembered for 55 minutes.
+   Works the same while the store is still public, so this version can go live first. */
+var FSIGN={cache:{},wait:{},t:0,obs:null};
+var FS_BLANK="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+function fsPath(u){var m=String(u||"").match(/\/storage\/v1\/object\/public\/files\/([^?#]+)/);if(!m)return null;try{return decodeURIComponent(m[1]);}catch(e){return m[1];}}
+function fsHit(p){var c=FSIGN.cache[p];return c&&c.until>Date.now()?c.url:null;}
+function fsAttr(el){return el.tagName==="A"?"href":"src";}
+function fsScan(){
+  FSIGN.t=0;
+  var els=document.querySelectorAll('img[src*="/object/public/files/"],iframe[src*="/object/public/files/"],a[href*="/object/public/files/"],img[data-fs]');
+  for(var i=0;i<els.length;i++){var el=els[i],at=fsAttr(el),orig=el.getAttribute("data-fs")||el.getAttribute(at),p=fsPath(orig);if(!p)continue;
+    var hit=fsHit(p);
+    if(hit){if(el.getAttribute(at)!==hit)el.setAttribute(at,hit);el.removeAttribute("data-fs");continue;}
+    if(!el.getAttribute("data-fs")){el.setAttribute("data-fs",orig);if(el.tagName==="IMG")el.setAttribute("src",FS_BLANK);}
+    (FSIGN.wait[p]=FSIGN.wait[p]||1);}
+  var paths=Object.keys(FSIGN.wait);if(!paths.length)return;FSIGN.wait={};
+  var put=function(){var all=document.querySelectorAll("[data-fs]");for(var j=0;j<all.length;j++){var e=all[j],a=fsAttr(e),o=e.getAttribute("data-fs"),q=fsPath(o);if(!q||paths.indexOf(q)<0)continue;
+      var h=fsHit(q);e.setAttribute(a,h||o);e.removeAttribute("data-fs");}};
+  var cl=null;try{cl=SB_ON&&USER?sbClient():null;}catch(e){}
+  if(!cl){put();return;}
+  var pr=null;try{pr=cl.storage.from("files").createSignedUrls(paths,3600);}catch(e){}
+  if(!pr||typeof pr.then!=="function"){put();return;}
+  pr.then(function(r){
+    var rows=(r&&r.data)||[];rows.forEach(function(x){if(x&&x.path&&x.signedUrl)FSIGN.cache[x.path]={url:x.signedUrl,until:Date.now()+55*60000};});
+    put();
+  }).catch(function(){put();});
+}
+function fsSoon(){if(!FSIGN.t)FSIGN.t=setTimeout(fsScan,60);}
+(function(){
+  function start(){if(FSIGN.obs||!document.body)return;
+    FSIGN.obs=new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];
+      if(m.type==="attributes"){var v=m.target.getAttribute&&m.target.getAttribute(m.attributeName);if(v&&v.indexOf("/object/public/files/")>=0){fsSoon();return;}}
+      else if(m.addedNodes&&m.addedNodes.length){for(var j=0;j<m.addedNodes.length;j++){var n=m.addedNodes[j];if(n.nodeType===1&&(n.outerHTML||"").indexOf("/object/public/files/")>=0){fsSoon();return;}}}}});
+    FSIGN.obs.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["src","href"]});fsSoon();}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
+  /* a link clicked before its signed version arrived: open it as soon as it is signed */
+  document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href*="/object/public/files/"],a[data-fs]');if(!a)return;
+    var o=a.getAttribute("data-fs")||a.getAttribute("href"),p=fsPath(o);if(!p)return;var h=fsHit(p);
+    if(h){a.setAttribute("href",h);return;}
+    e.preventDefault();var w=null;try{w=window.open("about:blank","_blank");}catch(x){}
+    var cl=null;try{cl=sbClient();}catch(x){}
+    if(!cl){if(w)w.location=o;return;}
+    var pr=null;try{pr=cl.storage.from("files").createSignedUrl(p,3600);}catch(x){}
+    if(!pr||typeof pr.then!=="function"){if(w)w.location=o;else location.href=o;return;}
+    pr.then(function(r){var u=r&&r.data&&r.data.signedUrl;if(u){FSIGN.cache[p]={url:u,until:Date.now()+55*60000};a.setAttribute("href",u);a.removeAttribute("data-fs");}
+      if(w)w.location=u||o;else location.href=u||o;}).catch(function(){if(w)w.location=o;});
+  },true);
+})();
 function sbUpload(path,blob,ct){
   return SB.storage.from("files").upload(path,blob,{upsert:true,contentType:ct}).then(function(res){
     if(res.error)throw res.error;
@@ -3255,27 +3307,28 @@ function setLive(ok,txt){
 // pull the full server state and reconcile (catch up on anything missed while disconnected/asleep)
 function sbReconcile(){
   if(!SB_ON||!SB||!USER||_reconciling)return Promise.resolve();
-  _reconciling=true;
+  _reconciling=true;_rtStart();
   var sel=_deltaOK?"collection,id,data,updated_at":"collection,id,data";
   return sbAllRecords(sel).then(function(res){
     _reconciling=false;
-    if(res.error||!res.data)return;
+    if(res.error||!res.data){_rtKeepNewer(null);return;}
+    res={data:_rtKeepNewer(res.data),error:null};
     if(dataSig(res.data)===_lastSig){bumpLastSync(res.data);flushPending();flushPendingDel();return;} // server unchanged → no rebuild, no blink, no scroll reset
     applyRows(res.data);bumpLastSync(res.data);flushPending();flushPendingDel();
     calmRefresh();
-  }).catch(function(){_reconciling=false;});
+  }).catch(function(){_reconciling=false;_rtKeepNewer(null);});
 }
 // cheap delta fetch — only rows changed since lastSync; merges them in (used on focus/reconnect when available)
 function sbDelta(){
   if(!SB_ON||!SB||!USER||_reconciling)return Promise.resolve();
-  _reconciling=true;
+  _reconciling=true;_rtStart();
   return sbAllRecords("collection,id,data,updated_at",function(q){return q.gt("updated_at",lastSync);}).then(function(res){
     _reconciling=false;
-    if(res.error){_deltaOK=false;return sbReconcile();} // any issue → safe full reconcile
-    var rows=res.data||[];
+    if(res.error){_rtKeepNewer(null);_deltaOK=false;return sbReconcile();} // any issue → safe full reconcile
+    var rows=_rtKeepNewer(res.data||[]);
     if(rows.length){applyDelta(rows);bumpLastSync(rows);calmRefresh();}
     flushPending();flushPendingDel();
-  }).catch(function(){_reconciling=false;});
+  }).catch(function(){_reconciling=false;_rtKeepNewer(null);});
 }
 // pick the cheap path when we can, else the full safety-net check
 function sbSync(){ if(_deltaOK&&lastSync)return sbDelta(); return sbReconcile(); }
@@ -3333,6 +3386,19 @@ function _lightRemovals(){
 /* v3.25: no broadcast. A broadcast reached anyone holding the public key (incl. finance rows) and anyone could send fake rows.
    Other screens get every change from postgres_changes on "records", which the database filters by role (RLS). */
 function broadcastChange(coll,id,data,eventType){}
+/* v3.32: live changes that arrive WHILE a refresh is downloading win over that (older) download */
+var _rtSeen={},_rtSeenOn=0;
+function _rtMark(k,del,data){if(_rtSeenOn)_rtSeen[k]={del:!!del,data:data};}
+function _rtStart(){_rtSeen={};_rtSeenOn++;}
+function _rtKeepNewer(rows){
+  var seen=_rtSeen,keys=Object.keys(seen);_rtSeenOn=Math.max(0,_rtSeenOn-1);if(!_rtSeenOn)_rtSeen={};
+  if(!keys.length||!rows)return rows;
+  var used={},out=[];
+  rows.forEach(function(r){var k=r.collection+"/"+r.id,s=seen[k];if(!s){out.push(r);return;}used[k]=1;if(s.del)return;
+    var o={};for(var q in r)o[q]=r[q];o.data=s.data;out.push(o);});
+  keys.forEach(function(k){if(used[k]||seen[k].del||!seen[k].data)return;var i=k.indexOf("/");out.push({collection:k.slice(0,i),id:k.slice(i+1),data:seen[k].data});});
+  return out;
+}
 function applyRealtimeRecord(coll,id,data,eventType){
   if(!coll){
     for(var c in COLLSET){
@@ -3343,6 +3409,7 @@ function applyRealtimeRecord(coll,id,data,eventType){
   }
   var dest=COLLSET[coll];
   if(!dest)return;
+  _rtMark(coll+"/"+id,eventType==="DELETE",data);
   var arr=STATE[dest[0]][dest[1]];
   if(!arr)return;
   var i=arr.findIndex(function(x){return x&&x.id===id;});
@@ -4571,9 +4638,9 @@ function processFormFiles(ent,cfg,ov){
       jobs.push(prepDoc({},file,f.l).then(function(doc){
         var nameEl=$('[name="'+f.k+'Name"]',ov)||$('[name="docName"]',ov);
         var obj={name:((nameEl&&nameEl.value)||"").trim()||doc.name,mime:doc.mime};
-        if(SB_ON){return sbUpload(ent+"/"+uid("att")+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){obj.url=url;result[f.k]=obj;}).catch(function(){obj.data=doc.data;result[f.k]=obj;});}
+        if(SB_ON){return sbUpload(ent+"/"+uid("att")+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){obj.url=url;result[f.k]=obj;}).catch(function(){var e=new Error("UPLOAD_FAILED");e.upload=true;throw e;});}
         obj.data=doc.data;result[f.k]=obj;
-      }).catch(function(){}));
+      }).catch(function(e){if(e&&e.upload)throw e;}));
     } else if(fld&&fld.getAttribute("data-fremoved")==="1"){
       result[f.k]=null;
     }
@@ -4591,7 +4658,9 @@ function saveForm(ent,id){
     processFormFiles(ent,cfg,ov).then(function(fileVals){
       Object.keys(fileVals).forEach(function(k){data[k]=(fileVals[k]===null?null:fileVals[k]);});
       hideLoader();_finishSaveForm(ent,id,cfg,data,context);
-    }).catch(function(){hideLoader();_finishSaveForm(ent,id,cfg,data,context);});
+    }).catch(function(e){hideLoader();
+      if(e&&e.upload){toast("The document didn't upload — check the internet and press Save again. Nothing was saved yet.","err");return;}
+      _finishSaveForm(ent,id,cfg,data,context);});
     return;
   }
   _finishSaveForm(ent,id,cfg,data,context);
@@ -4718,7 +4787,7 @@ function saveExpensePage(pg){
     var d=pg2.querySelector('[name="date"]');if(d)d.value=out.date;
     var m=pg2.querySelector('[name="month"]');if(m)m.value=out.month||MON[TODAY.getMonth()];
     toast("Expense logged: "+money(num(out.amount))+" KWD","good");}
-  if(rcp&&SB_ON){var bl=dataURLtoBlob(rcp);toast("Uploading receipt…","good");sbUpload("expenses/"+out.id+"/receipt."+extFor(bl.type),bl,bl.type).then(function(url){out.receipt=url;fin();}).catch(function(e){fin();});}
+  if(rcp&&SB_ON){var bl=dataURLtoBlob(rcp);toast("Uploading receipt…","good");sbUpload("expenses/"+out.id+"/receipt."+extFor(bl.type),bl,bl.type).then(function(url){out.receipt=url;fin();}).catch(function(e){fin();toast("The receipt didn't upload — open the expense and attach it again.","err");});}
   else{if(rcp)out.receipt=rcp;fin();}
 }
 function renderToday(pg){
@@ -6071,10 +6140,10 @@ function refreshDocHost(d){var dd=drById(d.id)||d;renderDocsModal(dd);if(curEnt=
 function saveDocsBatch(d,items){
   if(!items.length)return;
   showLoader("Uploading "+items.length+" document"+(items.length>1?"s":"")+"…");
-  var out=[];var chain=Promise.resolve();
+  var out=[],failed=[];var chain=Promise.resolve();
   items.forEach(function(it){chain=chain.then(function(){
     return prepDoc(d,it.file,it.type).then(function(doc){
-      if(SB_ON&&/^data:/.test(doc.data||"")){return sbUpload("drivers/"+d.id+"/doc-"+doc.id+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){doc.data=url;out.push(doc);}).catch(function(){out.push(doc);});}
+      if(SB_ON&&/^data:/.test(doc.data||"")){return sbUpload("drivers/"+d.id+"/doc-"+doc.id+"."+extFor(doc.mime),dataURLtoBlob(doc.data),doc.mime).then(function(url){doc.data=url;out.push(doc);}).catch(function(){failed.push(it.file&&it.file.name||doc.type);});}
       out.push(doc);
     }).catch(function(){});
   });});
@@ -6083,9 +6152,10 @@ function saveDocsBatch(d,items){
     if(!live.docs)live.docs=[];
     for(var i=out.length-1;i>=0;i--)live.docs.unshift(out[i]);
     if(out.length)logAudit("edit","drivers",live.id,recLabel("drivers",live),[{f:"docs",l:"Documents",from:"",to:"added "+out.length+" file(s)"}]);
-    persist();
+    if(out.length)persist();
     hideLoader();refreshDocHost(live);
-    toast("Saved "+out.length+" document(s).","good");
+    if(failed.length)toast((out.length?"Saved "+out.length+". ":"")+failed.length+" document(s) didn't upload — check the internet and add "+(failed.length>1?"them":"it")+" again.","err");
+    else toast("Saved "+out.length+" document(s).","good");
   }).catch(function(){hideLoader();refreshDocHost(drById(d.id)||d);});
 }
 function pickDoc(d,file){
@@ -8897,7 +8967,7 @@ saveExpensePage=function(pg){
   function withFiles(){if(!staged.length){fin([]);return;}
     showLoader("Uploading "+staged.length+" file"+(staged.length>1?"s":"")+"…");
     attUploadAll("expenses",out.id,staged).then(function(f){hideLoader();fin(f);},function(){hideLoader();fin([]);});}
-  if(rcp&&SB_ON){var bl=dataURLtoBlob(rcp);sbUpload("expenses/"+out.id+"/receipt."+extFor(bl.type),bl,bl.type).then(function(url){out.receipt=url;withFiles();}).catch(function(){withFiles();});}
+  if(rcp&&SB_ON){var bl=dataURLtoBlob(rcp);sbUpload("expenses/"+out.id+"/receipt."+extFor(bl.type),bl,bl.type).then(function(url){out.receipt=url;withFiles();}).catch(function(){withFiles();setTimeout(function(){toast("The receipt didn't upload — open the expense and attach it again.","err");},1500);});}
   else{if(rcp)out.receipt=rcp;withFiles();}
 };
 /* ---------- the Attachments folder on every record page ---------- */
@@ -10139,7 +10209,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.31 · 6 Oct 2026 · P&L management accounts";
+var ERP_BUILD="v3.32 · 8 Oct 2026 · private documents + sync safety";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
