@@ -2559,6 +2559,17 @@ html.smou-smooth-active::view-transition-old(smou-page){animation:smouPageOut 26
 .pg2-size{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .pg2-size select{height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);padding:0 6px;font:inherit;color:var(--ink)}
 .pg2-box{padding:12px 16px;border-top:1px solid var(--line)}
+/* v3.33: page buttons sit just above the table, on the right */
+.pg2-top{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0 10px;font-size:12.5px;color:var(--ink-2)}
+.pg2-top[hidden]{display:none}
+.pg2-top .pg2-cnt{color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:12px;white-space:nowrap}
+.pg2-top .pg2-cnt b{color:var(--ink)}
+.pg2-top .pg2-nav button{min-width:28px;height:28px}
+.pg2-top .pg2-size select{height:28px}
+#page.flat .pg2-top{margin:0 calc(-1 * var(--pgx));padding:8px var(--pgx);background:var(--panel);border-bottom:1px solid var(--line)}
+#page.flat .pg2-top + .flat-tbl{border-top:0 !important}
+.dl-table .card-b > .pg2-top{margin:0 !important;padding:10px 28px !important;border-bottom:1px solid var(--line);background:transparent}
+@media (max-width:700px){.pg2-top .pg2-size{display:none}.dl-table .card-b > .pg2-top{padding:10px 16px !important}}
 @media (min-width:701px){.pg2-box,.tbl-foot.pg2{padding-right:78px}}
 @media (max-width:700px){.pg2{justify-content:center}.pg2-size{display:none}.pg2>span:first-child{width:100%;text-align:center}}
 </style>
@@ -2888,13 +2899,18 @@ function pgNav(key,pi,total){
   var b=function(p,lab,cls,dis){return '<button type="button" class="'+(cls||"")+'" data-pg="'+key+'" data-p="'+p+'"'+(dis?" disabled":"")+'>'+lab+'</button>';};
   var h='';
   if(pi.pages>1){var set={},list=[];[1,pi.pages,pi.page-1,pi.page,pi.page+1].forEach(function(p){if(p>=1&&p<=pi.pages&&!set[p]){set[p]=1;list.push(p);}});list.sort(function(a,c){return a-c;});
-    h+='<div class="pg2-nav">'+b(pi.page-1,"‹ Prev","",pi.page<=1);
+    h+='<div class="pg2-nav">'+b(pi.page-1,"‹","",pi.page<=1).replace('<button ','<button title="Previous page" ');
     list.forEach(function(p,i){if(i&&p-list[i-1]>1)h+='<span class="dots">…</span>';h+=b(p,p,p===pi.page?"cur":"",p===pi.page);});
-    h+=b(pi.page+1,"Next ›","",pi.page>=pi.pages)+'</div>';}
-  h+='<label class="pg2-size">Rows per page <select data-pgsize="'+key+'">'+PG_SIZES.map(function(n){return '<option'+(n===pi.size?" selected":"")+'>'+n+'</option>';}).join("")+'</select></label>';
+    h+=b(pi.page+1,"›","",pi.page>=pi.pages).replace('<button ','<button title="Next page" ')+'</div>';}
+  h+='<label class="pg2-size">Rows <select data-pgsize="'+key+'">'+PG_SIZES.map(function(n){return '<option'+(n===pi.size?" selected":"")+'>'+n+'</option>';}).join("")+'</select></label>';
   return h;}
+/* v3.33: the bar above the table — "1–50 of 636", page buttons, rows per page. Empty for short lists. */
+function pgTopInner(key,pi,total){var nav=pgNav(key,pi,total);if(!nav)return "";
+  return '<span class="pg2-cnt"><b>'+(total?(pi.from+1)+'–'+pi.to:'0')+'</b> of <b>'+total.toLocaleString("en-US")+'</b></span>'+nav;}
+function pgTopBar(key,pi,total){var h=pgTopInner(key,pi,total);return h?'<div class="pg2-top">'+h+'</div>':'';}
 function pgShowing(pi,total,unit){return total?('Showing <b>'+(pi.from+1)+'–'+pi.to+'</b> of <b>'+total.toLocaleString("en-US")+'</b> '+esc(unit)):('0 '+esc(unit));}
-function pgTop(el){if(!el)return;try{var r=el.getBoundingClientRect();if(r.top<0||r.top>innerHeight*.6)window.scrollBy({top:r.top-90,behavior:"smooth"});}catch(e){}}
+function pgTop(el){if(!el)return;try{var bar=el.previousElementSibling;if(bar&&bar.classList&&bar.classList.contains("pg2-top")&&!bar.hidden)el=bar;else{var ib=el.querySelector&&el.querySelector(".pg2-top");if(ib)el=ib;}
+  var off=innerWidth>700?160:120,r=el.getBoundingClientRect();if(r.top<off-40||r.top>innerHeight*.6)window.scrollBy({top:r.top-off,behavior:"smooth"});}catch(e){}}
 document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-pg]");if(!b||b.disabled)return;var f=PGH[b.getAttribute("data-pg")];if(f){e.preventDefault();f(+b.getAttribute("data-p"));}});
 document.addEventListener("change",function(e){var s=e.target.closest&&e.target.closest("[data-pgsize]");if(!s)return;try{localStorage.setItem("smou-pgsize",String(+s.value));}catch(x){}var f=PGH[s.getAttribute("data-pgsize")];if(f)f(1);});
 function money(n){return (n||0).toLocaleString("en-US",{minimumFractionDigits:3,maximumFractionDigits:3});}
@@ -4260,8 +4276,9 @@ function pageRegister(pg,ent){
       '<button class="btn sm" data-act="selexport">'+svg('<path d="M12 3v11M8 10l4 4 4-4"/><path d="M4 21h16"/>')+'Export selected</button>'+
       (can("delete")?'<button class="btn sm danger" data-act="seldel">'+svg(IC_del)+'Delete selected</button>':'')+
       '<button class="btn ghost sm" data-act="selclear">Clear</button></div>'+
+    '<div class="pg2-top" id="pgnav" hidden></div>'+
     '<div class="tbl-wrap"><table class="dt"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>'+
-    '<div class="tbl-foot pg2"><span id="foot"></span><span class="pg2-r" id="pgnav"></span></div>';
+    '<div class="tbl-foot pg2"><span id="foot"></span></div>';
   $("#thead").innerHTML='<tr><th class="selcol"><input type="checkbox" class="selchk" data-selall title="Select all"></th>'+cfg.columns.map(function(c,i){return '<th data-sort="'+i+'">'+esc(c.h)+' <span class="sar">⇅</span></th>';}).join("")+'<th class="actcol">Actions</th></tr>';
   fillRows(ent);
   $("#q").addEventListener("input",function(){view.search=this.value;view.sel={};fillRows(ent);});
@@ -4472,7 +4489,7 @@ function fillRows(ent){
   var f=$("#foot");if(f){var allN=store(ent).length,ft=pgShowing(_pi,_all.length,cfg.title.toLowerCase())+(_all.length<allN?' <span style="color:var(--muted)">(filtered from '+allN.toLocaleString("en-US")+')</span>':"");
     if(ent==="expenses"){var tot=_all.reduce(function(a,b){return a+(num(b.amount)||0);},0);ft+="  ·  Total "+money(tot)+" KWD";}
     f.innerHTML=ft;}
-  var pn=$("#pgnav");if(pn)pn.innerHTML=pgNav("reg",_pi,_all.length);
+  var pn=$("#pgnav");if(pn){var _ph=pgTopInner("reg",_pi,_all.length);pn.innerHTML=_ph;pn.hidden=!_ph;}
   var th=$("#thead");if(th)$$("th",th).forEach(function(t,i){t.classList.toggle("sorted",view.sort===i);var ar=t.querySelector(".sar");if(ar&&i<cfg.columns.length)ar.textContent=view.sort===i?(view.dir>0?"▲":"▼"):"⇅";});
 }
 
@@ -5212,7 +5229,7 @@ function ordersDaily(){
   var _dsig=ordersPlat+"|"+ordersMonth+"|"+(typeof FLM!=="undefined"?JSON.stringify(FLM.om||[]):"");if(_dsig!==dailySig){dailySig=_dsig;dailyPage=1;}
   var _dpi=pgCalc(rows.length,dailyPage);dailyPage=_dpi.page;var _dall=rows.length;
   var body=rows.length?rows.slice(_dpi.from,_dpi.to).map(function(e){var d=parseD(e.date);var dl=d?(d.getDate()+" "+MONS[d.getMonth()]+" "+String(d.getFullYear()).slice(2)):esc(e.date);return '<tr><td class="mono">'+dl+'</td><td class="nm">'+esc(e.driver)+'</td><td>'+(e.platform?'<span class="chip">'+esc(e.platform)+'</span>':"—")+'</td><td>'+esc(e.vehicle||"—")+'</td><td class="mono nm" style="text-align:right">'+fmtN(e.orders)+'</td><td style="color:var(--muted);font-size:12px">'+esc(e.note||"")+'</td>'+(can("edit")?'<td class="actcol" style="white-space:nowrap"><button class="rowmenu-btn" data-act="dailyedit" data-id="'+e.id+'" title="Edit">'+svg(IC_edit)+'</button>'+(can("delete")?'<button class="rowmenu-btn" data-act="dailydel" data-id="'+e.id+'" title="Delete">'+svg(IC_del)+'</button>':'')+'</td>':'')+'</tr>';}).join(""):'<tr><td colspan="7"><div class="empty" style="padding:22px">'+svg('<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>')+'<h4>No entries'+(scope?" for "+esc(scope):"")+'</h4><p>'+(can("edit")?"Add your first daily entry above.":"No daily entries recorded.")+'</p></div></td></tr>';
-  var table='<div class="card dl-table"><div class="card-h"><h3>Daily Entries</h3><span class="hint">'+rows.length+' entr'+(rows.length===1?"y":"ies")+(scope?" · "+esc(scope):"")+' · '+fmtN(totO)+' orders</span></div><div class="card-b"><div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Vehicle</th><th style="text-align:right">Orders</th><th>Note</th>'+(can("edit")?'<th></th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>'+(_dall>PG_SIZES[0]?'<div class="pg2 pg2-box"><span>'+pgShowing(_dpi,_dall,"entries")+'</span><span class="pg2-r">'+pgNav("daily",_dpi,_dall)+'</span></div>':'')+'</div></div>';
+  var table='<div class="card dl-table"><div class="card-h"><h3>Daily Entries</h3><span class="hint">'+rows.length+' entr'+(rows.length===1?"y":"ies")+(scope?" · "+esc(scope):"")+' · '+fmtN(totO)+' orders</span></div><div class="card-b">'+pgTopBar("daily",_dpi,_dall)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Vehicle</th><th style="text-align:right">Orders</th><th>Note</th>'+(can("edit")?'<th></th>':'')+'</tr></thead><tbody>'+body+'</tbody></table></div>'+(_dall>PG_SIZES[0]?'<div class="pg2 pg2-box"><span>'+pgShowing(_dpi,_dall,"entries")+'</span></div>':'')+'</div></div>';
   var note='<div class="hintbar" style="background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;padding:9px 13px;border-radius:10px;margin-bottom:16px">'+svg('<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>')+' Daily entries automatically roll up into the monthly Dashboard, Records &amp; By Driver — orders add up and each day you log counts as one active day.</div>';
   return note+form+table;
 }
@@ -7046,8 +7063,9 @@ var CC_PAGE=200;CC.lim=CC_PAGE;CC.limSig="";CC.page=1;CC._pi=null;
 PGH.cc=function(p){CC.page=p;renderPage();pgTop(document.querySelector("#page .tbl-wrap"));};
 function ccLimRows(rows,what){var sig=what;try{sig+="|"+JSON.stringify(CC.f)+"|"+(typeof FLM!=="undefined"?JSON.stringify([FLM["cc:driver"],FLM["cc:platform"],FLM["cc:status"]]):"");}catch(e){}
   if(sig!==CC.limSig){CC.limSig=sig;CC.lim=CC_PAGE;CC.page=1;}var pi=pgCalc(rows.length,CC.page);CC.page=pi.page;CC._pi=pi;return rows.slice(pi.from,pi.to);}
+function ccTopBar(n){var pi=CC._pi||pgCalc(n,1);return pgTopBar("cc",pi,n);}
 function ccMoreFoot(n,what,label){var pi=CC._pi||pgCalc(n,1);
-  return '<div class="tbl-foot pg2"><span>'+pgShowing(pi,n,label)+'</span><span class="pg2-r">'+pgNav("cc",pi,n)+
+  return '<div class="tbl-foot pg2"><span>'+pgShowing(pi,n,label)+'</span><span class="pg2-r">'+
     '<button class="btn sm" data-act="ccexport" data-what="'+what+'">Export CSV</button></span></div>';}
 document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest('[data-act="ccmore"]');if(!a)return;
   var sc=document.scrollingElement||document.documentElement,y=sc.scrollTop,w=document.querySelector(".tbl-wrap"),wy=w?w.scrollTop:0;
@@ -7330,7 +7348,7 @@ function ccShiftsPage(){
       '<td class="mono">'+esc(s.duration||"—")+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td>'+
       '<td class="cc-act">'+(s.status==="ACTIVE"?'<button class="btn sm danger" data-act="ccend" data-id="'+s.id+'">End</button>':ccDelBtn("shifts",s.id))+'</td></tr>';}).join("")
     :'<tr><td colspan="11"><div class="empty" style="padding:24px"><h4>No shifts match</h4><p>Try clearing the filters.</p></div></td></tr>';
-  return ccFilters(true)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  return ccFilters(true)+ccTopBar(rows.length)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Status</th><th>Clock in</th><th>Clock out</th><th>Distance</th><th>Orders / cancel</th><th>Duration</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     ccMoreFoot(rows.length,"shifts","shifts");
 }
 /* ---------- KM ---------- */
@@ -7340,7 +7358,7 @@ function ccKmPage(){
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Distance (filtered)",fmtKm(tot)+" km",rows.length+" completed shifts","var(--teal)")+ccKpi("Today",fmtKm(ccKmDay(ccToday()))+" km","all drivers","var(--good)")+ccKpi("Last 7 days",fmtKm([0,1,2,3,4,5,6].reduce(function(a,i){return a+ccKmDay(ccDay(i));},0))+" km","all drivers","var(--indigo)")+ccKpi("Flagged",rows.filter(ccFlag).length,"over "+CC_KM_FLAG+" km or negative","var(--crit)")+'</div>';
   var tb=rows.length?ccLimRows(rows,"km").map(function(s){var d=ccDrv(s.driver_id);return '<tr><td class="mono">'+fmtD(s.date)+'</td><td>'+ccDrvCell(d)+'</td><td>'+esc(s.platform||"—")+'</td><td class="mono">'+fmtKm(s.start_odo)+'</td><td class="mono">'+(s.end_odo!=null?fmtKm(s.end_odo):"—")+'</td><td class="mono" style="font-weight:700;color:'+(ccFlag(s)?"var(--crit)":"var(--ink)")+'">+'+(s.distance||0)+' km</td><td class="mono">'+(s.orders_done||0)+'</td><td>'+ccPhoto(s.start_odo_photo,"in")+' '+ccPhoto(s.end_odo_photo,"out")+(s.orders_receipt?' '+ccPhoto(s.orders_receipt,"receipt"):"")+'</td><td class="cc-act">'+ccDelBtn("km",s.id)+'</td></tr>';}).join("")
     :'<tr><td colspan="9"><div class="empty" style="padding:24px"><h4>No completed shifts yet</h4></div></td></tr>';
-  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  return kpis+ccFilters(false)+ccTopBar(rows.length)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Platform</th><th>Start ODO</th><th>End ODO</th><th>Distance</th><th>Orders</th><th>Photos</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     ccMoreFoot(rows.length,"km","completed shifts");
 }
 /* ---------- FUEL ---------- */
@@ -7352,7 +7370,7 @@ function ccFuelPage(){
   var kpis='<div class="grid g4" style="margin-bottom:16px">'+ccKpi("Fuel spend",money(tot)+" KWD",rows.length+" refills","var(--amber)")+ccKpi("With receipt",rows.length?Math.round(rec/rows.length*100)+"%":"—",rec+" of "+rows.length,"var(--good)")+ccKpi("Today",money(CC.fuel.filter(function(x){return x.date===ccToday();}).reduce(function(a,x){return a+(x.cost||0);},0))+" KWD","all drivers","var(--teal)")+ccKpi("Drivers refilling",Object.keys(rows.reduce(function(a,r){a[r.driver_id]=1;return a;},{})).length,"in this list","var(--indigo)")+'</div>';
   var tb=rows.length?ccLimRows(rows,"fuel").map(function(r){var d=ccDrv(r.driver_id);return '<tr><td class="mono">'+fmtD(r.date)+'<div class="sub">'+esc(r.time||"")+'</div></td><td>'+ccDrvCell(d)+'</td><td><span class="nm">'+esc(r.station||"—")+'</span><div class="sub">'+esc(r.place||"")+'</div></td><td class="mono" style="font-weight:700">'+money(r.cost)+'</td><td>'+(safeUrl(r.receipt_photo)?'<a href="'+esc(safeUrl(r.receipt_photo))+'" target="_blank" rel="noopener"><img class="cc-thumb" src="'+esc(safeUrl(r.receipt_photo))+'" alt="Receipt" loading="lazy"></a>':'<span class="pill warn">No receipt</span>')+'</td><td class="cc-act">'+ccDelBtn("fuel",r.id)+'</td></tr>';}).join("")
     :'<tr><td colspan="6"><div class="empty" style="padding:24px"><h4>No fuel entries yet</h4><p>Drivers log fuel from the app with a receipt photo.</p></div></td></tr>';
-  return kpis+ccFilters(false)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
+  return kpis+ccFilters(false)+ccTopBar(rows.length)+'<div class="tbl-wrap"><table class="dt"><thead><tr><th>Date</th><th>Driver</th><th>Station</th><th>Amount (KWD)</th><th>Receipt</th><th></th></tr></thead><tbody>'+tb+'</tbody></table></div>'+
     ccMoreFoot(rows.length,"fuel","refills");
 }
 /* ---------- DRIVER ACCOUNTS ---------- */
@@ -10209,7 +10227,7 @@ function actLoadMore(){
 }
 document.addEventListener("click",function(e){var a=e.target.closest('[data-act="actmore"]');if(!a)return;e.preventDefault();actLoadMore();});
 /* build tag — lets anyone check which ERP version the browser is really running (user menu + console) */
-var ERP_BUILD="v3.32 · 8 Oct 2026 · private documents + sync safety";
+var ERP_BUILD="v3.33 · 8 Oct 2026 · page buttons on top";
 try{console.info("SMOU ERP "+ERP_BUILD);}catch(e){}
 (function(){var _um=openUserMenu;openUserMenu=function(btn){_um.apply(this,arguments);var m=document.getElementById("rowmenu");if(m&&!m.querySelector(".erp-build")){var d=document.createElement("div");d.className="erp-build";d.style.cssText="padding:8px 12px 6px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px";d.textContent="ERP "+ERP_BUILD;m.appendChild(d);if(PENDING.length){var b=document.createElement("button");b.className="btn sm";b.setAttribute("data-act","pendingreview");b.textContent="Review pending edits ("+PENDING.length+")";m.appendChild(b);}}};})();
 /* a failed save left over from an older version may hold a Daily Log duplicate — the database now refuses those,
@@ -11533,7 +11551,7 @@ if(SB_ON){
       var add=tb.querySelector('[data-act="new"]'); tb.insertBefore(c, add||null); }
     var rows=page.querySelectorAll(".dt tbody tr");
     var n=[].filter.call(rows,function(r){return !r.querySelector("td[colspan]");}).length;
-    var ft=document.getElementById("foot"),mm=ft&&/of\s*([\d,]+)/.exec(ft.textContent||"");if(mm)n=mm[1]; /* v3.29: with pages, count all matching records */
+    var ft=document.getElementById("foot")||page.querySelector(".tbl-foot.pg2 > span:first-child"),mm=ft&&/of\s*([\d,]+)/.exec(ft.textContent||"");if(mm)n=mm[1]; /* v3.29/v3.33: with pages, count all matching records (registers + Command Center) */
     c.innerHTML='<b>'+n+'</b> records';
   }
   var root=document.getElementById("root");
