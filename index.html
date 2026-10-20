@@ -7050,7 +7050,7 @@ document.addEventListener("click",function(e){
 
 /* ============================================================
    COMMAND CENTER — live data from the Sumou driver app
-   (tables: drivers, shifts, shift_points, fuel_records, driver_sessions — admin-only via RLS)
+   (latest positions on shifts; admin-only via RLS)
    ============================================================ */
 var CC={loaded:false,loading:false,err:"",drivers:[],shifts:[],fuel:[],chan:null,
   map:null,markers:{},trails:{},view:null,follow:null,
@@ -7293,17 +7293,9 @@ function ccAddMarker(s){
     .bindPopup(function(){var x=CC.shifts.filter(function(y){return String(y.id)===String(s.id);})[0]||s;return '<b>'+esc((d&&d.name)||"Driver")+'</b><br>'+esc(x.platform||"")+' · '+(x.speed||0)+' km/h<br>updated '+ccAgo(ccLiveMs(x));});
   mk._stale=st;CC.markers[s.id]=mk;
 }
-function ccLoadTrails(){
-  var ids=ccActive().map(function(s){return String(s.id);});if(!ids.length||!CC.map)return;
-  SB.from("shift_points").select("shift_id,lat,lng,recorded_at").in("shift_id",ids).order("recorded_at",{ascending:true}).limit(10000).then(function(r){
-    if(r.error||!r.data||!CC.map)return;var by={};
-    r.data.forEach(function(p){(by[p.shift_id]=by[p.shift_id]||[]).push([p.lat,p.lng]);});
-    Object.keys(by).forEach(function(sid){var ll=by[sid];var s=CC.shifts.filter(function(x){return String(x.id)===sid;})[0];if(s&&s.live_lat!=null)ll.push([s.live_lat,s.live_lng]);
-      if(CC.trails[sid])CC.trails[sid].setLatLngs(ll);else CC.trails[sid]=window.L.polyline(ll,{color:"#E3A64A",weight:4,opacity:.85,lineJoin:"round"}).addTo(CC.map);});
-  });
-}
-function ccTrailPoint(sid,lat,lng){sid=String(sid);if(!CC.map||lat==null)return;
-  if(CC.trails[sid])CC.trails[sid].addLatLng([lat,lng]);else CC.trails[sid]=window.L.polyline([[lat,lng]],{color:"#E3A64A",weight:4,opacity:.85,lineJoin:"round"}).addTo(CC.map);}
+/* Live map uses the latest position only; never load or draw route history. */
+function ccLoadTrails(){}
+function ccTrailPoint(){}
 function ccAnimate(mk,to){var from=mk.getLatLng();if(Math.abs(from.lat-to[0])<1e-7&&Math.abs(from.lng-to[1])<1e-7)return;
   if(mk._anim)cancelAnimationFrame(mk._anim);var t0=performance.now();
   var step=function(t){var k=Math.min(1,(t-t0)/900),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;mk.setLatLng([from.lat+(to[0]-from.lat)*e,from.lng+(to[1]-from.lng)*e]);mk._anim=k<1?requestAnimationFrame(step):null;};
@@ -7761,7 +7753,7 @@ function createSmouFleetSync(o){
 }
 /* ===== End compact fleet GPS sync ===== */
 
-/* ===== Command Center: accurate live location (full trails, stale ticker, realtime auto-reconnect, polling backup) ===== */
+/* ===== Command Center: latest live location (stale ticker, realtime auto-reconnect, polling backup) ===== */
 (function(){
   var ACC_MAX=100;              /* fixes worse than ±100 m are not drawn on the route */
   var POLL_MS=15000, TICK_MS=10000;
