@@ -11678,6 +11678,90 @@ var MC={isMobile:function(){return mq.matches;},icon:icon,sections:function(){if
   });
 })(MC);
 
+/* Mobile glass scene and floating navigation lifecycle */
+/* Approved frosted-glass scene and floating navigation; mobile presentation only. */
+(function(M){
+"use strict";
+var current=null,scene=null,IDLE_MS=2800;
+function clearScene(){if(scene){scene.remove();scene=null;}}
+function deactivate(){
+  if(current){var previous=current;current=null;previous.destroy();}
+  clearScene();
+}
+function mountScene(main){
+  if(scene&&scene.parentNode===main)return;
+  clearScene();
+  scene=document.createElement("div");
+  scene.className="mc-glass-scene";
+  scene.setAttribute("data-mc-owned","");
+  scene.setAttribute("aria-hidden","true");
+  ["a","b","c","d"].forEach(function(key){var orb=document.createElement("i");orb.className="mc-glass-orb mc-glass-orb-"+key;scene.appendChild(orb);});
+  var arc=document.createElement("i");arc.className="mc-glass-arc";scene.appendChild(arc);
+  main.insertBefore(scene,main.firstChild);
+}
+function bind(dock,main){
+  var listeners=[],timer=0,focusTimer=0,firstFrame=0,secondFrame=0,keepAwakeUntil=0,keyboard=false,pointers=new Set(),disposed=false;
+  function on(target,type,fn,options){target.addEventListener(type,fn,options);listeners.push([target,type,fn,options]);}
+  function keyboardInside(){return keyboard&&dock.contains(document.activeElement);}
+  function engaged(){return pointers.size>0||keyboardInside();}
+  function sync(){dock.classList.toggle("dock-interacting",pointers.size>0);dock.classList.toggle("dock-keyboard",keyboardInside());}
+  function state(resting){
+    if(disposed)return;
+    sync();dock.classList.toggle("dock-resting",resting);
+    var value=resting?"resting":"expanded";
+    if(dock.getAttribute("data-dock-state")!==value)dock.setAttribute("data-dock-state",value);
+  }
+  function arm(delay){
+    clearTimeout(timer);timer=0;
+    if(disposed||document.hidden)return;
+    timer=setTimeout(function(){timer=0;if(disposed)return;sync();if(!engaged())state(true);},delay==null?IDLE_MS:delay);
+  }
+  function wake(){if(disposed)return;keepAwakeUntil=Date.now()+IDLE_MS;state(false);arm();}
+  function release(e){if(!pointers.delete(e.pointerId))return;sync();if(!pointers.size)wake();}
+  on(dock,"pointerdown",function(e){keyboard=false;pointers.add(e.pointerId);wake();},{passive:true});
+  on(document,"pointerup",release,{passive:true,capture:true});
+  on(document,"pointercancel",release,{passive:true,capture:true});
+  on(dock,"pointerenter",function(e){if(e.pointerType==="mouse")wake();},{passive:true});
+  on(dock,"pointermove",function(e){if(e.pointerType==="mouse"&&!pointers.size)wake();},{passive:true});
+  /* Wake without cancelling the ERP's original click or route action. */
+  on(dock,"click",wake);
+  if(!window.PointerEvent){
+    on(dock,"touchstart",function(){keyboard=false;pointers.add("touch");wake();},{passive:true});
+    on(document,"touchend",function(){if(pointers.delete("touch"))wake();},{passive:true});
+    on(document,"touchcancel",function(){if(pointers.delete("touch"))wake();},{passive:true});
+  }
+  on(document,"keydown",function(e){if(e.key==="Tab")keyboard=true;if(dock.contains(e.target)){keyboard=true;wake();}});
+  on(document,"pointerdown",function(e){if(!dock.contains(e.target)){keyboard=false;sync();if(!engaged())arm(Math.max(160,keepAwakeUntil-Date.now()));}},{passive:true});
+  on(dock,"focusin",wake);
+  on(dock,"focusout",function(){clearTimeout(focusTimer);focusTimer=setTimeout(function(){focusTimer=0;if(disposed)return;sync();if(!engaged())arm();},0);});
+  on(window,"scroll",function(){if(!dock.classList.contains("dock-resting")&&!engaged())arm(Math.max(160,keepAwakeUntil-Date.now()));},{passive:true});
+  on(window,"hashchange",wake);
+  on(document,"visibilitychange",function(){clearTimeout(timer);timer=0;pointers.clear();sync();if(!document.hidden)wake();});
+  on(window,"blur",function(){pointers.clear();sync();arm();});
+  dock.setAttribute("data-floating-ready","");
+  var controller={dock:dock,main:main,destroy:function(){
+    if(disposed)return;disposed=true;
+    clearTimeout(timer);clearTimeout(focusTimer);cancelAnimationFrame(firstFrame);cancelAnimationFrame(secondFrame);
+    listeners.forEach(function(item){item[0].removeEventListener(item[1],item[2],item[3]);});listeners=[];
+    pointers.clear();
+    dock.classList.remove("dock-resting","dock-interacting","dock-keyboard","dock-animated");
+    dock.removeAttribute("data-floating-ready");dock.removeAttribute("data-dock-state");
+  }};
+  wake();
+  firstFrame=requestAnimationFrame(function(){firstFrame=0;if(disposed)return;secondFrame=requestAnimationFrame(function(){secondFrame=0;if(!disposed)dock.classList.add("dock-animated");});});
+  return controller;
+}
+M.addEnhancer(function(pg){
+  if(!M.isMobile())return;
+  var main=pg&&pg.closest(".main"),dock=document.querySelector(".mc-dock");
+  if(!main||!dock)return;
+  if(current&&(current.dock!==dock||current.main!==main))deactivate();
+  mountScene(main);
+  if(!current)current=bind(dock,main);
+});
+M.addCleanup(deactivate);
+})(MC);
+
 function tr(s){return LANG==="ar"&&typeof transToken==="function"?transToken(s):s;}
 function safeHTML(el,html){if(el._mcHTML!==html){el._mcHTML=html;el.innerHTML=html;}}
 function groupFor(route){var found=null,len=-1;MC.sections().forEach(function(s){s.items.forEach(function(it){if((route===it.r||route.indexOf(it.r+"/")===0)&&it.r.length>len){found=s;len=it.r.length;}});});return found||MC.sections()[0];}
@@ -11687,7 +11771,7 @@ function chrome(main){var el=main.querySelector(":scope > .mc-chrome");if(!el){e
 return el;}
 function heading(el,route,g){var date=new Intl.DateTimeFormat("en-GB",{weekday:"long",day:"numeric",month:"long",timeZone:"Asia/Kuwait"}).format(new Date());var title=document.getElementById("pgTitle"),name=title&&title.textContent.trim();var item=g.items.filter(function(it){return it.r===route;})[0];if(item)name=item.t;var h=route==="overview"?tr("Good ")+tr(Number(new Intl.DateTimeFormat("en-GB",{hour:"numeric",hourCycle:"h23",timeZone:"Asia/Kuwait"}).format(new Date()))<12?"morning":Number(new Intl.DateTimeFormat("en-GB",{hour:"numeric",hourCycle:"h23",timeZone:"Asia/Kuwait"}).format(new Date()))<17?"afternoon":"evening")+",<br>"+esc(who())+".":esc(name||g.t);safeHTML(el,'<div><span class="mc-label">'+esc(route==="overview"?date+" · Kuwait":g.t+' / '+tr("Workspace"))+'</span><h1>'+h+'</h1><p>'+esc(route==="overview"?tr("A clear view of your day."):tr("Your operation, always in reach."))+'</p></div>'+(route==="overview"?'<span class="mc-role">'+esc(cap(ROLE||"Workspace"))+'</span>':'<button type="button" class="mc-icon-btn" data-mc-open="directory" aria-label="All section pages">'+icon(groupIcon(g.k),20)+'</button>'));}
 function dock(g){var el=document.querySelector(".mc-dock");if(!el){el=document.createElement("nav");el.className="mc-dock";el.setAttribute("data-mc-owned","");el.setAttribute("aria-label","Main navigation");document.body.appendChild(el);}var ss=MC.sections(),items=["home","cc","ops","fleet"].map(function(k){return ss.filter(function(s){return s.k===k;})[0];}).filter(Boolean);if(items.length<4){var extra=ss.filter(function(s){return s.k==="orders";})[0];if(extra)items.splice(1,0,extra);}safeHTML(el,items.map(function(s){return '<button type="button" data-route="'+esc(s.items[0].r)+'" class="'+(g.k===s.k?'mc-active':'')+'" '+(g.k===s.k?'aria-current="page"':'')+'><span>'+icon(groupIcon(s.k),21)+'</span>'+esc(tr(s.t))+'</button>';}).join("")+'<button type="button" data-mc-open="directory" class="'+(!items.some(function(s){return s.k===g.k;})?'mc-active':'')+'"><span>'+icon("grid",21)+'</span>'+esc(tr("More"))+'</button>');}
-function update(){queued=false;if(!mq.matches)return;var pg=document.getElementById("page"),main=pg&&pg.closest(".main");if(!pg||!main)return;active=true;rootEl.classList.add("mc-mobile");var route=getRoute(),g=groupFor(route);if(!g)return;var el=chrome(main);heading(el.querySelector(".mc-heading"),route,g);el.querySelector(".mc-subnav").hidden=route==="overview"||g.items.length<2;el.querySelector(".mc-alert-dot").hidden=!computeAlerts().length;safeHTML(el.querySelector(".mc-subnav"),g.items.map(function(it){var on=route===it.r||(route.indexOf(it.r+"/")===0&&!g.items.some(function(x){return x.r.length>it.r.length&&route.indexOf(x.r)===0;}));return '<button type="button" data-route="'+esc(it.r)+'" aria-selected="'+on+'">'+esc(it.t)+'</button>';}).join(""));dock(g);enhancers.forEach(function(fn){try{fn(pg,route);}catch(e){console.error("Mobile presentation",e);}});if(route!==lastRoute){lastRoute=route;closeSheet();var sel=el.querySelector('.mc-subnav [aria-selected="true"]');if(sel)sel.scrollIntoView({block:"nearest",inline:"center"});} }
+function update(){queued=false;if(!mq.matches)return;var pg=document.getElementById("page"),main=pg&&pg.closest(".main");if(!pg||!main){if(active)clearMobile();return;}active=true;rootEl.classList.add("mc-mobile");var route=getRoute(),g=groupFor(route);if(!g)return;var el=chrome(main);heading(el.querySelector(".mc-heading"),route,g);el.querySelector(".mc-subnav").hidden=route==="overview"||g.items.length<2;el.querySelector(".mc-alert-dot").hidden=!computeAlerts().length;safeHTML(el.querySelector(".mc-subnav"),g.items.map(function(it){var on=route===it.r||(route.indexOf(it.r+"/")===0&&!g.items.some(function(x){return x.r.length>it.r.length&&route.indexOf(x.r)===0;}));return '<button type="button" data-route="'+esc(it.r)+'" aria-selected="'+on+'">'+esc(it.t)+'</button>';}).join(""));dock(g);enhancers.forEach(function(fn){try{fn(pg,route);}catch(e){console.error("Mobile presentation",e);}});if(route!==lastRoute){lastRoute=route;closeSheet();var sel=el.querySelector('.mc-subnav [aria-selected="true"]');if(sel)sel.scrollIntoView({block:"nearest",inline:"center"});} }
 function schedule(){if(!mq.matches||queued)return;queued=true;requestAnimationFrame(update);}
 function closeSheet(){var el=document.querySelector(".mc-sheet-overlay");if(el){el.remove();document.body.classList.remove("mc-sheet-open");if(sheetFocus&&sheetFocus.isConnected)sheetFocus.focus({preventScroll:true});sheetFocus=null;}}
 function openSheet(kind,trigger){closeSheet();sheetFocus=trigger;var html='';if(kind==="themes")html='<span class="mc-label">'+esc(tr("Make it yours"))+'</span><h2>'+esc(tr("Choose your mood."))+'</h2><p>'+esc(tr("Three familiar themes. The same workspace."))+'</p><div class="mc-themes">'+[["desert","Desert Dispatch","Warm sand · burnt orange","#F6F1E7","#C2410C"],["night","Night Shift","Dark · electric lime","#0E1117","#C6F432"],["gulf","Gulf Breeze","Cool grey · royal blue","#EEF3F6","#1D4ED8"]].map(function(s){return '<button type="button" data-v3skin="'+s[0]+'" aria-pressed="'+(rootEl.getAttribute("data-skin")===s[0])+'"><i style="background:linear-gradient(135deg,'+s[3]+' 50%,'+s[4]+' 50%)"></i><span><strong>'+s[1]+'</strong><small>'+s[2]+'</small></span>'+icon(rootEl.getAttribute("data-skin")===s[0]?"check":"chevron",19)+'</button>';}).join("")+'</div>';
@@ -11697,7 +11781,8 @@ document.addEventListener("click",function(e){if(!mq.matches)return;var b=e.targ
 document.addEventListener("click",function(e){if(mq.matches&&e.target.closest(".mc-sheet [data-v3skin]"))closeSheet();},true);
 document.addEventListener("keydown",function(e){if(!mq.matches)return;var sheet=document.querySelector(".mc-sheet");if(e.key==="Escape"&&sheet){e.preventDefault();closeSheet();}else if(e.key==="Tab"&&sheet){var focusable=Array.prototype.filter.call(sheet.querySelectorAll("button,a,input,select,textarea,[tabindex]"),function(x){return !x.disabled&&x.offsetParent!==null;}),first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 var observer=new MutationObserver(function(records){if(!mq.matches)return;var changed=records.some(function(r){return !r.target.closest||!r.target.closest("[data-mc-owned],#qaStatus,.v3-head,.mbar,#v3load,.mc-overview,.mc-command-status,.mc-command-stats,.mc-reg-summary,.mc-reg-selectbar,.mc-detail-top");});if(changed)schedule();});observer.observe(document.body,{childList:true,subtree:true});
-function mode(){if(mq.matches){schedule();return;}queued=false;if(!active)return;active=false;closeSheet();rootEl.classList.remove("mc-mobile");document.querySelectorAll("[data-mc-owned]").forEach(function(n){n.remove();});cleanups.forEach(function(fn){fn();});lastRoute="";renderPage();}
+function clearMobile(){active=false;closeSheet();rootEl.classList.remove("mc-mobile");document.querySelectorAll("[data-mc-owned]").forEach(function(n){n.remove();});cleanups.forEach(function(fn){fn();});lastRoute="";}
+function mode(){if(mq.matches){schedule();return;}queued=false;if(!active)return;clearMobile();renderPage();}
 if(mq.addEventListener)mq.addEventListener("change",mode);else mq.addListener(mode);window.addEventListener("hashchange",schedule);window.addEventListener("resize",schedule);mode();
 })();
 /* END MC MOBILE PRESENTATION */
@@ -12557,6 +12642,426 @@ html.mc-mobile #page.flatform.mc-new-expense .nx-bar>span[style*="flex:1"]{displ
 html.mc-mobile #page.flatform.mc-new-expense .nx-bar>.btn{width:100%!important;min-width:0!important;max-width:100%;justify-content:center!important;box-sizing:border-box;padding-inline:10px!important;white-space:normal!important}
 html.mc-mobile #page.flatform.mc-new-expense .nx-bar>a[data-route="finance/log"]{grid-column:1 / -1;min-height:42px!important}
 html.mc-mobile #page.flatform.mc-new-expense :is(.filecur,.filepick,.filebox){max-width:100%;min-width:0;overflow-wrap:anywhere;box-sizing:border-box}
+
+/* mobile-glass-surfaces.css */
+/* Concatenated inside max-width:860px. Only material changes on real ERP nodes. */
+html.mc-mobile #page :is(.card,.stat,.mc-reg-metric,.mc-workspace-metric,.mc-overview-panel,.mc-overview-alert,.mc-command-stats>div,.mc-users-summary>div,.cc-live,.pvc,.docs-mini),
+html.mc-mobile #page .fd .c:not(#fd-hero),
+html.mc-mobile #page .pnl :is(.kpi:not(.hero),.ma,.mbox),
+html.mc-mobile #page .pnl-sum :is(.pm-card,.pm-strip>div),
+html.mc-mobile #page.mc-record-detail :is(.pvc,.card,.docs-mini),
+html.mc-mobile #page:is(.mc-orders,.mc-payroll) .flat-tbl:has(table.mc-special) {
+  background:var(--glass-fill)!important;
+  background-image:linear-gradient(137deg,#ffffff10,#ffffff00 58%)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:var(--glass-filter)!important;
+  backdrop-filter:var(--glass-filter)!important;
+  box-shadow:inset 0 1px 0 var(--glass-edge),inset 1px 0 0 var(--glass-edge-soft),0 6px 24px -8px var(--glass-shadow)!important;
+}
+
+/* Preserve the existing warning edge and critical state of dashboard alerts. */
+html.mc-mobile #page .mc-overview-alert{border-inline-start-color:var(--amber)!important}
+html.mc-mobile #page .mc-overview-alert-crit{border-inline-start-color:var(--crit)!important}
+
+/* Original register rows keep their cells, selection and hidden-row behaviour. */
+html.mc-mobile #page table.dt.mc-register>tbody>tr[data-rowid],
+html.mc-mobile :is(#page,.mc-real-modal) table.dt.mc-special>tbody>tr[data-mc-spec-row]:not([style*="display: none"]):not([style*="display:none"]),
+html.mc-mobile #page table.dt.mc-special[data-mc-special="users"]>tbody>tr[data-mc-spec-row] {
+  background:var(--glass-fill)!important;
+  background-image:linear-gradient(140deg,#ffffff0b,#ffffff00 65%)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:var(--glass-filter)!important;
+  backdrop-filter:var(--glass-filter)!important;
+  box-shadow:inset 0 1px 0 var(--glass-edge-soft),0 4px 15px -9px var(--glass-shadow)!important;
+}
+html.mc-mobile #page table.dt.mc-register>tbody>tr[data-rowid]:active{
+  background-color:var(--glass-fill-heavy)!important;
+}
+html.mc-mobile #page table.dt.mc-register>tbody>tr.selrow[data-rowid],
+html.mc-mobile #page table.dt.mc-special>tbody>tr.ordrec-picked[data-mc-spec-row] {
+  background-color:color-mix(in srgb,var(--acc) 12%,var(--glass-fill))!important;
+  border-color:var(--acc)!important;
+}
+html.mc-mobile #page table.dt.mc-register>tbody>tr[data-rowid]>td[data-mc-cell],
+html.mc-mobile :is(#page,.mc-real-modal) table.dt.mc-special>tbody>tr[data-mc-spec-row]>td[data-mc-spec] {
+  background:transparent!important;
+}
+
+/* These are structural wrappers, deliberately clear around the actual cards. */
+html.mc-mobile #page.mc-users>.card,
+html.mc-mobile #page .mc-reg-wrap,
+html.mc-mobile #page.flat .mc-reg-wrap.flat-tbl,
+html.mc-mobile #page #hireReg .mc-reg-wrap,
+html.mc-mobile :is(#page,.mc-real-modal) .mc-special-wrap,
+html.mc-mobile #page .mc-special-wrap:has(>table.mc-special) {
+  background:transparent!important;
+  border-color:transparent!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  box-shadow:none!important;
+}
+
+html.mc-mobile #page :is(.card-h,.ordrec-toolbar,.fd .ch,.fd .body,.fd .tv){
+  background-color:transparent!important;
+}
+html.mc-mobile #page table.dt.mc-special tfoot tr,
+html.mc-mobile #page :is(.hintbar,.od2-keep,.rp-style,.rp-steps li,.pnl .adv div:last-child) {
+  background-color:var(--glass-fill)!important;
+  background-image:none!important;
+  border-color:var(--glass-edge-soft)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%);
+  backdrop-filter:blur(18px) saturate(135%);
+  box-shadow:inset 0 1px 0 var(--glass-edge-soft);
+}
+
+/* Local avatars remain recognisable, with translucent accent-tinted material. */
+html.mc-mobile #page :is(.mini-ava,.cava,.mc-reg-icon,.pvc-ava),
+html.mc-mobile #page table.dt.mc-register .mc-reg-icon {
+  background:color-mix(in srgb,var(--acc) 11%,var(--glass-fill))!important;
+  border-color:var(--glass-edge-soft)!important;
+  -webkit-backdrop-filter:blur(12px) saturate(135%);
+  backdrop-filter:blur(12px) saturate(135%);
+  box-shadow:inset 0 1px 0 var(--glass-edge),inset 0 0 0 1px var(--glass-edge-soft);
+}
+html.mc-mobile #page .mc-live-banner {
+  background:color-mix(in srgb,var(--acc) 10%,var(--glass-fill))!important;
+  -webkit-backdrop-filter:var(--glass-filter);
+  backdrop-filter:var(--glass-filter);
+  box-shadow:inset 0 0 0 1px var(--glass-edge),0 5px 19px -10px var(--glass-shadow);
+}
+
+/* Controls get their own frost. Toolbars stay clear to preserve popover stacking. */
+html.mc-mobile #page :is(.btn:not(.ghost),.act2-btn,.fl-btn,.ms-btn,.pl-chip,.mc-reg-select-btn,.pg2-btn,.pg2-nav button,.mc-spec-controls>button,.fd .tbtn),
+html.mc-mobile #page[data-mc-register] .toolbar :is(.btn:not(.ghost),.act2-btn,.fl-btn,.ms-btn),
+html.mc-mobile #page.mc-pnl .pnl :is(.pl-exp,.closebtn,.sgbtn),
+html.mc-mobile :is(.mc-form-sheet,.mc-real-modal) :is(.btn:not(.ghost),.icon-btn,.ff-back) {
+  background:var(--glass-fill)!important;
+  background-image:linear-gradient(145deg,var(--glass-edge-soft),#ffffff00 65%)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(145%);
+  backdrop-filter:blur(18px) saturate(145%);
+  box-shadow:inset 0 1px 0 var(--glass-edge),0 4px 12px -7px var(--glass-shadow)!important;
+}
+html.mc-mobile #page :is(.btn.primary,.btn.amber,.btn.teal,.act2-btn.primary),
+html.mc-mobile #page[data-mc-register] .toolbar .m-chips .btn.primary,
+html.mc-mobile :is(.mc-form-sheet,.mc-real-modal) :is(.btn.primary,.btn.amber,.btn.teal),
+html.mc-mobile #page.flatform .nx-bar .btn.amber {
+  background-color:color-mix(in srgb,var(--acc) 24%,var(--glass-fill-heavy))!important;
+  color:var(--ink)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 32%,var(--glass-edge)),inset 0 1px 0 var(--glass-edge),0 6px 18px -10px var(--glass-shadow)!important;
+}
+html.mc-mobile #page :is(.btn.danger,.btn.danger.primary),
+html.mc-mobile #page .tb-row .btn.tb-arm,
+html.mc-mobile :is(.mc-form-sheet,.mc-real-modal) .btn.danger {
+  background-color:color-mix(in srgb,var(--crit) 12%,var(--glass-fill-heavy))!important;
+  color:var(--crit)!important;
+  border-color:color-mix(in srgb,var(--crit) 30%,var(--glass-edge))!important;
+}
+html.mc-mobile #page .mc-reg-selectbar.mc-reg-selecting .mc-reg-select-btn,
+html.mc-mobile #page :is(.pl-chip.active,.rp-style.on,.rp-seg button.on,.act2-btn.on,.pg2-nav button.cur) {
+  background-color:color-mix(in srgb,var(--acc) 15%,var(--glass-fill-heavy))!important;
+  color:var(--ink)!important;
+  border-color:color-mix(in srgb,var(--acc) 40%,var(--glass-edge))!important;
+}
+html.mc-mobile #page.mc-pnl .pnl :is(.pl-exp,.closebtn,.sgbtn){color:var(--ink)!important}
+
+/* Only individual tab buttons blur; the containing tab rails do not trap menus. */
+html.mc-mobile #page :is(.sub-tabs,.pl-filter),
+html.mc-mobile #page.mc-finance .fd-ph .seg,
+html.mc-mobile #page.mc-pnl .pnl :is(.pl-tabs,.pl-seg,.pl-month,.pl-bar) {
+  background:color-mix(in srgb,var(--glass-fill) 65%,transparent)!important;
+  border-color:var(--glass-edge-soft)!important;
+  box-shadow:inset 0 0 0 1px var(--glass-edge-soft);
+}
+html.mc-mobile #page .sub-tabs button:is(.on,.active),
+html.mc-mobile #page.mc-finance .fd-ph .seg button.on,
+html.mc-mobile #page.mc-pnl .pnl :is(.pl-tabs,.pl-seg) button.on {
+  background:color-mix(in srgb,var(--acc) 14%,var(--glass-fill-heavy))!important;
+  color:var(--ink)!important;
+  -webkit-backdrop-filter:blur(16px) saturate(135%);
+  backdrop-filter:blur(16px) saturate(135%);
+  box-shadow:inset 0 1px 0 var(--glass-edge-soft);
+}
+
+/* Readable edit surfaces keep every original field, control and validation. */
+html.mc-mobile #page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),select,textarea),
+html.mc-mobile #page[data-mc-register] .toolbar .search,
+html.mc-mobile #page.flatform.mc-new-expense .nx-f .field :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea),
+html.mc-mobile #page .dl-form .dl-fld :is(input,select),
+html.mc-mobile #page table.dt.mc-special[data-mc-special="users"] select.urole,
+html.mc-mobile :is(#overlay,#overlay2).mc-form-sheet .field :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea),
+html.mc-mobile :is(#overlay,#overlay2).mc-real-modal .field :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+  background:var(--glass-fill-heavy)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%);
+  backdrop-filter:blur(18px) saturate(135%);
+  box-shadow:inset 0 1px 2px var(--glass-shadow),0 1px 0 var(--glass-edge-soft)!important;
+}
+html.mc-mobile #page[data-mc-register] .toolbar .search input:not([type="checkbox"]):not([type="radio"]) {
+  background:transparent!important;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  box-shadow:none!important;
+}
+html.mc-mobile #page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),select,textarea):focus,
+html.mc-mobile #page.flatform.mc-new-expense .nx-f .field :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),select,textarea):focus,
+html.mc-mobile :is(#overlay,#overlay2) .field :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),select,textarea):focus {
+  border-color:var(--acc)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 15%,transparent),inset 0 1px 0 var(--glass-edge-soft)!important;
+}
+
+/* Real forms, details, payslips and dialogs retain their existing sheet geometry. */
+html.mc-mobile #page:is(.mc-detail-view,.mc-payslip-view),
+html.mc-mobile .mc-form-sheet>.ff,
+html.mc-mobile .mc-real-modal>.modal {
+  background:var(--glass-fill-heavy)!important;
+  background-image:linear-gradient(145deg,var(--glass-edge-soft),#ffffff00 48%)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:blur(32px) saturate(150%)!important;
+  backdrop-filter:blur(32px) saturate(150%)!important;
+  box-shadow:inset 0 1px 0 var(--glass-edge),0 -18px 55px var(--glass-shadow)!important;
+}
+html.mc-mobile #page.mc-detail-view .mc-detail-top,
+html.mc-mobile #page.mc-payslip-view .mc-payslip-top,
+html.mc-mobile .mc-form-sheet :is(.ff-top,.ff-actionbar),
+html.mc-mobile .mc-real-modal :is(.modal-h,.modal-f) {
+  background:var(--glass-fill-heavy)!important;
+  border-color:var(--glass-edge-soft)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(135%);
+  backdrop-filter:blur(22px) saturate(135%);
+}
+html.mc-mobile #page.mc-detail-view .mc-detail-top>button,
+html.mc-mobile #page.mc-payslip-view .mc-payslip-top>button,
+html.mc-mobile .mc-form-sheet .fcard,
+html.mc-mobile #page.flatform .nx,
+html.mc-mobile #page.flatform :is(.nx-row,.nx-bar) {
+  background:var(--glass-fill)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:var(--glass-filter);
+  backdrop-filter:var(--glass-filter);
+  box-shadow:inset 0 1px 0 var(--glass-edge-soft),0 4px 15px -10px var(--glass-shadow)!important;
+}
+
+/* Filter menus and calendars use a stronger frost so small values stay legible. */
+html.mc-mobile :is(.popmenu,.fl-pop,.ms-pop,.rp-cal),
+html.mc-mobile .acc-pw-card {
+  background:var(--glass-fill-heavy)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(135%);
+  backdrop-filter:blur(24px) saturate(135%);
+  box-shadow:inset 0 1px 0 var(--glass-edge),0 12px 28px -10px var(--glass-shadow)!important;
+}
+html.mc-mobile .fl-pop.rp-calpop .rp-cal {
+  background:transparent!important;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  box-shadow:none!important;
+}
+html.mc-mobile .rp-d.in {background:color-mix(in srgb,var(--acc) 11%,var(--glass-fill))!important}
+html.mc-mobile .rp-d.end {background:color-mix(in srgb,var(--acc) 20%,var(--glass-fill-heavy))!important}
+html.mc-mobile .rp-d.sel {background:var(--acc)!important;color:var(--acc-ink,var(--panel))!important}
+
+/* Tables retain full accounting comparison and sticky headers on a heavier frost. */
+html.mc-mobile #page :is(.rp-pivot,.pnl .ma-tw,.pnl .tw) {
+  background-color:var(--glass-fill);
+  border-color:var(--glass-edge-soft)!important;
+}
+html.mc-mobile #page :is(.rp-pivot table.dt th.rp-rh,.rp-pivot table.dt .rp-tc,.rp-pivot table.dt thead th),
+html.mc-mobile #page .pnl table.pl :is(td:first-child,th:first-child) {
+  background:var(--glass-fill-heavy)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(135%);
+  backdrop-filter:blur(20px) saturate(135%);
+}
+html.mc-mobile #page .rp-list table.dt tbody tr.rp-g,
+html.mc-mobile #page .rp-list table.dt tfoot tr.rp-tot,
+html.mc-mobile #page .pnl table.pl :is(tr.sub,tr.key) td,
+html.mc-mobile #page .pnl .ma-t tr.gp td {
+  background-color:color-mix(in srgb,var(--ink) 5%,var(--glass-fill-heavy))!important;
+}
+html.mc-mobile #page .pnl table.pl tr.net td {
+  background-color:color-mix(in srgb,var(--acc) 12%,var(--glass-fill-heavy))!important;
+}
+
+/* P&L's older summary uses hardcoded dark colours, so give its own hero readable frost. */
+html.mc-mobile #page .pnl-sum .pm-net {
+  background:var(--glass-fill)!important;
+  color:var(--ink)!important;
+  border-color:var(--glass-edge)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(140%);
+  backdrop-filter:blur(24px) saturate(140%);
+  box-shadow:inset 0 0 0 1px var(--glass-edge),0 12px 32px -18px var(--glass-shadow)!important;
+}
+html.mc-mobile #page .pnl-sum .pm-net .v{color:var(--ink)!important}
+html.mc-mobile #page .pnl-sum .pm-net :is(.l,.v small,.pm-pill){color:var(--muted)!important}
+html.mc-mobile #page .pnl-sum .pm-net :is(.pos,.v.pos){color:var(--good)!important}
+html.mc-mobile #page .pnl-sum .pm-net :is(.neg,.v.neg){color:var(--crit)!important}
+html.mc-mobile #page .pnl-sum :is(.pm-total,.pm-total.loss){
+  background-color:color-mix(in srgb,var(--good) 9%,var(--glass-fill))!important;
+}
+html.mc-mobile #page .pnl-sum .pm-total.loss{
+  background-color:color-mix(in srgb,var(--crit) 9%,var(--glass-fill))!important;
+}
+
+/* Native chart fills and operational statuses retain their semantic colours. */
+html.mc-mobile #page .mc-workforce-donut:before {
+  background:var(--glass-fill-heavy)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(145%);
+  backdrop-filter:blur(18px) saturate(145%);
+  box-shadow:inset 0 1px 4px var(--glass-shadow),0 1px 0 var(--glass-edge-soft);
+}
+html.mc-mobile #page :is(.mc-fleet-status>div,.fd .mt .bar,.fd .td-bar,.pnl-sum .pm-prog,.ct,.pd-bar,.fbar-t) {
+  background-color:color-mix(in srgb,var(--ink) 8%,transparent)!important;
+  box-shadow:inset 0 1px 2px var(--glass-shadow),0 1px 0 var(--glass-edge-soft);
+}
+html.mc-mobile #page.mc-command :is(.cc-mapcard>.card-h,.leaflet-control-zoom a,.leaflet-control-attribution) {
+  background:var(--glass-fill-heavy)!important;
+  border-color:var(--glass-edge-soft)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%);
+  backdrop-filter:blur(18px) saturate(135%);
+}
+
+/* mobile-glass-chrome.css */
+/* Frosted glass, with the approved mobile layout and ERP palettes. */
+html.mc-mobile {
+ --glass-fill:rgba(255,255,255,.25);--glass-fill-heavy:rgba(255,255,255,.58);
+ --glass-edge:rgba(255,255,255,.75);--glass-edge-soft:rgba(255,255,255,.32);
+ --glass-shadow:rgba(91,55,32,.16);--glass-filter:blur(22px) saturate(140%);
+ --glass-base:#f4e9de;--glass-orb-a:#ed9b76;--glass-orb-b:#d2ba9c;--glass-orb-c:#fff1df;--glass-orb-d:#b89779;
+ --glass-hero:rgba(255,255,255,.23);--glass-muted:#766356;
+}
+html.mc-mobile[data-skin="night"] {
+ --glass-fill:rgba(30,39,43,.30);--glass-fill-heavy:rgba(21,30,33,.64);
+ --glass-edge:rgba(231,255,234,.25);--glass-edge-soft:rgba(255,255,255,.10);
+ --glass-shadow:rgba(0,0,0,.32);--glass-base:#101c20;
+ --glass-orb-a:#527b28;--glass-orb-b:#225d57;--glass-orb-c:#182c30;--glass-orb-d:#8aa349;
+ --glass-hero:rgba(41,63,42,.24);--glass-muted:#b6c6bf;
+}
+html.mc-mobile[data-skin="gulf"] {
+ --glass-base:#e2edf3;--glass-orb-a:#82b8e8;--glass-orb-b:#7c93c9;--glass-orb-c:#d7f2f1;--glass-orb-d:#8cd0d9;
+ --glass-hero:rgba(255,255,255,.23);--glass-shadow:rgba(31,73,115,.16);--glass-muted:#597184;
+}
+html.mc-mobile body {background:var(--glass-base);isolation:isolate}
+html.mc-mobile #root,html.mc-mobile .app {background:transparent!important}
+html.mc-mobile .main {position:relative;min-height:100dvh;background:transparent!important}
+html.mc-mobile #page {background:transparent!important;background-image:none!important;padding-bottom:calc(115px + env(safe-area-inset-bottom,0px))!important}
+html.mc-mobile .mc-chrome {background:transparent}
+html.mc-mobile .mc-overview-hero {--hero-ink:var(--ink);--hero-muted:var(--glass-muted)}
+html.mc-mobile .mc-glass-scene {position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:linear-gradient(150deg,color-mix(in srgb,var(--glass-base) 80%,var(--glass-orb-c)),var(--glass-base));}
+html.mc-mobile .mc-glass-scene:before {content:"";position:absolute;inset:0;background:radial-gradient(ellipse 390px 290px at 95% 18%,color-mix(in srgb,var(--glass-orb-a) 58%,transparent),transparent 75%),radial-gradient(ellipse 400px 500px at 0 45%,color-mix(in srgb,var(--glass-orb-b) 50%,transparent),transparent 78%),radial-gradient(ellipse 500px 650px at 85% 85%,color-mix(in srgb,var(--glass-orb-d) 42%,transparent),transparent 78%)}
+html.mc-mobile .mc-glass-orb {position:absolute;border-radius:50%;background:var(--glass-orb-a);filter:blur(4px)}
+html.mc-mobile .mc-glass-orb-a {width:310px;height:310px;top:145px;right:-110px;background:radial-gradient(circle at 30% 25%,var(--glass-orb-c),var(--glass-orb-a) 65%,color-mix(in srgb,var(--glass-orb-a) 65%,var(--glass-orb-b)));box-shadow:inset -20px -20px 70px color-mix(in srgb,var(--glass-orb-b) 45%,transparent);opacity:.83}
+html.mc-mobile .mc-glass-orb-b {width:245px;height:245px;top:475px;left:-105px;background:radial-gradient(circle at 70% 30%,var(--glass-orb-c),var(--glass-orb-b) 65%);opacity:.7}
+html.mc-mobile .mc-glass-orb-c {width:290px;height:290px;top:970px;right:-140px;background:radial-gradient(circle at 30% 30%,var(--glass-orb-c),var(--glass-orb-a));opacity:.65}
+html.mc-mobile .mc-glass-orb-d {width:280px;height:280px;top:1600px;left:-145px;background:radial-gradient(circle at 70% 30%,var(--glass-orb-c),var(--glass-orb-d));opacity:.7}
+html.mc-mobile .mc-glass-arc {position:absolute;width:300px;height:300px;top:285px;left:-150px;border:25px solid color-mix(in srgb,var(--glass-orb-c) 58%,transparent);border-radius:50%;transform:rotate(-25deg);opacity:.7;filter:blur(1px)}
+html.mc-mobile .mc-top {background:transparent}
+html.mc-mobile .mc-icon-btn {background:var(--glass-fill);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-edge-soft),0 6px 14px -10px var(--glass-shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+html.mc-mobile .mc-brand-logo {background:var(--glass-fill-heavy);color:var(--ink);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-edge),0 6px 15px -10px var(--glass-shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+html.mc-mobile .mc-role {background:var(--glass-fill);border-color:var(--glass-edge);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 var(--glass-edge-soft)}
+html.mc-mobile .mc-overview-hero {background:var(--glass-hero);color:var(--ink);border:1px solid var(--glass-edge);-webkit-backdrop-filter:blur(24px) saturate(135%);backdrop-filter:blur(24px) saturate(135%);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 1px 0 0 var(--glass-edge-soft),0 15px 40px -22px var(--glass-shadow);isolation:auto;}
+html.mc-mobile .mc-overview-hero:before {width:160px;height:160px;top:-60px;right:-55px;border:1px solid var(--glass-edge-soft);background:linear-gradient(130deg,var(--glass-edge-soft),transparent);z-index:-1;opacity:.55}
+html.mc-mobile .mc-overview-hero:after {display:none}
+html.mc-mobile .mc-overview-hero :is(.mc-eyebrow,.mc-hero-time,.mc-hero-big small),html.mc-mobile .mc-hero-mini span {color:var(--glass-muted)}
+html.mc-mobile .mc-hero-status {color:var(--ink);background:var(--glass-fill);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-edge-soft);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+html.mc-mobile .mc-hero-arrow {color:var(--acc-text);background:var(--glass-fill-heavy);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-edge),0 5px 12px -8px var(--glass-shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+html.mc-mobile .mc-hero-mini {border-top-color:var(--glass-edge-soft)}
+html.mc-mobile .mc-overview-hero h2 {letter-spacing:-.035em}
+html.mc-mobile .mc-hero-big {color:var(--ink)}
+html.mc-mobile .mc-quick-links .mc-quick-link>span {background-color:var(--glass-fill);border-color:var(--glass-edge);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 var(--glass-edge),0 6px 14px -10px var(--glass-shadow)}
+html.mc-mobile .mc-quick-links .mc-quick-link:first-child>span {background-color:color-mix(in srgb,var(--acc) 12%,var(--glass-fill));border-color:var(--glass-edge)}
+html.mc-mobile .mc-dock {background:color-mix(in srgb,var(--glass-fill-heavy) 60%,transparent);border-top-color:var(--glass-edge);backdrop-filter:blur(30px) saturate(160%);-webkit-backdrop-filter:blur(30px) saturate(160%);box-shadow:inset 0 1px 0 var(--glass-edge-soft),0 -8px 30px -20px var(--glass-shadow)}
+html.mc-mobile .mc-dock button.mc-active>span {background:color-mix(in srgb,var(--acc) 12%,var(--glass-fill));box-shadow:inset 0 1px 0 var(--glass-edge)}
+html.mc-mobile .mc-live-ring {border-color:color-mix(in srgb,var(--acc) 28%,var(--glass-edge));box-shadow:inset 0 1px 0 var(--glass-edge)}
+@supports not (backdrop-filter:blur(1px)){html.mc-mobile{--glass-fill:rgba(255,255,255,.76);--glass-fill-heavy:rgba(255,255,255,.9)}html.mc-mobile[data-skin="night"]{--glass-fill:rgba(21,30,33,.84);--glass-fill-heavy:rgba(21,30,33,.94)}}
+@media(prefers-reduced-transparency:reduce){html.mc-mobile{--glass-fill:rgba(255,255,255,.8);--glass-fill-heavy:rgba(255,255,255,.93)}html.mc-mobile[data-skin="night"]{--glass-fill:rgba(21,30,33,.85);--glass-fill-heavy:rgba(21,30,33,.95)}}
+html.mc-mobile .mc-sheet-backdrop {background:rgba(25,30,35,.16);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+html.mc-mobile #page .mc-overview-hero h2 {color:var(--ink)}
+html.mc-mobile .mc-overview-hero .mc-hero-mini small {color:var(--glass-muted)}
+html.mc-mobile .fd #fd-hero {--hero-ink:var(--ink);--hero-muted:var(--glass-muted);--heroInk:var(--ink);--heroMuted:var(--glass-muted);--heroAcc:var(--acc-text);background:var(--glass-hero)!important;color:var(--ink)!important;border:1px solid var(--glass-edge)!important;backdrop-filter:blur(24px) saturate(135%);-webkit-backdrop-filter:blur(24px) saturate(135%);box-shadow:inset 0 1px 0 var(--glass-edge),0 12px 34px -20px var(--glass-shadow)!important}
+html.mc-mobile .fd #fd-hero :is(.lab,.dl,.row3,.plat,.platl) {color:var(--glass-muted)!important}
+html.mc-mobile .fd #fd-hero :is(.big,strong,b) {color:var(--ink)!important}
+
+/* Approved floating capsule navigation, limited to mobile ERP. */
+html.mc-mobile .mc-dock {
+  left: 50%;
+  right: auto;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: calc(100% - 32px);
+  max-width: 398px;
+  padding: 8px 7px;
+  gap: 2px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--glass-fill-heavy) 70%, transparent);
+  background-image: linear-gradient(145deg, #ffffff0a, #ffffff00 65%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  backdrop-filter: blur(30px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    0 9px 25px -8px var(--glass-shadow),
+    0 2px 5px -2px var(--glass-shadow);
+  transform: translateX(-50%) scale(1);
+  transform-origin: center bottom;
+  transition: none;
+}
+
+html.mc-mobile .mc-dock::after {
+  display: none;
+}
+
+html.mc-mobile .mc-dock button {
+  flex: 1 1 0;
+  min-width: 44px;
+  min-height: 48px;
+  padding: 3px 2px;
+  border-radius: 999px;
+}
+
+html.mc-mobile .mc-dock button >span {
+  border-radius: 999px;
+}
+
+html.mc-mobile .mc-dock.dock-resting:not(.dock-interacting):not(.dock-keyboard) {
+  transform: translateX(-50%) scale(.94);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge-soft),
+    0 6px 20px -8px var(--glass-shadow);
+}
+
+html.mc-mobile .mc-dock.dock-interacting,
+html.mc-mobile .mc-dock.dock-keyboard {
+  transform: translateX(-50%) scale(1);
+}
+
+/* This wins over the original edge-to-edge mobile navigation rules. */
+@media (max-width: 600px) {
+  html.mc-mobile .mc-dock {
+    left: 50%;
+    width: calc(100% - 32px);
+    max-width: 398px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    padding: 8px 7px;
+    border-radius: 999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.mc-mobile .mc-dock {
+    transition: none;
+  }
+}
+@media (max-width: 600px) {
+  html.mc-mobile #page {
+    padding-bottom: calc(115px + env(safe-area-inset-bottom, 0px))!important;
+  }
+}
+
+html.mc-mobile .mc-dock.dock-animated {
+  transition:
+    transform 300ms cubic-bezier(.22, .8, .24, 1),
+    box-shadow 300ms ease;
+}
+@media(prefers-reduced-motion:reduce){html.mc-mobile .mc-dock.dock-animated{transition:none}}
 }
 </style>
 <!-- END MC MOBILE STYLES -->
